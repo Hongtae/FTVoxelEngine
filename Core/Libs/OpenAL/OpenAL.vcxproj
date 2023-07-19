@@ -1,0 +1,380 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="alc\alconfig.h" />
+    <ClInclude Include="alc\alu.h" />
+    <ClInclude Include="alc\backends\base.h" />
+    <ClInclude Include="alc\backends\dsound.h" />
+    <ClInclude Include="alc\backends\loopback.h" />
+    <ClInclude Include="alc\backends\null.h" />
+    <ClInclude Include="alc\backends\wasapi.h" />
+    <ClInclude Include="alc\backends\wave.h" />
+    <ClInclude Include="alc\backends\winmm.h" />
+    <ClInclude Include="alc\context.h" />
+    <ClInclude Include="alc\device.h" />
+    <ClInclude Include="alc\effects\base.h" />
+    <ClInclude Include="alc\inprogext.h" />
+    <ClInclude Include="al\auxeffectslot.h" />
+    <ClInclude Include="al\buffer.h" />
+    <ClInclude Include="al\eax\api.h" />
+    <ClInclude Include="al\eax\call.h" />
+    <ClInclude Include="al\eax\effect.h" />
+    <ClInclude Include="al\eax\exception.h" />
+    <ClInclude Include="al\eax\fx_slots.h" />
+    <ClInclude Include="al\eax\fx_slot_index.h" />
+    <ClInclude Include="al\eax\globals.h" />
+    <ClInclude Include="al\eax\utils.h" />
+    <ClInclude Include="al\eax\x_ram.h" />
+    <ClInclude Include="al\effect.h" />
+    <ClInclude Include="al\effects\effects.h" />
+    <ClInclude Include="al\event.h" />
+    <ClInclude Include="al\filter.h" />
+    <ClInclude Include="al\listener.h" />
+    <ClInclude Include="al\source.h" />
+    <ClInclude Include="build\config.h" />
+    <ClInclude Include="build\config_android.h" />
+    <ClInclude Include="build\config_apple.h" />
+    <ClInclude Include="build\config_linux.h" />
+    <ClInclude Include="build\config_win32.h" />
+    <ClInclude Include="build\hrtf_default.h" />
+    <ClInclude Include="build\version.h" />
+    <ClInclude Include="common\albit.h" />
+    <ClInclude Include="common\albyte.h" />
+    <ClInclude Include="common\alcomplex.h" />
+    <ClInclude Include="common\aldeque.h" />
+    <ClInclude Include="common\alfstream.h" />
+    <ClInclude Include="common\almalloc.h" />
+    <ClInclude Include="common\alnumbers.h" />
+    <ClInclude Include="common\alnumeric.h" />
+    <ClInclude Include="common\aloptional.h" />
+    <ClInclude Include="common\alspan.h" />
+    <ClInclude Include="common\alstring.h" />
+    <ClInclude Include="common\atomic.h" />
+    <ClInclude Include="common\comptr.h" />
+    <ClInclude Include="common\dynload.h" />
+    <ClInclude Include="common\intrusive_ptr.h" />
+    <ClInclude Include="common\opthelpers.h" />
+    <ClInclude Include="common\phase_shifter.h" />
+    <ClInclude Include="common\polyphase_resampler.h" />
+    <ClInclude Include="common\pragmadefs.h" />
+    <ClInclude Include="common\ringbuffer.h" />
+    <ClInclude Include="common\strutils.h" />
+    <ClInclude Include="common\threads.h" />
+    <ClInclude Include="common\vecmat.h" />
+    <ClInclude Include="common\vector.h" />
+    <ClInclude Include="common\win_main_utf8.h" />
+    <ClInclude Include="core\ambdec.h" />
+    <ClInclude Include="core\ambidefs.h" />
+    <ClInclude Include="core\async_event.h" />
+    <ClInclude Include="core\bformatdec.h" />
+    <ClInclude Include="core\bs2b.h" />
+    <ClInclude Include="core\bsinc_defs.h" />
+    <ClInclude Include="core\bsinc_tables.h" />
+    <ClInclude Include="core\bufferline.h" />
+    <ClInclude Include="core\buffer_storage.h" />
+    <ClInclude Include="core\context.h" />
+    <ClInclude Include="core\converter.h" />
+    <ClInclude Include="core\cpu_caps.h" />
+    <ClInclude Include="core\devformat.h" />
+    <ClInclude Include="core\device.h" />
+    <ClInclude Include="core\effectslot.h" />
+    <ClInclude Include="core\except.h" />
+    <ClInclude Include="core\filters\biquad.h" />
+    <ClInclude Include="core\filters\nfc.h" />
+    <ClInclude Include="core\filters\splitter.h" />
+    <ClInclude Include="core\fmt_traits.h" />
+    <ClInclude Include="core\fpu_ctrl.h" />
+    <ClInclude Include="core\front_stablizer.h" />
+    <ClInclude Include="core\helpers.h" />
+    <ClInclude Include="core\hrtf.h" />
+    <ClInclude Include="core\logging.h" />
+    <ClInclude Include="core\mastering.h" />
+    <ClInclude Include="core\mixer.h" />
+    <ClInclude Include="core\resampler_limits.h" />
+    <ClInclude Include="core\uhjfilter.h" />
+    <ClInclude Include="core\voice.h" />
+    <ClInclude Include="core\voice_change.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="alc\alc.cpp" />
+    <ClCompile Include="alc\alconfig.cpp" />
+    <ClCompile Include="alc\alu.cpp" />
+    <ClCompile Include="alc\backends\base.cpp" />
+    <ClCompile Include="alc\backends\dsound.cpp" />
+    <ClCompile Include="alc\backends\loopback.cpp" />
+    <ClCompile Include="alc\backends\null.cpp" />
+    <ClCompile Include="alc\backends\wasapi.cpp" />
+    <ClCompile Include="alc\backends\wave.cpp" />
+    <ClCompile Include="alc\backends\winmm.cpp" />
+    <ClCompile Include="alc\context.cpp" />
+    <ClCompile Include="alc\device.cpp" />
+    <ClCompile Include="alc\effects\autowah.cpp" />
+    <ClCompile Include="alc\effects\chorus.cpp" />
+    <ClCompile Include="alc\effects\compressor.cpp" />
+    <ClCompile Include="alc\effects\convolution.cpp" />
+    <ClCompile Include="alc\effects\dedicated.cpp" />
+    <ClCompile Include="alc\effects\distortion.cpp" />
+    <ClCompile Include="alc\effects\echo.cpp" />
+    <ClCompile Include="alc\effects\equalizer.cpp" />
+    <ClCompile Include="alc\effects\fshifter.cpp" />
+    <ClCompile Include="alc\effects\modulator.cpp" />
+    <ClCompile Include="alc\effects\null.cpp" />
+    <ClCompile Include="alc\effects\pshifter.cpp" />
+    <ClCompile Include="alc\effects\reverb.cpp" />
+    <ClCompile Include="alc\effects\vmorpher.cpp" />
+    <ClCompile Include="alc\panning.cpp" />
+    <ClCompile Include="al\auxeffectslot.cpp" />
+    <ClCompile Include="al\buffer.cpp" />
+    <ClCompile Include="al\eax\api.cpp" />
+    <ClCompile Include="al\eax\call.cpp" />
+    <ClCompile Include="al\eax\exception.cpp" />
+    <ClCompile Include="al\eax\fx_slots.cpp" />
+    <ClCompile Include="al\eax\fx_slot_index.cpp" />
+    <ClCompile Include="al\eax\globals.cpp" />
+    <ClCompile Include="al\eax\utils.cpp" />
+    <ClCompile Include="al\effect.cpp" />
+    <ClCompile Include="al\effects\autowah.cpp" />
+    <ClCompile Include="al\effects\chorus.cpp" />
+    <ClCompile Include="al\effects\compressor.cpp" />
+    <ClCompile Include="al\effects\convolution.cpp" />
+    <ClCompile Include="al\effects\dedicated.cpp" />
+    <ClCompile Include="al\effects\distortion.cpp" />
+    <ClCompile Include="al\effects\echo.cpp" />
+    <ClCompile Include="al\effects\effects.cpp" />
+    <ClCompile Include="al\effects\equalizer.cpp" />
+    <ClCompile Include="al\effects\fshifter.cpp" />
+    <ClCompile Include="al\effects\modulator.cpp" />
+    <ClCompile Include="al\effects\null.cpp" />
+    <ClCompile Include="al\effects\pshifter.cpp" />
+    <ClCompile Include="al\effects\reverb.cpp" />
+    <ClCompile Include="al\effects\vmorpher.cpp" />
+    <ClCompile Include="al\error.cpp" />
+    <ClCompile Include="al\event.cpp" />
+    <ClCompile Include="al\extension.cpp" />
+    <ClCompile Include="al\filter.cpp" />
+    <ClCompile Include="al\listener.cpp" />
+    <ClCompile Include="al\source.cpp" />
+    <ClCompile Include="al\state.cpp" />
+    <ClCompile Include="common\alcomplex.cpp" />
+    <ClCompile Include="common\alfstream.cpp" />
+    <ClCompile Include="common\almalloc.cpp" />
+    <ClCompile Include="common\alstring.cpp" />
+    <ClCompile Include="common\dynload.cpp" />
+    <ClCompile Include="common\polyphase_resampler.cpp" />
+    <ClCompile Include="common\ringbuffer.cpp" />
+    <ClCompile Include="common\strutils.cpp" />
+    <ClCompile Include="common\threads.cpp" />
+    <ClCompile Include="core\ambdec.cpp" />
+    <ClCompile Include="core\ambidefs.cpp" />
+    <ClCompile Include="core\bformatdec.cpp" />
+    <ClCompile Include="core\bs2b.cpp" />
+    <ClCompile Include="core\bsinc_tables.cpp" />
+    <ClCompile Include="core\buffer_storage.cpp" />
+    <ClCompile Include="core\context.cpp" />
+    <ClCompile Include="core\converter.cpp" />
+    <ClCompile Include="core\cpu_caps.cpp" />
+    <ClCompile Include="core\devformat.cpp" />
+    <ClCompile Include="core\device.cpp" />
+    <ClCompile Include="core\effectslot.cpp" />
+    <ClCompile Include="core\except.cpp" />
+    <ClCompile Include="core\filters\biquad.cpp" />
+    <ClCompile Include="core\filters\nfc.cpp" />
+    <ClCompile Include="core\filters\splitter.cpp" />
+    <ClCompile Include="core\fmt_traits.cpp" />
+    <ClCompile Include="core\fpu_ctrl.cpp" />
+    <ClCompile Include="core\helpers.cpp" />
+    <ClCompile Include="core\hrtf.cpp" />
+    <ClCompile Include="core\logging.cpp" />
+    <ClCompile Include="core\mastering.cpp" />
+    <ClCompile Include="core\mixer.cpp" />
+    <ClCompile Include="core\mixer\mixer_c.cpp" />
+    <ClCompile Include="core\mixer\mixer_sse.cpp" />
+    <ClCompile Include="core\mixer\mixer_sse2.cpp" />
+    <ClCompile Include="core\mixer\mixer_sse3.cpp" />
+    <ClCompile Include="core\mixer\mixer_sse41.cpp" />
+    <ClCompile Include="core\uhjfilter.cpp" />
+    <ClCompile Include="core\uiddefs.cpp" />
+    <ClCompile Include="core\voice.cpp" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{6f7ccfde-9567-4f43-b6e0-754d17b6b5d8}</ProjectGuid>
+    <RootNamespace>OpenAL</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>$(SolutionDir)Build\$(Platform)_$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)Build\Intermediates\$(ProjectName)_$(Platform)_$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>$(SolutionDir)Build\$(Platform)_$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)Build\Intermediates\$(ProjectName)_$(Platform)_$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(SolutionDir)Build\$(Platform)_$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)Build\Intermediates\$(ProjectName)_$(Platform)_$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(SolutionDir)Build\$(Platform)_$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)Build\Intermediates\$(ProjectName)_$(Platform)_$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>AL_BUILD_LIBRARY;AL_ALEXT_PROTOTYPES;ALC_API=__declspec(dllexport);AL_API=__declspec(dllexport);RESTRICT=__restrict;NOMINMAX;_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;OPENAL_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <AdditionalIncludeDirectories>.;include;build;common</AdditionalIncludeDirectories>
+      <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
+      <DisableSpecificWarnings>5030;4065</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+      <AdditionalDependencies>Winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>AL_BUILD_LIBRARY;AL_ALEXT_PROTOTYPES;ALC_API=__declspec(dllexport);AL_API=__declspec(dllexport);RESTRICT=__restrict;NOMINMAX;_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;OPENAL_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <AdditionalIncludeDirectories>.;include;build;common</AdditionalIncludeDirectories>
+      <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
+      <DisableSpecificWarnings>5030;4065</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+      <AdditionalDependencies>Winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>AL_BUILD_LIBRARY;AL_ALEXT_PROTOTYPES;ALC_API=__declspec(dllexport);AL_API=__declspec(dllexport);RESTRICT=__restrict;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_DEBUG;OPENAL_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <AdditionalIncludeDirectories>.;include;build;common</AdditionalIncludeDirectories>
+      <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
+      <DisableSpecificWarnings>5030;4065</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+      <AdditionalDependencies>Winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>AL_BUILD_LIBRARY;AL_ALEXT_PROTOTYPES;ALC_API=__declspec(dllexport);AL_API=__declspec(dllexport);RESTRICT=__restrict;NOMINMAX;_CRT_SECURE_NO_WARNINGS;NDEBUG;OPENAL_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <AdditionalIncludeDirectories>.;include;build;common</AdditionalIncludeDirectories>
+      <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
+      <DisableSpecificWarnings>5030;4065</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+      <AdditionalDependencies>Winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

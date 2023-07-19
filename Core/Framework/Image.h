@@ -1,0 +1,64 @@
+#pragma once
+#include "../include.h"
+#include <vector>
+#include <functional>
+
+namespace FV
+{
+    enum class ImagePixelFormat {
+        Invalid = 0,
+        R8,         //  1 byte  per pixel, uint8
+        RG8,        //  2 bytes per pixel, uint8
+        RGB8,       //  3 bytes per pixel, uint8
+        RGBA8,      //  4 bytes per pixel, uint8
+        R16,        //  2 bytes per pixel, uint16
+        RG16,       //  4 bytes per pixel, uint16
+        RGB16,      //  6 bytes per pixel, uint16
+        RGBA16,     //  8 bytes per pixel, uint16
+        R32,        //  4 bytes per pixel, uint32
+        RG32,       //  8 bytes per pixel, uint32
+        RGB32,      // 12 bytes per pixel, uint32
+        RGBA32,     // 16 bytes per pixel, uint32
+        R32F,       //  4 bytes per pixel, float32
+        RG32F,      //  8 bytes per pixel, float32
+        RGB32F,     // 12 bytes per pixel, float32
+        RGBA32F,    // 16 bytes per pixel, float32
+    };
+
+    enum class ImageFormat {
+        Unknown = 0,
+        PNG,
+        JPEG,
+        BMP,
+    };
+
+    enum class ImageInterpolation {
+        Nearest,
+        Bilinear,
+        Bicubic,
+        Spline,
+        Gaussian,
+        Quadratic,
+    };
+
+	class FVCORE_API Image 
+	{
+    public:
+        Image();
+        ~Image();
+
+        uint32_t width;
+        uint32_t height;
+        uint32_t depth;
+
+        ImagePixelFormat pixelFormat;
+        uint32_t bytesPerPixel() const;
+
+        bool canEncode(ImageFormat format) const;
+        bool encode(ImageFormat format, std::function<void(void*, size_t)>) const;
+
+        std::shared_ptr<Image> resample(uint32_t width, uint32_t height, ImagePixelFormat format, ImageInterpolation interpolation) const;
+    private:
+        std::vector<uint8_t> data;
+	};
+}

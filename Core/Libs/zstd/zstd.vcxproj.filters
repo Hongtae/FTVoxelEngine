@@ -1,0 +1,181 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="common">
+      <UniqueIdentifier>{941a0f7d-3fa8-406f-8795-69412366c829}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="compress">
+      <UniqueIdentifier>{d10de3c7-3455-4f6c-9293-99ab458849b7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="decompress">
+      <UniqueIdentifier>{e4f33c98-9c0b-4436-a348-75855d7bdef2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dictBuilder">
+      <UniqueIdentifier>{b2c6d710-07c9-4347-8d0d-d80192a49fc2}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="lib\common\bitstream.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\common\compiler.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\common\cpu.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\common\debug.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\common\error_private.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\common\fse.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\common\huf.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\common\mem.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\common\pool.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\common\threading.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\common\xxhash.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\common\zstd_errors.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\common\zstd_internal.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\compress\hist.h">
+      <Filter>compress</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\compress\zstd_compress_internal.h">
+      <Filter>compress</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\compress\zstd_double_fast.h">
+      <Filter>compress</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\compress\zstd_fast.h">
+      <Filter>compress</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\compress\zstd_lazy.h">
+      <Filter>compress</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\compress\zstd_ldm.h">
+      <Filter>compress</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\compress\zstd_opt.h">
+      <Filter>compress</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\compress\zstdmt_compress.h">
+      <Filter>compress</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\decompress\zstd_ddict.h">
+      <Filter>decompress</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\decompress\zstd_decompress_block.h">
+      <Filter>decompress</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\decompress\zstd_decompress_internal.h">
+      <Filter>decompress</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\dictBuilder\cover.h">
+      <Filter>dictBuilder</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\dictBuilder\divsufsort.h">
+      <Filter>dictBuilder</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\dictBuilder\zdict.h">
+      <Filter>dictBuilder</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\zstd.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="lib\common\debug.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\common\entropy_common.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\common\error_private.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\common\fse_decompress.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\common\pool.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\common\threading.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\common\xxhash.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\common\zstd_common.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\compress\fse_compress.c">
+      <Filter>compress</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\compress\hist.c">
+      <Filter>compress</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\compress\huf_compress.c">
+      <Filter>compress</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\compress\zstd_compress.c">
+      <Filter>compress</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\compress\zstd_double_fast.c">
+      <Filter>compress</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\compress\zstd_fast.c">
+      <Filter>compress</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\compress\zstd_lazy.c">
+      <Filter>compress</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\compress\zstd_ldm.c">
+      <Filter>compress</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\compress\zstd_opt.c">
+      <Filter>compress</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\compress\zstdmt_compress.c">
+      <Filter>compress</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\decompress\huf_decompress.c">
+      <Filter>decompress</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\decompress\zstd_ddict.c">
+      <Filter>decompress</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\decompress\zstd_decompress.c">
+      <Filter>decompress</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\decompress\zstd_decompress_block.c">
+      <Filter>decompress</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\dictBuilder\cover.c">
+      <Filter>dictBuilder</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\dictBuilder\divsufsort.c">
+      <Filter>dictBuilder</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\dictBuilder\fastcover.c">
+      <Filter>dictBuilder</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\dictBuilder\zdict.c">
+      <Filter>dictBuilder</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

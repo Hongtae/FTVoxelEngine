@@ -1,0 +1,618 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Build">
+      <UniqueIdentifier>{12e4c3e7-cf66-4c5f-b3b9-c407be414596}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Backend">
+      <UniqueIdentifier>{59b24a51-162f-4a56-a62c-a16e619b1b54}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Mixer">
+      <UniqueIdentifier>{d97d3c61-42ac-40e9-b826-d3e7506f1110}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common">
+      <UniqueIdentifier>{e95791fa-1709-426a-aac8-28d44e01384d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AL">
+      <UniqueIdentifier>{782417ea-dc4e-471d-b1ff-9bbf57c52a37}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AL\EAX">
+      <UniqueIdentifier>{284fa4ce-0a7b-4028-9559-4102bee5baad}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AL\Effects">
+      <UniqueIdentifier>{a2a3995a-c5ae-4700-81b0-8159f263570a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ALC">
+      <UniqueIdentifier>{c9b5637b-6a0b-49d9-93a9-0392320b77fe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ALC\Effects">
+      <UniqueIdentifier>{42c8c732-e4cd-4d0d-b5e1-ac3415625826}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core">
+      <UniqueIdentifier>{433e7f07-fdf5-4862-94cc-bcecb1b7852d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core\Filters">
+      <UniqueIdentifier>{b34e4598-7300-4720-9600-e0bcda847d04}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="build\config.h">
+      <Filter>Build</Filter>
+    </ClInclude>
+    <ClInclude Include="alc\backends\dsound.h">
+      <Filter>Backend</Filter>
+    </ClInclude>
+    <ClInclude Include="alc\backends\wasapi.h">
+      <Filter>Backend</Filter>
+    </ClInclude>
+    <ClInclude Include="alc\backends\winmm.h">
+      <Filter>Backend</Filter>
+    </ClInclude>
+    <ClInclude Include="common\albit.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\albyte.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\alcomplex.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\aldeque.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\alfstream.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\almalloc.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\alnumbers.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\alnumeric.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\aloptional.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\alspan.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\alstring.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\atomic.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\comptr.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\dynload.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\intrusive_ptr.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\opthelpers.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\phase_shifter.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\polyphase_resampler.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\pragmadefs.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\ringbuffer.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\strutils.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\threads.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\vecmat.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\vector.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\win_main_utf8.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="al\auxeffectslot.h">
+      <Filter>AL</Filter>
+    </ClInclude>
+    <ClInclude Include="al\buffer.h">
+      <Filter>AL</Filter>
+    </ClInclude>
+    <ClInclude Include="al\effect.h">
+      <Filter>AL</Filter>
+    </ClInclude>
+    <ClInclude Include="al\event.h">
+      <Filter>AL</Filter>
+    </ClInclude>
+    <ClInclude Include="al\filter.h">
+      <Filter>AL</Filter>
+    </ClInclude>
+    <ClInclude Include="al\listener.h">
+      <Filter>AL</Filter>
+    </ClInclude>
+    <ClInclude Include="al\source.h">
+      <Filter>AL</Filter>
+    </ClInclude>
+    <ClInclude Include="al\eax\api.h">
+      <Filter>AL\EAX</Filter>
+    </ClInclude>
+    <ClInclude Include="al\eax\call.h">
+      <Filter>AL\EAX</Filter>
+    </ClInclude>
+    <ClInclude Include="al\eax\effect.h">
+      <Filter>AL\EAX</Filter>
+    </ClInclude>
+    <ClInclude Include="al\eax\exception.h">
+      <Filter>AL\EAX</Filter>
+    </ClInclude>
+    <ClInclude Include="al\eax\fx_slot_index.h">
+      <Filter>AL\EAX</Filter>
+    </ClInclude>
+    <ClInclude Include="al\eax\fx_slots.h">
+      <Filter>AL\EAX</Filter>
+    </ClInclude>
+    <ClInclude Include="al\eax\globals.h">
+      <Filter>AL\EAX</Filter>
+    </ClInclude>
+    <ClInclude Include="al\eax\utils.h">
+      <Filter>AL\EAX</Filter>
+    </ClInclude>
+    <ClInclude Include="al\eax\x_ram.h">
+      <Filter>AL\EAX</Filter>
+    </ClInclude>
+    <ClInclude Include="al\effects\effects.h">
+      <Filter>AL\Effects</Filter>
+    </ClInclude>
+    <ClInclude Include="alc\alconfig.h">
+      <Filter>ALC</Filter>
+    </ClInclude>
+    <ClInclude Include="alc\alu.h">
+      <Filter>ALC</Filter>
+    </ClInclude>
+    <ClInclude Include="alc\context.h">
+      <Filter>ALC</Filter>
+    </ClInclude>
+    <ClInclude Include="alc\device.h">
+      <Filter>ALC</Filter>
+    </ClInclude>
+    <ClInclude Include="alc\inprogext.h">
+      <Filter>ALC</Filter>
+    </ClInclude>
+    <ClInclude Include="alc\effects\base.h">
+      <Filter>ALC\Effects</Filter>
+    </ClInclude>
+    <ClInclude Include="core\ambdec.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\ambidefs.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\async_event.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\bformatdec.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\bs2b.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\bsinc_defs.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\bsinc_tables.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\buffer_storage.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\bufferline.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\context.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\converter.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\cpu_caps.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\devformat.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\device.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\effectslot.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\except.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\fmt_traits.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\fpu_ctrl.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\front_stablizer.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\helpers.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\hrtf.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\logging.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\mastering.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\mixer.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\resampler_limits.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\uhjfilter.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\voice.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\voice_change.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\filters\biquad.h">
+      <Filter>Core\Filters</Filter>
+    </ClInclude>
+    <ClInclude Include="core\filters\nfc.h">
+      <Filter>Core\Filters</Filter>
+    </ClInclude>
+    <ClInclude Include="core\filters\splitter.h">
+      <Filter>Core\Filters</Filter>
+    </ClInclude>
+    <ClInclude Include="alc\backends\base.h">
+      <Filter>Backend</Filter>
+    </ClInclude>
+    <ClInclude Include="alc\backends\loopback.h">
+      <Filter>Backend</Filter>
+    </ClInclude>
+    <ClInclude Include="alc\backends\null.h">
+      <Filter>Backend</Filter>
+    </ClInclude>
+    <ClInclude Include="alc\backends\wave.h">
+      <Filter>Backend</Filter>
+    </ClInclude>
+    <ClInclude Include="build\config_android.h">
+      <Filter>Build</Filter>
+    </ClInclude>
+    <ClInclude Include="build\config_apple.h">
+      <Filter>Build</Filter>
+    </ClInclude>
+    <ClInclude Include="build\config_linux.h">
+      <Filter>Build</Filter>
+    </ClInclude>
+    <ClInclude Include="build\config_win32.h">
+      <Filter>Build</Filter>
+    </ClInclude>
+    <ClInclude Include="build\hrtf_default.h">
+      <Filter>Build</Filter>
+    </ClInclude>
+    <ClInclude Include="build\version.h">
+      <Filter>Build</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="alc\backends\dsound.cpp">
+      <Filter>Backend</Filter>
+    </ClCompile>
+    <ClCompile Include="alc\backends\wasapi.cpp">
+      <Filter>Backend</Filter>
+    </ClCompile>
+    <ClCompile Include="alc\backends\winmm.cpp">
+      <Filter>Backend</Filter>
+    </ClCompile>
+    <ClCompile Include="core\mixer\mixer_c.cpp">
+      <Filter>Mixer</Filter>
+    </ClCompile>
+    <ClCompile Include="core\mixer\mixer_sse.cpp">
+      <Filter>Mixer</Filter>
+    </ClCompile>
+    <ClCompile Include="core\mixer\mixer_sse2.cpp">
+      <Filter>Mixer</Filter>
+    </ClCompile>
+    <ClCompile Include="core\mixer\mixer_sse3.cpp">
+      <Filter>Mixer</Filter>
+    </ClCompile>
+    <ClCompile Include="core\mixer\mixer_sse41.cpp">
+      <Filter>Mixer</Filter>
+    </ClCompile>
+    <ClCompile Include="common\alcomplex.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="common\alfstream.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="common\almalloc.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="common\alstring.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="common\dynload.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="common\polyphase_resampler.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="common\ringbuffer.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="common\strutils.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="common\threads.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="al\auxeffectslot.cpp">
+      <Filter>AL</Filter>
+    </ClCompile>
+    <ClCompile Include="al\buffer.cpp">
+      <Filter>AL</Filter>
+    </ClCompile>
+    <ClCompile Include="al\effect.cpp">
+      <Filter>AL</Filter>
+    </ClCompile>
+    <ClCompile Include="al\error.cpp">
+      <Filter>AL</Filter>
+    </ClCompile>
+    <ClCompile Include="al\event.cpp">
+      <Filter>AL</Filter>
+    </ClCompile>
+    <ClCompile Include="al\extension.cpp">
+      <Filter>AL</Filter>
+    </ClCompile>
+    <ClCompile Include="al\filter.cpp">
+      <Filter>AL</Filter>
+    </ClCompile>
+    <ClCompile Include="al\listener.cpp">
+      <Filter>AL</Filter>
+    </ClCompile>
+    <ClCompile Include="al\source.cpp">
+      <Filter>AL</Filter>
+    </ClCompile>
+    <ClCompile Include="al\state.cpp">
+      <Filter>AL</Filter>
+    </ClCompile>
+    <ClCompile Include="al\eax\api.cpp">
+      <Filter>AL\EAX</Filter>
+    </ClCompile>
+    <ClCompile Include="al\eax\call.cpp">
+      <Filter>AL\EAX</Filter>
+    </ClCompile>
+    <ClCompile Include="al\eax\exception.cpp">
+      <Filter>AL\EAX</Filter>
+    </ClCompile>
+    <ClCompile Include="al\eax\fx_slot_index.cpp">
+      <Filter>AL\EAX</Filter>
+    </ClCompile>
+    <ClCompile Include="al\eax\fx_slots.cpp">
+      <Filter>AL\EAX</Filter>
+    </ClCompile>
+    <ClCompile Include="al\eax\globals.cpp">
+      <Filter>AL\EAX</Filter>
+    </ClCompile>
+    <ClCompile Include="al\eax\utils.cpp">
+      <Filter>AL\EAX</Filter>
+    </ClCompile>
+    <ClCompile Include="al\effects\autowah.cpp">
+      <Filter>AL\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="al\effects\chorus.cpp">
+      <Filter>AL\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="al\effects\compressor.cpp">
+      <Filter>AL\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="al\effects\convolution.cpp">
+      <Filter>AL\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="al\effects\dedicated.cpp">
+      <Filter>AL\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="al\effects\distortion.cpp">
+      <Filter>AL\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="al\effects\echo.cpp">
+      <Filter>AL\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="al\effects\effects.cpp">
+      <Filter>AL\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="al\effects\equalizer.cpp">
+      <Filter>AL\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="al\effects\fshifter.cpp">
+      <Filter>AL\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="al\effects\modulator.cpp">
+      <Filter>AL\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="al\effects\null.cpp">
+      <Filter>AL\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="al\effects\pshifter.cpp">
+      <Filter>AL\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="al\effects\reverb.cpp">
+      <Filter>AL\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="al\effects\vmorpher.cpp">
+      <Filter>AL\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="alc\alc.cpp">
+      <Filter>ALC</Filter>
+    </ClCompile>
+    <ClCompile Include="alc\alconfig.cpp">
+      <Filter>ALC</Filter>
+    </ClCompile>
+    <ClCompile Include="alc\alu.cpp">
+      <Filter>ALC</Filter>
+    </ClCompile>
+    <ClCompile Include="alc\context.cpp">
+      <Filter>ALC</Filter>
+    </ClCompile>
+    <ClCompile Include="alc\device.cpp">
+      <Filter>ALC</Filter>
+    </ClCompile>
+    <ClCompile Include="alc\panning.cpp">
+      <Filter>ALC</Filter>
+    </ClCompile>
+    <ClCompile Include="alc\effects\autowah.cpp">
+      <Filter>ALC\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="alc\effects\chorus.cpp">
+      <Filter>ALC\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="alc\effects\compressor.cpp">
+      <Filter>ALC\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="alc\effects\convolution.cpp">
+      <Filter>ALC\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="alc\effects\dedicated.cpp">
+      <Filter>ALC\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="alc\effects\distortion.cpp">
+      <Filter>ALC\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="alc\effects\echo.cpp">
+      <Filter>ALC\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="alc\effects\equalizer.cpp">
+      <Filter>ALC\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="alc\effects\fshifter.cpp">
+      <Filter>ALC\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="alc\effects\modulator.cpp">
+      <Filter>ALC\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="alc\effects\null.cpp">
+      <Filter>ALC\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="alc\effects\pshifter.cpp">
+      <Filter>ALC\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="alc\effects\reverb.cpp">
+      <Filter>ALC\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="alc\effects\vmorpher.cpp">
+      <Filter>ALC\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="core\ambdec.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\ambidefs.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\bformatdec.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\bs2b.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\bsinc_tables.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\buffer_storage.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\context.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\converter.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\cpu_caps.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\devformat.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\device.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\effectslot.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\except.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\fmt_traits.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\fpu_ctrl.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\helpers.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\hrtf.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\logging.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\mastering.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\mixer.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\uhjfilter.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\uiddefs.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\voice.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\filters\biquad.cpp">
+      <Filter>Core\Filters</Filter>
+    </ClCompile>
+    <ClCompile Include="core\filters\nfc.cpp">
+      <Filter>Core\Filters</Filter>
+    </ClCompile>
+    <ClCompile Include="core\filters\splitter.cpp">
+      <Filter>Core\Filters</Filter>
+    </ClCompile>
+    <ClCompile Include="alc\backends\base.cpp">
+      <Filter>Backend</Filter>
+    </ClCompile>
+    <ClCompile Include="alc\backends\loopback.cpp">
+      <Filter>Backend</Filter>
+    </ClCompile>
+    <ClCompile Include="alc\backends\null.cpp">
+      <Filter>Backend</Filter>
+    </ClCompile>
+    <ClCompile Include="alc\backends\wave.cpp">
+      <Filter>Backend</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
