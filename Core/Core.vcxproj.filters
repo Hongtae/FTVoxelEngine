@@ -24,6 +24,9 @@
     <Filter Include="Private">
       <UniqueIdentifier>{af676d65-c1f8-4208-bbb7-e604d3661e53}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Private\Vulkan">
+      <UniqueIdentifier>{6bd6d434-fd8d-4dfe-ba89-a0256736f6a2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
@@ -170,9 +173,6 @@
     <ClInclude Include="Framework\VirtualKey.h">
       <Filter>Framework</Filter>
     </ClInclude>
-    <ClInclude Include="Framework\SpinLock.h">
-      <Filter>Framework</Filter>
-    </ClInclude>
     <ClInclude Include="Framework\Logger.h">
       <Filter>Framework</Filter>
     </ClInclude>
@@ -183,6 +183,96 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Framework\Compression.h">
+      <Filter>Framework</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\Buffer.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\BufferView.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\CommandBuffer.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\CommandQueue.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\ComputeCommandEncoder.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\ComputePipelineState.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\CopyCommandEncoder.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\DescriptorPool.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\DescriptorPoolChain.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\DescriptorSet.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\DeviceMemory.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\Extensions.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\GraphicsDevice.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\Image.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\ImageView.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\QueueFamily.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\RenderCommandEncoder.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\RenderPipelineState.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\Sampler.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\Semaphore.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\ShaderBindingSet.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\ShaderFunction.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\ShaderModule.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\SwapChain.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\TimelineSemaphore.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\Types.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\Vulkan.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\PhysicalDevice.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Vulkan\DepthStencilState.h">
+      <Filter>Private\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Hash.h">
       <Filter>Framework</Filter>
     </ClInclude>
   </ItemGroup>
@@ -251,6 +341,90 @@
       <Filter>Framework</Filter>
     </ClCompile>
     <ClCompile Include="Framework\Compression.cpp">
+      <Filter>Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Vulkan\Buffer.cpp">
+      <Filter>Private\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Vulkan\BufferView.cpp">
+      <Filter>Private\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Vulkan\CommandBuffer.cpp">
+      <Filter>Private\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Vulkan\CommandQueue.cpp">
+      <Filter>Private\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Vulkan\ComputeCommandEncoder.cpp">
+      <Filter>Private\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Vulkan\ComputePipelineState.cpp">
+      <Filter>Private\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Vulkan\CopyCommandEncoder.cpp">
+      <Filter>Private\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Vulkan\DescriptorPool.cpp">
+      <Filter>Private\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Vulkan\DescriptorPoolChain.cpp">
+      <Filter>Private\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Vulkan\DescriptorSet.cpp">
+      <Filter>Private\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Vulkan\DeviceMemory.cpp">
+      <Filter>Private\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Vulkan\GraphicsDevice.cpp">
+      <Filter>Private\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Vulkan\Image.cpp">
+      <Filter>Private\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Vulkan\ImageView.cpp">
+      <Filter>Private\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Vulkan\QueueFamily.cpp">
+      <Filter>Private\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Vulkan\RenderCommandEncoder.cpp">
+      <Filter>Private\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Vulkan\RenderPipelineState.cpp">
+      <Filter>Private\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Vulkan\Sampler.cpp">
+      <Filter>Private\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Vulkan\Semaphore.cpp">
+      <Filter>Private\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Vulkan\ShaderBindingSet.cpp">
+      <Filter>Private\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Vulkan\ShaderFunction.cpp">
+      <Filter>Private\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Vulkan\ShaderModule.cpp">
+      <Filter>Private\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Vulkan\SwapChain.cpp">
+      <Filter>Private\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Vulkan\TimelineSemaphore.cpp">
+      <Filter>Private\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Vulkan\Vulkan.cpp">
+      <Filter>Private\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Vulkan\PhysicalDevice.cpp">
+      <Filter>Private\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Vulkan\DepthStencilState.cpp">
+      <Filter>Private\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Hash.cpp">
       <Filter>Framework</Filter>
     </ClCompile>
   </ItemGroup>

@@ -5,7 +5,6 @@
 #include <vector>
 #include <string>
 #include <format>
-#include "SpinLock.h"
 
 namespace FV
 {
@@ -14,11 +13,15 @@ namespace FV
     public:
         enum class Level
         {
-            debug, verbose, info, warning, error
+            Debug, Verbose, Info, Warning, Error
         };
 
-        Logger(const std::string& category, bool bind);
+        Logger(const std::string& category);
         virtual ~Logger();
+
+        void bind(bool retain);
+        void unbind();
+        bool isBound() const;
         
         static std::vector<std::shared_ptr<Logger>> categorized(const std::string&);
         virtual void log(Level level, const std::string& mesg) const;
@@ -27,12 +30,7 @@ namespace FV
         static Logger* defaultLogger();
 
     private:
-        static std::map<Logger*, std::weak_ptr<Logger>> boundLoggers;
-        static std::map<std::string, std::vector<std::weak_ptr<Logger>>> categorizedLoggers;
-        static SpinLock lock;
-
-        std::string category;
-        bool isBound;
+        const std::string category;
     };
 
     struct Log
@@ -53,10 +51,10 @@ namespace FV
             Logger::broadcast(level, mesg);
         }
 
-        static void debug(const std::string& mesg)     { log(Level::debug, mesg); }
-        static void verbose(const std::string& mesg)   { log(Level::verbose, mesg); }
-        static void info(const std::string& mesg)      { log(Level::info, mesg); }
-        static void warning(const std::string& mesg)   { log(Level::warning, mesg); }
-        static void error(const std::string& mesg)     { log(Level::error, mesg); }
+        static void debug(const std::string& mesg)     { log(Level::Debug, mesg); }
+        static void verbose(const std::string& mesg)   { log(Level::Verbose, mesg); }
+        static void info(const std::string& mesg)      { log(Level::Info, mesg); }
+        static void warning(const std::string& mesg)   { log(Level::Warning, mesg); }
+        static void error(const std::string& mesg)     { log(Level::Error, mesg); }
     };
 }

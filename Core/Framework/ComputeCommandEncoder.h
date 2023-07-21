@@ -6,7 +6,7 @@
 
 namespace FV
 {
-    class ComputeCommandEncoder
+    class ComputeCommandEncoder : public CommandEncoder
     {
     public:
         virtual ~ComputeCommandEncoder() {}

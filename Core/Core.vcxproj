@@ -94,10 +94,12 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>FVCORE_STATIC;FVCORE_EXPORTS;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>FVCORE_STATIC;FVCORE_EXPORTS;FVCORE_ENABLE_VULKAN;VK_USE_PLATFORM_WIN32_KHR;NOMINMAX;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>Libs/Vulkan/include</AdditionalIncludeDirectories>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -111,10 +113,12 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>FVCORE_STATIC;FVCORE_EXPORTS;WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>FVCORE_STATIC;FVCORE_EXPORTS;FVCORE_ENABLE_VULKAN;VK_USE_PLATFORM_WIN32_KHR;NOMINMAX;WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>Libs/Vulkan/include</AdditionalIncludeDirectories>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -128,10 +132,12 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>FVCORE_STATIC;FVCORE_EXPORTS;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>FVCORE_STATIC;FVCORE_EXPORTS;FVCORE_ENABLE_VULKAN;VK_USE_PLATFORM_WIN32_KHR;NOMINMAX;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>Libs/Vulkan/include</AdditionalIncludeDirectories>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -145,10 +151,12 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>FVCORE_STATIC;FVCORE_EXPORTS;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>FVCORE_STATIC;FVCORE_EXPORTS;FVCORE_ENABLE_VULKAN;VK_USE_PLATFORM_WIN32_KHR;NOMINMAX;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>Libs/Vulkan/include</AdditionalIncludeDirectories>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -185,6 +193,7 @@
     <ClInclude Include="Framework\GPUBuffer.h" />
     <ClInclude Include="Framework\GPUResource.h" />
     <ClInclude Include="Framework\GraphicsDevice.h" />
+    <ClInclude Include="Framework\Hash.h" />
     <ClInclude Include="Framework\Image.h" />
     <ClInclude Include="Framework\Logger.h" />
     <ClInclude Include="Framework\Matrix2.h" />
@@ -192,6 +201,35 @@
     <ClInclude Include="Framework\Matrix4.h" />
     <ClInclude Include="Framework\PipelineReflection.h" />
     <ClInclude Include="Framework\PixelFormat.h" />
+    <ClInclude Include="Framework\Private\Vulkan\Buffer.h" />
+    <ClInclude Include="Framework\Private\Vulkan\BufferView.h" />
+    <ClInclude Include="Framework\Private\Vulkan\CommandBuffer.h" />
+    <ClInclude Include="Framework\Private\Vulkan\CommandQueue.h" />
+    <ClInclude Include="Framework\Private\Vulkan\ComputeCommandEncoder.h" />
+    <ClInclude Include="Framework\Private\Vulkan\ComputePipelineState.h" />
+    <ClInclude Include="Framework\Private\Vulkan\CopyCommandEncoder.h" />
+    <ClInclude Include="Framework\Private\Vulkan\DepthStencilState.h" />
+    <ClInclude Include="Framework\Private\Vulkan\DescriptorPool.h" />
+    <ClInclude Include="Framework\Private\Vulkan\DescriptorPoolChain.h" />
+    <ClInclude Include="Framework\Private\Vulkan\DescriptorSet.h" />
+    <ClInclude Include="Framework\Private\Vulkan\DeviceMemory.h" />
+    <ClInclude Include="Framework\Private\Vulkan\Extensions.h" />
+    <ClInclude Include="Framework\Private\Vulkan\GraphicsDevice.h" />
+    <ClInclude Include="Framework\Private\Vulkan\Image.h" />
+    <ClInclude Include="Framework\Private\Vulkan\ImageView.h" />
+    <ClInclude Include="Framework\Private\Vulkan\PhysicalDevice.h" />
+    <ClInclude Include="Framework\Private\Vulkan\QueueFamily.h" />
+    <ClInclude Include="Framework\Private\Vulkan\RenderCommandEncoder.h" />
+    <ClInclude Include="Framework\Private\Vulkan\RenderPipelineState.h" />
+    <ClInclude Include="Framework\Private\Vulkan\Sampler.h" />
+    <ClInclude Include="Framework\Private\Vulkan\Semaphore.h" />
+    <ClInclude Include="Framework\Private\Vulkan\ShaderBindingSet.h" />
+    <ClInclude Include="Framework\Private\Vulkan\ShaderFunction.h" />
+    <ClInclude Include="Framework\Private\Vulkan\ShaderModule.h" />
+    <ClInclude Include="Framework\Private\Vulkan\SwapChain.h" />
+    <ClInclude Include="Framework\Private\Vulkan\TimelineSemaphore.h" />
+    <ClInclude Include="Framework\Private\Vulkan\Types.h" />
+    <ClInclude Include="Framework\Private\Vulkan\Vulkan.h" />
     <ClInclude Include="Framework\Quaternion.h" />
     <ClInclude Include="Framework\Rect.h" />
     <ClInclude Include="Framework\RenderCommandEncoder.h" />
@@ -203,7 +241,6 @@
     <ClInclude Include="Framework\ShaderFunction.h" />
     <ClInclude Include="Framework\ShaderModule.h" />
     <ClInclude Include="Framework\ShaderResource.h" />
-    <ClInclude Include="Framework\SpinLock.h" />
     <ClInclude Include="Framework\SwapChain.h" />
     <ClInclude Include="Framework\Texture.h" />
     <ClInclude Include="Framework\Vector2.h" />
@@ -227,11 +264,39 @@
     <ClCompile Include="Framework\AudioSource.cpp" />
     <ClCompile Include="Framework\AudioStream.cpp" />
     <ClCompile Include="Framework\Compression.cpp" />
+    <ClCompile Include="Framework\Hash.cpp" />
     <ClCompile Include="Framework\Image.cpp" />
     <ClCompile Include="Framework\Logger.cpp" />
     <ClCompile Include="Framework\Matrix2.cpp" />
     <ClCompile Include="Framework\Matrix3.cpp" />
     <ClCompile Include="Framework\Matrix4.cpp" />
+    <ClCompile Include="Framework\Private\Vulkan\Buffer.cpp" />
+    <ClCompile Include="Framework\Private\Vulkan\BufferView.cpp" />
+    <ClCompile Include="Framework\Private\Vulkan\CommandBuffer.cpp" />
+    <ClCompile Include="Framework\Private\Vulkan\CommandQueue.cpp" />
+    <ClCompile Include="Framework\Private\Vulkan\ComputeCommandEncoder.cpp" />
+    <ClCompile Include="Framework\Private\Vulkan\ComputePipelineState.cpp" />
+    <ClCompile Include="Framework\Private\Vulkan\CopyCommandEncoder.cpp" />
+    <ClCompile Include="Framework\Private\Vulkan\DepthStencilState.cpp" />
+    <ClCompile Include="Framework\Private\Vulkan\DescriptorPool.cpp" />
+    <ClCompile Include="Framework\Private\Vulkan\DescriptorPoolChain.cpp" />
+    <ClCompile Include="Framework\Private\Vulkan\DescriptorSet.cpp" />
+    <ClCompile Include="Framework\Private\Vulkan\DeviceMemory.cpp" />
+    <ClCompile Include="Framework\Private\Vulkan\GraphicsDevice.cpp" />
+    <ClCompile Include="Framework\Private\Vulkan\Image.cpp" />
+    <ClCompile Include="Framework\Private\Vulkan\ImageView.cpp" />
+    <ClCompile Include="Framework\Private\Vulkan\PhysicalDevice.cpp" />
+    <ClCompile Include="Framework\Private\Vulkan\QueueFamily.cpp" />
+    <ClCompile Include="Framework\Private\Vulkan\RenderCommandEncoder.cpp" />
+    <ClCompile Include="Framework\Private\Vulkan\RenderPipelineState.cpp" />
+    <ClCompile Include="Framework\Private\Vulkan\Sampler.cpp" />
+    <ClCompile Include="Framework\Private\Vulkan\Semaphore.cpp" />
+    <ClCompile Include="Framework\Private\Vulkan\ShaderBindingSet.cpp" />
+    <ClCompile Include="Framework\Private\Vulkan\ShaderFunction.cpp" />
+    <ClCompile Include="Framework\Private\Vulkan\ShaderModule.cpp" />
+    <ClCompile Include="Framework\Private\Vulkan\SwapChain.cpp" />
+    <ClCompile Include="Framework\Private\Vulkan\TimelineSemaphore.cpp" />
+    <ClCompile Include="Framework\Private\Vulkan\Vulkan.cpp" />
     <ClCompile Include="Framework\Quaternion.cpp" />
     <ClCompile Include="Framework\Rect.cpp" />
     <ClCompile Include="Framework\Shader.cpp" />

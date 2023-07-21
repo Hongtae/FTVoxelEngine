@@ -37,28 +37,42 @@ namespace FV
     {
     public:
         Shader();
-        Shader(const uint32_t* data, size_t length); // share data
         ~Shader();
 
-        bool compile();
+        bool compile(const std::vector<uint32_t>&);
         bool validate();
+        bool isValid() const;
 
-        ShaderStage stage;
-        std::vector<uint8_t> data;
+        ShaderStage stage() const { return _stage;  }
+        const std::vector<uint32_t>& data() const { return _data; }
 
         // entry point functions
-        std::vector<std::string> functions;
+        const std::vector<std::string>& functions() const { return _functions; }
 
-        std::vector<ShaderAttribute> inputAttributes;
-        std::vector<ShaderAttribute> outputAttributes;
-        std::vector<ShaderResource> resources;
+        const std::vector<ShaderAttribute>& inputAttributes() const { return _inputAttributes; }
+        const std::vector<ShaderAttribute>& outputAttributes() const { return _outputAttributes; }
+        const std::vector<ShaderResource>& resources() const { return _resources; }
 
-        std::vector<ShaderPushConstantLayout> pushConstantLayouts;
+        const std::vector<ShaderPushConstantLayout>& pushConstantLayouts() const { return _pushConstantLayouts; }
 
         // for descriptor set layout bindings
-        std::vector<ShaderDescriptor> descriptors;
+        const std::vector<ShaderDescriptor>& descriptors() const { return _descriptors; }
 
         // compute-shader threadgroup
-        struct { uint32_t x, y, z; } threadgroupSize;
+        auto threadgroupSize() const { return _threadgroupSize; }
+
+    private:
+        ShaderStage _stage;
+        std::vector<uint32_t> _data;
+
+        std::vector<std::string> _functions;
+
+        std::vector<ShaderAttribute> _inputAttributes;
+        std::vector<ShaderAttribute> _outputAttributes;
+        std::vector<ShaderResource> _resources;
+
+        std::vector<ShaderPushConstantLayout> _pushConstantLayouts;
+        std::vector<ShaderDescriptor> _descriptors;
+        struct { uint32_t x, y, z; } _threadgroupSize;
     };
 }

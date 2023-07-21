@@ -1,6 +1,7 @@
 #pragma once
 #include "../include.h"
 #include <algorithm>
+#include "Vector3.h"
 #include "Vector4.h"
 
 #pragma pack(push, 4)
@@ -24,6 +25,25 @@ namespace FV
 			uint8_t bytes[4];
 			uint32_t value;
 		};
+
+		Color() : r(0.0f), g(0.0f), b(0.0f), a(1.0f) {}
+		Color(const Color& c) : r(c.r), g(c.g), b(c.b), a(c.a) {}
+		Color(float _r, float _g, float _b, float _a)
+			: r(_r), g(_g), b(_b), a(_a) {}
+		Color(RGBA32 rgba)
+			: r(static_cast<float>(rgba.r) / 255.0f)
+			, g(static_cast<float>(rgba.g) / 255.0f)
+			, b(static_cast<float>(rgba.b) / 255.0f)
+			, a(static_cast<float>(rgba.a) / 255.0f) {}
+		Color(ARGB32 argb)
+			: r(static_cast<float>(argb.r) / 255.0f)
+			, g(static_cast<float>(argb.g) / 255.0f)
+			, b(static_cast<float>(argb.b) / 255.0f)
+			, a(static_cast<float>(argb.a) / 255.0f) {}
+		explicit Color(const Vector3& v)
+			: r(v.x), g(v.y), b(v.z), a(1.0) {}
+		explicit Color(const Vector4& v)
+			: r(v.x), g(v.y), b(v.z), a(v.w) {}
 
 		union
 		{

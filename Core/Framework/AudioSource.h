@@ -1,8 +1,8 @@
 #pragma once
 #include "../include.h"
 #include <vector>
+#include <mutex>
 #include "Vector3.h"
-#include "SpinLock.h"
 
 namespace FV
 {
@@ -87,7 +87,7 @@ namespace FV
 
 	private:
 		uint32_t sourceID;
-		SpinLock bufferLock;
+		mutable std::mutex bufferLock;
 		struct Buffer
 		{
 			double timestamp;

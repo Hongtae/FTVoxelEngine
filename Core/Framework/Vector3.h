@@ -33,7 +33,7 @@ namespace FV
         Vector3 operator * (const Vector3& v) const { return { x * v.x, y * v.y, z * v.z }; }
         Vector3 operator / (const Vector3& v) const { return { x / v.x, y / v.y, z / v.z }; }
         Vector3 operator * (float f) const          { return { x * f, y * f, z * f }; }
-        Vector3 operator / (float f) const          { return (*this) * (1.0 / f); }
+        Vector3 operator / (float f) const          { return (*this) * (1.0f / f); }
         Vector3 operator - () const                 { return { -x, -y, -z }; }
 
         Vector3& operator += (const Vector3& v) { *this = (*this) + v; return *this; }

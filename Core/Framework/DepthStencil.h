@@ -45,9 +45,11 @@ namespace FV
         bool depthWriteEnabled = false;
     };
 
+    class GraphicsDevice;
     class DepthStencilState
     {
     public:
         virtual ~DepthStencilState() {}
+        virtual std::shared_ptr<GraphicsDevice> device() const = 0;
     };
 }

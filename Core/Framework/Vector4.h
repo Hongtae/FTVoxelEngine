@@ -32,7 +32,7 @@ namespace FV
         Vector4 operator * (const Vector4& v) const { return { x * v.x, y * v.y, z * v.z, w * v.w }; }
         Vector4 operator / (const Vector4& v) const { return { x / v.x, y / v.y, z / v.z, w / v.w }; }
         Vector4 operator * (float f) const          { return { x * f, y * f, z * f, w * f }; }
-        Vector4 operator / (float f) const          { return (*this) * (1.0 / f); }
+        Vector4 operator / (float f) const          { return (*this) * (1.0f / f); }
         Vector4 operator - () const                 { return { -x, -y, -z, -w }; }
 
         Vector4& operator += (const Vector4& v) { *this = (*this) + v; return *this; }

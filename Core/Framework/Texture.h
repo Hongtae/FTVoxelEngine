@@ -4,30 +4,33 @@
 
 namespace FV
 {
+    class GraphicsDevice;
+
+    enum TextureType
+    {
+        TextureTypeUnknown = 0,
+        TextureType1D,
+        TextureType2D,
+        TextureType3D,
+        TextureTypeCube,
+    };
+
+    enum TextureUsage
+    {
+        TextureUsageUnknown = 0U,
+        TextureUsageCopySource = 1U,
+        TextureUsageCopyDestination = 1U << 1,
+        TextureUsageSampled = 1U << 2,
+        TextureUsageStorage = 1U << 3,
+        TextureUsageShaderRead = 1U << 4,
+        TextureUsageShaderWrite = 1U << 5,
+        TextureUsageRenderTarget = 1U << 6,
+        TextureUsagePixelFormatView = 1U << 7,
+    };
+
     class Texture
     {
     public:
-        enum Type
-        {
-            TypeUnknown = 0,
-            Type1D,
-            Type2D,
-            Type3D,
-            TypeCube,
-        };
-        enum Usage : uint32_t
-        {
-            UsageUnknown = 0U,
-            UsageCopySource = 1U,
-            UsageCopyDestination = 1U << 1,
-            UsageSampled = 1U << 2,
-            UsageStorage = 1U << 3,
-            UsageShaderRead = 1U << 4,
-            UsageShaderWrite = 1U << 5,
-            UsageRenderTarget = 1U << 6,
-            UsagePixelFormatView = 1U << 7,
-        };
-
         virtual ~Texture() {}
 
         virtual uint32_t width() const = 0;
@@ -36,13 +39,15 @@ namespace FV
         virtual uint32_t mipmapCount() const = 0;
         virtual uint32_t arrayLength() const = 0;
 
-        virtual Type type() const = 0;
+        virtual TextureType type() const = 0;
         virtual PixelFormat pixelFormat() const = 0;
+
+        virtual std::shared_ptr<GraphicsDevice> device() const = 0;
     };
 
     struct TextureDescriptor
     {
-        Texture::Type type;
+        TextureType textureType;
         PixelFormat pixelFormat;
 
         uint32_t width;

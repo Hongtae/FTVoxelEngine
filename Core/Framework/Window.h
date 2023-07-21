@@ -1,6 +1,9 @@
 #pragma once
 #include "../include.h"
+#include <functional>
 #include "Rect.h"
+#include "Vector2.h"
+#include "VirtualKey.h"
 
 namespace FV
 {
@@ -131,6 +134,7 @@ namespace FV
 		virtual void setOrigin(const Point&) = 0;
 		virtual std::string title() const = 0;
 		virtual void setTitle(const std::string&) = 0;
+		virtual Size resolution() const = 0;
 
 		virtual bool isTextInputEnabled(int deviceID) const = 0;
 		virtual void enableTextInput(int deviceID) = 0;
@@ -143,9 +147,9 @@ namespace FV
 		virtual void activate() = 0;
 		virtual void minimize() = 0;
 
-		virtual void addEventObserver(const void*, std::shared_ptr<WindowEventHandler>) = 0;
-		virtual void addEventObserver(const void*, std::shared_ptr<MouseEventHandler>) = 0;
-		virtual void addEventObserver(const void*, std::shared_ptr<KeyboardEventHandler>) = 0;
+		virtual void addEventObserver(const void*, WindowEventHandler) = 0;
+		virtual void addEventObserver(const void*, MouseEventHandler) = 0;
+		virtual void addEventObserver(const void*, KeyboardEventHandler) = 0;
 		virtual void removeEventObserver(const void*) = 0;
 
 		virtual void postMouseEvent(const MouseEvent&) = 0;

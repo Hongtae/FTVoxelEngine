@@ -241,7 +241,7 @@ namespace FV
     struct ShaderResourceTexture
     {
         ShaderDataType dataType;
-        Texture::Type textureType;
+        TextureType textureType;
     };
 
     struct ShaderResourceThreadgroup

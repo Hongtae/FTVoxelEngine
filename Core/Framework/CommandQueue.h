@@ -8,6 +8,7 @@
 namespace FV
 {
     class Window;
+	class GraphicsDevice;
     class CommandQueue
     {
 	public:

@@ -1,10 +1,10 @@
+#include <numbers>
+#include <algorithm>
+
 #include "../Libs/OpenAL/include/AL/al.h"
 #include "../Libs/OpenAL/include/AL/alc.h"
 #include "../Libs/OpenAL/include/AL/alext.h"
 
-#define _USE_MATH_DEFINES
-#include <math.h>
-#include <algorithm>
 #include "AudioSource.h"
 #include "AudioDevice.h"
 #include "Logger.h"
@@ -13,12 +13,12 @@ namespace {
     template <typename T>
     constexpr T radianToDegree(T r)
     {
-        return r * T(180) / T(M_PI);
+        return r * T(180.0 / std::numbers::pi);
     }
     template <typename T>
     constexpr T degreeToRadian(T d)
     {
-        return d * T(M_PI) / T(180);
+        return d * T(std::numbers::pi / 180.0);
     }
 }
 

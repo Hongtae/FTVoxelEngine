@@ -5,27 +5,26 @@
 using namespace FV;
 
 Shader::Shader()
-    : stage(ShaderStage::Unknown)
-    , threadgroupSize({ 1, 1, 1 })
+    : _stage(ShaderStage::Unknown)
+    , _threadgroupSize({ 1, 1, 1 })
 {
-}
-
-Shader::Shader(const uint32_t* data, size_t length)
-    : Shader()
-{
-    compile();
 }
 
 Shader::~Shader()
 {
 }
 
-bool Shader::compile()
+bool Shader::compile(const std::vector<uint32_t>& data)
 {
     return false;
 }
 
 bool Shader::validate()
 {
-    return stage != ShaderStage::Unknown && data.empty() == false;
+    return isValid();
+}
+
+bool Shader::isValid() const
+{
+    return _stage != ShaderStage::Unknown && _data.empty() == false;
 }
