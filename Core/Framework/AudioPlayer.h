@@ -29,6 +29,10 @@ namespace FV
         const std::shared_ptr<AudioSource> source;
         const std::shared_ptr<AudioStream> stream;
 
+    protected:
+        virtual void bufferingStateChanged(bool, double timestamp) {}
+        virtual void playbackStateChanged(bool, double  position) {}
+        virtual void processStream(void* data, size_t byteCount, double timestamp) {}
     private:
         bool playing;
         bool buffering;
@@ -36,5 +40,6 @@ namespace FV
         double playbackPosition;
         int playLoopCount;
         double maxBufferingTime;
+        friend class AudioDeviceContext;
     };
 }

@@ -1,31 +1,154 @@
+#include <istream>
+#include <fstream>
+#include <vector>
+#include <algorithm>
+
 #include "../Libs/dkwrapper/DKAudioStream.h"
 #include "AudioStream.h"
 
-namespace {
-    struct DataStream
-    {
-        DKStream stream;
-        uint64_t position;
-    };
-}
 using namespace FV;
 
-AudioStream::AudioStream()
-    : source(nullptr), stream(nullptr)
-{
-    DKAudioStream* audioStream = new DKAudioStream();
-    this->stream = audioStream;
+namespace {
+    class StreamSource
+    {
+    public:
+        StreamSource() {}
+        virtual ~StreamSource() {}
 
-    //TODO: setup DataStream..
+        virtual uint64_t setPosition(uint64_t) = 0;
+        virtual uint64_t getPosition() = 0;
+        virtual uint64_t remainLength() = 0;
+        virtual uint64_t totalLength() = 0;
+        virtual uint64_t read(void* buff, size_t) = 0;
+    };
+
+    class FileStreamSource : public StreamSource
+    {
+    public:
+        FileStreamSource(const std::string& path)
+            : file(path, std::ios::binary | std::ios::in | std::ios::ate)
+        {
+            if (file.good())
+            {
+                file.seekg(0, std::ios::beg);
+                this->begin = file.tellg();
+                file.seekg(0, std::ios::end);
+                this->end = file.tellg();
+                file.clear();
+                file.seekg(0, std::ios::beg);
+            }
+        }
+        uint64_t setPosition(uint64_t pos) override 
+        {
+            if (file.good())
+                file.seekg(pos, std::ios::beg);
+            return file.tellg();
+        }
+        uint64_t getPosition() override
+        {
+            return file.tellg() - this->begin;
+        }
+        uint64_t remainLength() override
+        {
+            return this->end - file.tellg();
+        }
+        uint64_t totalLength() override
+        {
+            return this->end - this->begin;
+        }
+        uint64_t read(void* buff, size_t s) override 
+        {
+            if (file.good())
+            {
+                file.read((std::ifstream::char_type*)buff, s);
+                return file.gcount();
+            }
+            return uint64_t(-1); //error
+        }
+        std::ifstream file;
+        std::streampos begin;
+        std::streampos end;
+    };
+    class DataStreamSource : public StreamSource
+    {
+    public:
+        DataStreamSource(const uint8_t* p, size_t s)
+            : data(&p[0], &p[s]), position(0)
+        {
+        }
+        uint64_t setPosition(uint64_t pos) override
+        {
+            position = std::clamp(pos, 0ULL, uint64_t(data.size()));
+            return position;
+        }
+        uint64_t getPosition() override
+        {
+            return position;
+        }
+        uint64_t remainLength() override
+        {
+            return data.size() - position;
+        }
+        uint64_t totalLength() override 
+        {
+            return data.size();
+        }
+        uint64_t read(void* buff, size_t size) override
+        {
+            uint64_t s = std::min(size, data.size() - position);
+            if (s > 0)
+                memcpy(buff, &(data.data()[position]), s);
+            return s;
+        }
+        std::vector<uint8_t> data;
+        uint64_t position;
+    };
+
+    DKAudioStream* allocStream(StreamSource* source)
+    {
+        if (source)
+        {
+            DKAudioStream* stream = new DKAudioStream();
+
+            return stream;
+        }
+        return nullptr;
+    }
+    StreamSource* deallocStream(DKAudioStream* stream)
+    {
+        if (stream)
+        {
+            StreamSource* src = (StreamSource*)(stream->userContext);
+            DKAudioStreamDestroy(stream);
+            delete stream;
+            return src;
+        }
+        return nullptr;
+    }
+}
+
+AudioStream::AudioStream()
+    : stream(nullptr)
+{
+    this->stream = allocStream(nullptr);
+}
+
+AudioStream::AudioStream(const std::string& path)
+    : stream(nullptr)
+{
+    this->stream = allocStream(new FileStreamSource(path));
+}
+
+AudioStream::AudioStream(const void* data, size_t size)
+    : stream(nullptr)
+{
+    this->stream = allocStream(new DataStreamSource((const uint8_t*)data, size));
 }
 
 AudioStream::~AudioStream()
 {
-    if (stream)
-    {
-        DKAudioStreamDestroy(reinterpret_cast<DKAudioStream*>(stream));
-        delete reinterpret_cast<DKAudioStream*>(stream);
-    }
+    auto source = deallocStream((DKAudioStream*)stream);
+    delete source;
 }
 
 size_t AudioStream::read(void* buffer, size_t length) 

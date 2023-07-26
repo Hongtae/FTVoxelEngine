@@ -17,6 +17,8 @@ namespace FV
     {
     public:
         AudioStream();
+        AudioStream(const std::string& path);
+        AudioStream(const void* data, size_t size);
         ~AudioStream();
 
          size_t read(void*, size_t);
@@ -40,7 +42,6 @@ namespace FV
 
     private:
         AudioStreamEncodingFormat format;
-        void* source;
         void* stream;
     };
 }

@@ -44,7 +44,7 @@ namespace FV
         Matrix3 operator * (const Matrix3& m) const { return concatenating(m); }
         Matrix3 operator / (const Matrix3& m) const { return concatenating(m.inverted()); }
         Matrix3 operator * (float f) const;
-        Matrix3 operator / (float f) const { return (*this) * (1.0 / f); }
+        Matrix3 operator / (float f) const { return (*this) * (1.0f / f); }
               
         Matrix3& operator += (const Matrix3& m) { *this = (*this) + m; return *this; }
         Matrix3& operator -= (const Matrix3& m) { *this = (*this) - m; return *this; }
