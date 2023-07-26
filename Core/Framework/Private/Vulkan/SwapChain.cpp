@@ -108,7 +108,7 @@ bool SwapChain::setup()
 	}
 	if (!surfaceSupported)
 	{
-		Log::error(std::format("VkSurfaceKHR not support with QueueFamily at index: {:u}", queueFamilyIndex));
+		Log::error(std::format("VkSurfaceKHR not support with QueueFamily at index: {:d}", queueFamilyIndex));
 		return false;
 	}
 	
@@ -299,7 +299,7 @@ bool SwapChain::updateDevice()
 		return false;
 	}
 
-	Log::info(std::format("VkSwapchainKHR created. ({:u} x {:u}, V-sync: {}, {})",
+	Log::info(std::format("VkSwapchainKHR created. ({:d} x {:d}, V-sync: {}, {})",
 		   swapchainExtent.width, swapchainExtent.height,
 		   this->enableVSync,
 		   [](VkPresentModeKHR mode)->const char*

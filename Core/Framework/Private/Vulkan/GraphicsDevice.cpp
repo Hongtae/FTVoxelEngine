@@ -1494,7 +1494,7 @@ std::shared_ptr<FV::RenderPipelineState> GraphicsDevice::makeRenderPipeline(cons
     if (colorAttachmentRefCount > this->properties().limits.maxColorAttachments)
     {
         Log::error(std::format(
-            "The number of colors attached exceeds the device limit. ({:u} > {:u})",
+            "The number of colors attached exceeds the device limit. ({:d} > {:d})",
             colorAttachmentRefCount,
             this->properties().limits.maxColorAttachments));
         return nullptr;
@@ -1992,7 +1992,7 @@ VkPipelineLayout GraphicsDevice::makePipelineLayout(std::initializer_list<std::s
                             else
                             {
                                 Log::error(std::format(
-                                    "descriptor binding conflict! (set={:d}, binding={:u})",
+                                    "descriptor binding conflict! (set={:d}, binding={:d})",
                                     setIndex, desc.binding));
                                 return VK_NULL_HANDLE;
                             }
@@ -2205,7 +2205,7 @@ VkFence GraphicsDevice::getFence()
         }
         std::unique_lock lock(fenceCompletionMutex);
         this->numberOfFences += 1;
-        Log::info(std::format("Queue Completion Helper: Num-Fences: {:u}",
+        Log::info(std::format("Queue Completion Helper: Num-Fences: {:d}",
                               numberOfFences));
     }
     return fence;

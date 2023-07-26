@@ -1,6 +1,7 @@
 #pragma once
 #include "../include.h"
 #include <vector>
+#include <cstdint>
 #include "ShaderResource.h"
 
 namespace FV
@@ -37,9 +38,10 @@ namespace FV
     {
     public:
         Shader();
+        Shader(const std::vector<uint32_t>&);
+        Shader(const uint32_t* ir, size_t words);
         ~Shader();
 
-        bool compile(const std::vector<uint32_t>&);
         bool validate();
         bool isValid() const;
 
@@ -62,6 +64,8 @@ namespace FV
         auto threadgroupSize() const { return _threadgroupSize; }
 
     private:
+        bool compile();
+
         ShaderStage _stage;
         std::vector<uint32_t> _data;
 

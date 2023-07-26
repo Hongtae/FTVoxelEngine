@@ -134,13 +134,13 @@
 #define FV_TRAP() __builtin_trap()
 #endif
 
-#define FVASSERT_THROW_ON_FAIL  0
+#define _FVASSERT_THROW_EXCEPTION 0
 
 #define FVCORE_NOOP (void)0 // Forces the macro to end the statement with a semicolon.
 #define FVERROR_LOG(desc)       {std::cerr << desc << std::endl;} FVCORE_NOOP
 #define FVERROR_THROW(desc)     {throw std::runtime_error(desc);} FVCORE_NOOP
 #define FVERROR_ABORT(desc)     {FVERROR_LOG(desc); FV_TRAP(); abort(); } FVCORE_NOOP
-#if FVASSERT_THROW_ON_FAIL
+#if _FVASSERT_THROW_EXCEPTION
 #   define FVASSERT_DESC(expr, desc)    {if (!(expr)) FVERROR_THROW(desc);} FVCORE_NOOP
 #   define FVASSERT(expr)               {if (!(expr)) FVERROR_THROW("");} FVCORE_NOOP
 #else
@@ -148,13 +148,18 @@
 #   define FVASSERT(expr)               {if (!(expr)) FVERROR_ABORT("");} FVCORE_NOOP
 #endif
 
+#define _FVSTRINGIFY(x) #x
+#define _FVSTR(x) _FVSTRINGIFY(x)
+
 #ifdef FVCORE_DEBUG_ENABLED
-#    define FVERROR_THROW_DEBUG(desc)            FVERROR_THROW(desc)
-#    define FVASSERT_DESC_DEBUG(expr, desc)      FVASSERT_DESC(expr, desc)
-#    define FVASSERT_DEBUG(expr)                 FVASSERT(expr)
+#   define FVERROR_THROW_DEBUG(desc)        FVERROR_THROW(desc)
+#   define FVASSERT_DESC_DEBUG(expr, desc)  FVASSERT_DESC(expr, desc)
+#   define FVASSERT_DEBUG(expr)             FVASSERT(expr)
+#   define FVASSERT_THROW(expr)             {if (!(expr)) FVERROR_THROW("assertion failure: <" __FILE__ ":" _FVSTR(__LINE__) "> \nexpression: " #expr);} FVCORE_NOOP
 #else
-#    define FVERROR_THROW_DEBUG(desc)            FVCORE_NOOP
-#    define FVASSERT_DESC_DEBUG(expr, desc)      FVCORE_NOOP
-#    define FVASSERT_DEBUG(expr)                 FVCORE_NOOP
+#   define FVERROR_THROW_DEBUG(desc)        FVCORE_NOOP
+#   define FVASSERT_DESC_DEBUG(expr, desc)  FVCORE_NOOP
+#   define FVASSERT_DEBUG(expr)             FVCORE_NOOP
+#   define FVASSERT_THROW(expr)             FVCORE_NOOP
 #endif
 #endif	// #ifdef __cplusplus
