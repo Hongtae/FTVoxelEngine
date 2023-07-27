@@ -1,3 +1,4 @@
+#include <cmath>
 #include "Extensions.h"
 #include "SwapChain.h"
 #include "GraphicsDevice.h"
@@ -163,8 +164,8 @@ bool SwapChain::updateDevice()
 	VkDevice device = gdevice->device;
 
 	Size resolution = this->window->resolution();
-	uint32_t width = static_cast<uint32_t>(floor(resolution.width + 0.5f));
-	uint32_t height = static_cast<uint32_t>(floor(resolution.height + 0.5f));
+	uint32_t width = static_cast<uint32_t>(std::round(resolution.width));
+	uint32_t height = static_cast<uint32_t>(std::round(resolution.height));
 
 	VkResult err = VK_SUCCESS;
 	VkSwapchainKHR swapchainOld = this->swapchain;

@@ -32,7 +32,7 @@ namespace FV
         Vector2 operator * (const Vector2& v) const { return { x * v.x, y * v.y }; }
         Vector2 operator / (const Vector2& v) const { return { x / v.x, y / v.y }; }
         Vector2 operator * (float f) const          { return { x * f, y * f }; }
-        Vector2 operator / (float f) const          { return (*this) * (1.0 / f); }
+        Vector2 operator / (float f) const          { return (*this) * (1.0f / f); }
         Vector2 operator - () const                 { return { -x, -y }; }
 
         Vector2& operator += (const Vector2& v) { *this = (*this) + v; return *this; }

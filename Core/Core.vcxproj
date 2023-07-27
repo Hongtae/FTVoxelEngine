@@ -230,6 +230,10 @@
     <ClInclude Include="Framework\Private\Vulkan\TimelineSemaphore.h" />
     <ClInclude Include="Framework\Private\Vulkan\Types.h" />
     <ClInclude Include="Framework\Private\Vulkan\Vulkan.h" />
+    <ClInclude Include="Framework\Private\Win32\Application.h" />
+    <ClInclude Include="Framework\Private\Win32\DropTarget.h" />
+    <ClInclude Include="Framework\Private\Win32\VirtualKey.h" />
+    <ClInclude Include="Framework\Private\Win32\Window.h" />
     <ClInclude Include="Framework\Quaternion.h" />
     <ClInclude Include="Framework\Rect.h" />
     <ClInclude Include="Framework\RenderCommandEncoder.h" />
@@ -297,12 +301,16 @@
     <ClCompile Include="Framework\Private\Vulkan\SwapChain.cpp" />
     <ClCompile Include="Framework\Private\Vulkan\TimelineSemaphore.cpp" />
     <ClCompile Include="Framework\Private\Vulkan\Vulkan.cpp" />
+    <ClCompile Include="Framework\Private\Win32\Application.cpp" />
+    <ClCompile Include="Framework\Private\Win32\DropTarget.cpp" />
+    <ClCompile Include="Framework\Private\Win32\Window.cpp" />
     <ClCompile Include="Framework\Quaternion.cpp" />
     <ClCompile Include="Framework\Rect.cpp" />
     <ClCompile Include="Framework\Shader.cpp" />
     <ClCompile Include="Framework\Vector2.cpp" />
     <ClCompile Include="Framework\Vector3.cpp" />
     <ClCompile Include="Framework\Vector4.cpp" />
+    <ClCompile Include="Framework\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="Libs\dkwrapper\dkwrapper.vcxproj">

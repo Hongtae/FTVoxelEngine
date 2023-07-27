@@ -3,7 +3,7 @@
 
 namespace FV
 {
-    enum class VirtualKey
+    enum class VirtualKey : uint32_t
     {
         None = 0,
 

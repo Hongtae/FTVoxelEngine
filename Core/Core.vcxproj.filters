@@ -27,6 +27,9 @@
     <Filter Include="Private\Vulkan">
       <UniqueIdentifier>{6bd6d434-fd8d-4dfe-ba89-a0256736f6a2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Private\Win32">
+      <UniqueIdentifier>{67b7e5cf-2d15-48d9-be5d-1d7bb2eeca7e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
@@ -275,6 +278,18 @@
     <ClInclude Include="Framework\Hash.h">
       <Filter>Framework</Filter>
     </ClInclude>
+    <ClInclude Include="Framework\Private\Win32\DropTarget.h">
+      <Filter>Private\Win32</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Win32\VirtualKey.h">
+      <Filter>Private\Win32</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Win32\Window.h">
+      <Filter>Private\Win32</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework\Private\Win32\Application.h">
+      <Filter>Private\Win32</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -425,6 +440,18 @@
       <Filter>Private\Vulkan</Filter>
     </ClCompile>
     <ClCompile Include="Framework\Hash.cpp">
+      <Filter>Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Win32\DropTarget.cpp">
+      <Filter>Private\Win32</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Win32\Window.cpp">
+      <Filter>Private\Win32</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Win32\Application.cpp">
+      <Filter>Private\Win32</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Window.cpp">
       <Filter>Framework</Filter>
     </ClCompile>
   </ItemGroup>

@@ -1,17 +1,18 @@
 #pragma once
 #include "../include.h"
 #include <functional>
+#include <unordered_map>
+#include <mutex>
+#include <future>
 #include "Rect.h"
 #include "Vector2.h"
 #include "VirtualKey.h"
 
 namespace FV
 {
-    class Window
+    class FVCORE_API Window
     {
     public:
-        virtual ~Window() {}
-
 		/// Window Style
 		enum Style : uint32_t
 		{
@@ -49,7 +50,7 @@ namespace FV
 			int deviceId;
 			int buttonId;
 			Point location;	///< location in window
-			Vector2 delta;
+			Point delta;
 			float pressure;		///< for stylus-pen
 			float tilt;			///< radian value of stylus-pen and screen angle. 0 is parallel, PI/2 is perpendicular to the surface.
 		};
@@ -68,7 +69,7 @@ namespace FV
 			std::weak_ptr<Window> window;
 			int deviceId;
 			VirtualKey key;
-			std::wstring text;
+			std::string text;
 		};
 
 		/// Window event, reposition, resize etc.
@@ -126,36 +127,66 @@ namespace FV
 			std::function<bool(Window*)> closeRequest;
 		};
 
+		Window(const WindowCallback& cb);
+		virtual ~Window();
+
 		virtual bool isActivated() const = 0;
 		virtual bool isVisible() const = 0;
+
 		virtual Rect contentBounds() const = 0;
 		virtual Rect windowFrame() const = 0;
 		virtual float contentScaleFactor() const = 0;
-		virtual void setOrigin(const Point&) = 0;
-		virtual std::string title() const = 0;
-		virtual void setTitle(const std::string&) = 0;
 		virtual Size resolution() const = 0;
+		virtual void setResolution(Size) = 0;
 
-		virtual bool isTextInputEnabled(int deviceID) const = 0;
-		virtual void enableTextInput(int deviceID) = 0;
-		virtual bool keyState(int deviceID, VirtualKey) = 0;
-		virtual void setKeyState(int deviceID, VirtualKey, bool) = 0;
-		virtual void resetKeyStates(int deviceID) = 0;
+		virtual Point origin() const = 0;
+		virtual void setOrigin(Point) = 0;
+		virtual Size contentSize() const = 0;
+		virtual void setContentSize(Size) = 0;
 
 		virtual void show() = 0;
 		virtual void hide() = 0;
 		virtual void activate() = 0;
 		virtual void minimize() = 0;
 
-		virtual void addEventObserver(const void*, WindowEventHandler) = 0;
-		virtual void addEventObserver(const void*, MouseEventHandler) = 0;
-		virtual void addEventObserver(const void*, KeyboardEventHandler) = 0;
-		virtual void removeEventObserver(const void*) = 0;
+		virtual std::string title() const = 0;
+		virtual void setTitle(const std::string&) = 0;
 
-		virtual void postMouseEvent(const MouseEvent&) = 0;
-		virtual void postKeyboardEvent(const KeyboardEvent&) = 0;
-		virtual void postWindowEvent(const WindowEvent&) = 0;
+		virtual void showMouse(int deviceID, bool) = 0;
+		virtual bool isMouseVisible(int deviceID) const = 0;
+		virtual void lockMouse(int deviceID, bool) = 0;
+		virtual bool isMouseLocked(int deviceID) const = 0;
+		virtual void setMousePosition(int deviceID, Point) = 0;
+		virtual Point mousePosition(int deviceID) const = 0;
+
+		virtual bool isTextInputEnabled(int deviceID) const = 0;
+		virtual void enableTextInput(int deviceID, bool) = 0;
+		virtual bool keyState(int deviceID, VirtualKey) = 0;
+		virtual void setKeyState(int deviceID, VirtualKey, bool) = 0;
+		virtual void resetKeyStates(int deviceID) = 0;
+
+        void addEventObserver(const void*, WindowEventHandler);
+        void addEventObserver(const void*, MouseEventHandler);
+        void addEventObserver(const void*, KeyboardEventHandler);
+        void removeEventObserver(const void*);
+
+        void postMouseEvent(const MouseEvent&);
+        void postKeyboardEvent(const KeyboardEvent&);
+        void postWindowEvent(const WindowEvent&);
 
 		virtual void* platformHandle() const = 0;
+
+		const WindowCallback& callback() const { return _callback; }
+    protected:
+		WindowCallback _callback;
+
+		struct EventHandlers
+		{
+			WindowEventHandler windowEventHandler;
+			MouseEventHandler mouseEventHandler;
+			KeyboardEventHandler keyboardEventHandler;
+		};
+		std::unordered_map<const void*, EventHandlers> eventObservers;
+		std::mutex observerLock;
 	};
 }

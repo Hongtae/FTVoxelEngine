@@ -1,10 +1,10 @@
 #pragma once
+#include "../include.h"
 #include <mutex>
 #include <thread>
 #include <memory>
 #include <vector>
 
-#include "../include.h"
 #include "AudioDevice.h"
 #include "AudioListener.h"
 #include "AudioPlayer.h"
