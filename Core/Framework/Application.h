@@ -9,7 +9,7 @@ namespace FV
         virtual ~Application() {}
 
         virtual void initialize() {}
-        virtual void finialize() {}
+        virtual void finalize() {}
 
         void terminate(int exitCode);
         int run();

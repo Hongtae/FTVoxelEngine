@@ -137,7 +137,7 @@ namespace FV::Win32
             ::KillTimer(nullptr, timerID);
 
         if (app)
-            app->finialize();
+            app->finalize();
 
         if (keyboardHook)
             ::UnhookWindowsHookEx(keyboardHook);
