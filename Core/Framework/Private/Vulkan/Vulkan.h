@@ -20,13 +20,20 @@ namespace FV::Vulkan
         std::map<std::string, uint32_t> extensions;
     };
 
-    class VulkanInstance
+    class VulkanInstance : public std::enable_shared_from_this<VulkanInstance>
     {
     public:
         VulkanInstance();
         ~VulkanInstance();
 
-        std::shared_ptr<FV::GraphicsDevice> makeDevice();
+        std::shared_ptr<FV::GraphicsDevice> makeDevice(
+            const std::string& identifier,
+            std::vector<std::string> requiredExtensions,
+            std::vector<std::string> optionalExtensions);
+
+        std::shared_ptr<FV::GraphicsDevice> makeDevice(
+            std::vector<std::string> requiredExtensions,
+            std::vector<std::string> optionalExtensions);
 
         std::map<std::string, LayerProperties> layers;
         std::map<std::string, uint32_t> extensions;
@@ -38,8 +45,8 @@ namespace FV::Vulkan
             std::vector<std::string> optionalLayers,
             std::vector<std::string> requiredExtensions,
             std::vector<std::string> optionalExtensions,
-            bool enableExtensionsForEnabledLayers,
-            bool enableLayersForEnabledExtensions,
+            bool enableExtensionsForEnabledLayers = false,
+            bool enableLayersForEnabledExtensions = false,
             bool enableValidation = false,
             bool enableDebugUtils = false,
             VkAllocationCallbacks* allocationCallback = nullptr);

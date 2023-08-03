@@ -4,6 +4,11 @@
 #include "Private/Win32/Application.h"
 #endif
 
+namespace {
+    FV::Application* shared;
+    std::vector<std::string> commandLineArgs;
+}
+
 using namespace FV;
 
 void Application::terminate(int exitCode)
@@ -15,8 +20,41 @@ void Application::terminate(int exitCode)
 
 int Application::run()
 {
+    std::vector<std::string> args;
 #ifdef _WIN32
-    return Win32::runApplication(this);
+    args = Win32::commandLineArguments();
 #endif
-    return 0;
+    return run(args);
+}
+
+int Application::run(int argc, char** argv)
+{
+    std::vector<std::string> args;
+    args.reserve(argc);
+    for (int i = 0; i < argc; ++i)
+        args.push_back(argv[i]);
+    return run(args);
+}
+
+int Application::run(std::vector<std::string> args)
+{
+    commandLineArgs = std::move(args);
+    shared = this;
+
+    int result;
+#ifdef _WIN32
+    result = Win32::runApplication(this);
+#endif
+    shared = nullptr;
+    return result;
+}
+
+std::vector<std::string> Application::commandLineArguments()
+{
+    return commandLineArgs;
+}
+
+Application* Application::sharedInstance()
+{
+    return shared;
 }

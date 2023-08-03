@@ -177,6 +177,9 @@ namespace FV
 		virtual void* platformHandle() const = 0;
 
 		const WindowCallback& callback() const { return _callback; }
+
+		static std::shared_ptr<Window> makeWindow(const std::string& name, Style style, const WindowCallback& callback);
+
     protected:
 		WindowCallback _callback;
 

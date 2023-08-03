@@ -106,6 +106,10 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
     </Link>
+    <Lib>
+      <AdditionalDependencies>imm32.lib;vulkan-1.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>Libs/Vulkan/libs/Win32/x86_64</AdditionalLibraryDirectories>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -127,6 +131,10 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
     </Link>
+    <Lib>
+      <AdditionalDependencies>imm32.lib;vulkan-1.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>Libs/Vulkan/libs/Win32/x86_64</AdditionalLibraryDirectories>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -144,6 +152,10 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
     </Link>
+    <Lib>
+      <AdditionalDependencies>imm32.lib;vulkan-1.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>Libs/Vulkan/libs/Win32/x86_64</AdditionalLibraryDirectories>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -165,6 +177,10 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
     </Link>
+    <Lib>
+      <AdditionalDependencies>imm32.lib;vulkan-1.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>Libs/Vulkan/libs/Win32/x86_64</AdditionalLibraryDirectories>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
@@ -193,6 +209,7 @@
     <ClInclude Include="Framework\GPUBuffer.h" />
     <ClInclude Include="Framework\GPUResource.h" />
     <ClInclude Include="Framework\GraphicsDevice.h" />
+    <ClInclude Include="Framework\GraphicsDeviceContext.h" />
     <ClInclude Include="Framework\Hash.h" />
     <ClInclude Include="Framework\Image.h" />
     <ClInclude Include="Framework\Logger.h" />
@@ -269,6 +286,7 @@
     <ClCompile Include="Framework\AudioSource.cpp" />
     <ClCompile Include="Framework\AudioStream.cpp" />
     <ClCompile Include="Framework\Compression.cpp" />
+    <ClCompile Include="Framework\GraphicsDeviceContext.cpp" />
     <ClCompile Include="Framework\Hash.cpp" />
     <ClCompile Include="Framework\Image.cpp" />
     <ClCompile Include="Framework\Logger.cpp" />

@@ -91,15 +91,15 @@ bool CommandQueue::waitIdle()
 	return vkQueueWaitIdle(queue) == VK_SUCCESS;
 }
 
-uint32_t CommandQueue::type() const
+uint32_t CommandQueue::flags() const
 {
-	VkQueueFlags flags = family->properties.queueFlags;
-	uint32_t type = 0;
-	if (flags & VK_QUEUE_GRAPHICS_BIT)
-		type = type | Graphics;
-	if (flags & VK_QUEUE_COMPUTE_BIT)
-		type = type | Compute;
-	return type;
+	VkQueueFlags queueFlags = family->properties.queueFlags;
+	uint32_t flags = Copy; /* Copy = 0 */
+	if (queueFlags & VK_QUEUE_GRAPHICS_BIT)
+		flags = flags | Render;
+	if (queueFlags & VK_QUEUE_COMPUTE_BIT)
+		flags = flags | Compute;
+	return flags;
 }
 
 std::shared_ptr<FV::GraphicsDevice> CommandQueue::device() const

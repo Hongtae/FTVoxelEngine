@@ -4,6 +4,7 @@
 #include "Application.h"
 #include "Window.h"
 #include "Logger.h"
+#include "VirtualKey.h"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -180,6 +181,23 @@ namespace FV::Win32
         {
             PostThreadMessageW(mainThreadID, WM_NULL, 0, 0);
         }
+    }
+
+    std::vector<std::string> commandLineArguments()
+    {
+        std::vector<std::string> result;
+        int argc = 0;
+        LPWSTR* args = ::CommandLineToArgvW(::GetCommandLineW(), &argc);
+        if (args)
+        {
+            result.reserve(argc);
+            for (int i = 0; i < argc; ++i)
+            {
+                std::wstring warg = args[i];
+                result.push_back(toUTF8(warg));
+            }
+        }
+        return result;
     }
 }
 #endif //#ifdef _WIN32

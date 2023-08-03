@@ -22,7 +22,7 @@ namespace FV::Vulkan
 
 		bool waitIdle();
 
-		uint32_t type() const override;
+		uint32_t flags() const override;
 		std::shared_ptr<FV::GraphicsDevice> device() const override;
 
 		QueueFamily* family;

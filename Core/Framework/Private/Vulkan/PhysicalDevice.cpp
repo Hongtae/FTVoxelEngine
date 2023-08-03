@@ -42,12 +42,6 @@ PhysicalDeviceDescription::PhysicalDeviceDescription(VkPhysicalDevice dev)
     vkGetPhysicalDeviceProperties2(device, &properties);
     this->properties = properties.properties;
 
-    enumerateNextChain(properties.pNext, [this](auto sType, auto ptr)
-        {
-            if (sType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_3_PROPERTIES_EXT)
-                this->extendedDynamicState3Properties = *(VkPhysicalDeviceExtendedDynamicState3PropertiesEXT*)ptr;
-        });
-
     VkPhysicalDeviceMemoryProperties memoryProperties = {};
     vkGetPhysicalDeviceMemoryProperties(device, &memoryProperties);
     this->memory = memoryProperties;
@@ -61,21 +55,6 @@ PhysicalDeviceDescription::PhysicalDeviceDescription(VkPhysicalDevice dev)
 
     vkGetPhysicalDeviceFeatures2(device, &features);
     this->features = features.features;
-
-    enumerateNextChain(features.pNext, [this](auto sType, auto ptr)
-        {
-            switch (sType)
-            {
-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES:
-                this->timelineSemaphoreFeatures = *(VkPhysicalDeviceTimelineSemaphoreFeatures*)ptr;
-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT:
-                this->extendedDynamicStateFeatures = *(VkPhysicalDeviceExtendedDynamicStateFeaturesEXT*)ptr;
-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_2_FEATURES_EXT:
-                this->extendedDynamicState2Features = *(VkPhysicalDeviceExtendedDynamicState2FeaturesEXT*)ptr;
-            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_3_FEATURES_EXT:
-                this->extendedDynamicState3Features = *(VkPhysicalDeviceExtendedDynamicState3FeaturesEXT*)ptr;
-            }
-        });
 
     this->devicePriority = 0;
     switch (properties.properties.deviceType)
@@ -147,14 +126,19 @@ std::string PhysicalDeviceDescription::description() const
     {
     case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
         deviceType = "INTEGRATED_GPU";
+        break;
     case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
         deviceType = "DISCRETE_GPU";
+        break;
     case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
         deviceType = "VIRTUAL_GPU";
+        break;
     case VK_PHYSICAL_DEVICE_TYPE_CPU:
         deviceType = "CPU";
+        break;
     default:
         deviceType = "UNKNOWN";
+        break;
     }
 
     std::string apiVersion = std::format("{:d}.{:d}.{:d}",

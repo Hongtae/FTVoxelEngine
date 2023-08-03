@@ -29,16 +29,15 @@ namespace
 
 using namespace FV::Vulkan;
 
-#define FVCORE_PRINT_VULKAN_LAYERS 1
-#define FVCORE_PRINT_VULKAN_EXTENSIONS 1
-#define FVCORE_PRINT_VULKAN_DEVICE_EXTENSIONS 1
-
 GraphicsDevice::GraphicsDevice(std::shared_ptr<VulkanInstance> ins,
                                const PhysicalDeviceDescription& pd,
                                std::vector<std::string> requiredExtensions,
                                std::vector<std::string> optionalExtensions)
     : instance(ins)
     , physicalDevice(pd)
+    , device(VK_NULL_HANDLE)
+    , pipelineCache(VK_NULL_HANDLE)
+    , extensionProc{}
 {
     std::vector<float> queuePriority = std::vector<float>(physicalDevice.maxQueues, 0.0f);
 
@@ -161,14 +160,14 @@ GraphicsDevice::GraphicsDevice(std::shared_ptr<VulkanInstance> ins,
                                   instance->allocationCallback, &device);
     if (err != VK_SUCCESS)
     {
-        Log::error(std::format("vkCreateDescriptorPool failed: {}",
+        Log::error(std::format("vkCreateDevice failed: {}",
                                getVkResultString(err)));
         throw std::runtime_error("vkCreateDevice failed");
     }
     this->device = device;
     this->extensionProc.load(device);
 
-    this->deviceMemoryTypes.resize(physicalDevice.memory.memoryHeapCount);
+    this->deviceMemoryTypes.resize(physicalDevice.memory.memoryTypeCount);
     for (uint32_t i = 0; i < physicalDevice.memory.memoryTypeCount; ++i)
     {
         this->deviceMemoryTypes.at(i) = physicalDevice.memory.memoryTypes[i];
@@ -257,7 +256,7 @@ GraphicsDevice::~GraphicsDevice()
 std::shared_ptr<FV::CommandQueue> GraphicsDevice::makeCommandQueue(uint32_t flags)
 {
 	uint32_t queueFlags = 0;
-	if (flags & CommandQueue::Graphics)
+	if (flags & CommandQueue::Render)
 		queueFlags = queueFlags | VK_QUEUE_GRAPHICS_BIT;
 	if (flags & CommandQueue::Compute)
 		queueFlags = queueFlags | VK_QUEUE_COMPUTE_BIT;

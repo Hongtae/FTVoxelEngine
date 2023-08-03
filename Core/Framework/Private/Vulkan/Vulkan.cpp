@@ -26,17 +26,17 @@ VkBool32 VKAPI_PTR debugUtilsMessengerCallback(
     }
     if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
     {
-        prefix += "INFO:";
+        prefix += "INFO: ";
         level = Level::Info;
     }
     if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
     {
-        prefix += "WARNING:";
+        prefix += "WARNING: ";
         level = Level::Warning;
     }
     if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
     {
-        prefix += "ERROR:";
+        prefix += "ERROR: ";
         level = Level::Error;
     }
 
@@ -56,17 +56,22 @@ VkBool32 VKAPI_PTR debugUtilsMessengerCallback(
 
     if (auto logger = vulkanDebugLogger.lock())
     {
-        logger->log(level, std::format("type:{}{} [{:x}]{}", type, prefix,
-            pCallbackData->pMessageIdName,
-            pCallbackData->messageIdNumber,
-            pCallbackData->pMessage));
+        logger->log(
+            level,
+            std::format("[{}]({:d}){}",
+                        pCallbackData->pMessageIdName,
+                        pCallbackData->messageIdNumber,
+                        pCallbackData->pMessage));
     }
     else
     {
-        FV::Log::log(level, std::format("type:{}{} [{:x}]{}", type, prefix,
-            pCallbackData->pMessageIdName,
-            pCallbackData->messageIdNumber,
-            pCallbackData->pMessage));
+        FV::Log::log(
+            level,
+            std::format("[Vulkan {}{}] [{}]({:d}){}",
+                        type, prefix,
+                        pCallbackData->pMessageIdName,
+                        pCallbackData->messageIdNumber,
+                        pCallbackData->pMessage));
     }
     return VK_FALSE;
 }
@@ -108,11 +113,10 @@ std::shared_ptr<VulkanInstance> VulkanInstance::makeInstance(
             getVkResultString(err)));
         return nullptr;
     }
-    Log::info(std::format("Vulkan Instance Version: {:d}.{:d}.{:d} ({:d})",
-        (uint32_t)VK_VERSION_MAJOR(instanceVersion),
-        (uint32_t)VK_VERSION_MINOR(instanceVersion),
-        (uint32_t)VK_VERSION_PATCH(instanceVersion),
-        instanceVersion));
+    Log::info(std::format("Vulkan Instance Version: {:d}.{:d}.{:d}",
+                          VK_VERSION_MAJOR(instanceVersion),
+                          VK_VERSION_MINOR(instanceVersion),
+                          VK_VERSION_PATCH(instanceVersion)));
 
     // checking layers
     auto availableLayers = []()
@@ -169,7 +173,8 @@ std::shared_ptr<VulkanInstance> VulkanInstance::makeInstance(
 
     std::shared_ptr output = std::make_shared<VulkanInstance>();
     output->allocationCallback = allocationCallback;
-    output->debugLogger = std::make_shared<VulkanLogger>();
+    //output->debugLogger = std::make_shared<VulkanLogger>();
+    //vulkanDebugLogger = output->debugLogger;
 
     for (auto& layer : availableLayers)
     {
@@ -252,18 +257,36 @@ std::shared_ptr<VulkanInstance> VulkanInstance::makeInstance(
             if (enableLayersForEnabledExtensions)
             {
                 requiredLayers.insert(requiredLayers.end(),
-                    iter->second.begin(), iter->second.end());
-            }
-            else
-            {
-                Log::warning(std::format(
-                    "Instance extension: {} not supported, but required.",
-                    ext));
+                                      iter->second.begin(), iter->second.end());
             }
         }
+        else
+        {
+            Log::warning(std::format(
+                "Instance extension: {} not supported, but required.", ext));
+        }
     }
+    // add layers for optional extensions
+    for (auto& ext : optionalExtensions)
+    {
+        if (auto iter = output->extensionSupportLayers.find(ext);
+            iter != output->extensionSupportLayers.end())
+        {
+            if (enableLayersForEnabledExtensions)
+            {
+                optionalLayers.insert(optionalLayers.end(),
+                                      iter->second.begin(), iter->second.end());
+            }
+        }
+        else
+        {
+            Log::warning(std::format("Instance extension: {} not supported.",
+                                     ext));
+        }
+    }
+
     // setup layer, merge extension list
-    std::vector<std::string> enabledLayers;
+    std::vector<const char*> enabledLayers;
     for (auto& layer : optionalLayers)
     {
         if (output->layers.contains(layer))
@@ -273,11 +296,11 @@ std::shared_ptr<VulkanInstance> VulkanInstance::makeInstance(
     }
     for (auto& layer : requiredLayers)
     {
-        enabledLayers.push_back(layer);
+        enabledLayers.push_back(layer.c_str());
         if (output->layers.contains(layer) == false)
         {
             Log::warning(std::format("Layer: {} not supported, but required",
-                layer));
+                                     layer));
         }
     }
     // setup instance extensions!
@@ -286,16 +309,15 @@ std::shared_ptr<VulkanInstance> VulkanInstance::makeInstance(
     {
         for (auto& item : enabledLayers)
         {
-            if (auto it = output->layers.find(item);
-                it != output->layers.end())
+            if (auto it = output->layers.find(item); it != output->layers.end())
             {
                 std::transform(it->second.extensions.begin(),
-                    it->second.extensions.end(),
-                    std::back_inserter(optionalExtensions),
-                    [](const auto& pair)
-                    {
-                        return pair.first;
-                    });
+                               it->second.extensions.end(),
+                               std::back_inserter(optionalExtensions),
+                               [](const auto& pair)
+                               {
+                                   return pair.first;
+                               });
             }
         }
     }
@@ -334,6 +356,11 @@ std::shared_ptr<VulkanInstance> VulkanInstance::makeInstance(
     if (enabledLayers.empty() == false)
     {
         instanceCreateInfo.enabledLayerCount = enabledLayers.size();
+        instanceCreateInfo.ppEnabledLayerNames = enabledLayers.data();
+    }
+    if (enabledExtensions.empty() == false)
+    {
+        instanceCreateInfo.enabledExtensionCount = enabledExtensions.size();
         instanceCreateInfo.ppEnabledExtensionNames = enabledExtensions.data();
     }
 
@@ -468,6 +495,7 @@ VulkanInstance::VulkanInstance()
     : instance(nullptr)
     , allocationCallback(nullptr)
     , debugMessenger(VK_NULL_HANDLE)
+    , extensionProc{}
 {
 }
 
@@ -487,8 +515,53 @@ VulkanInstance::~VulkanInstance()
     }
 }
 
-std::shared_ptr<FV::GraphicsDevice> VulkanInstance::makeDevice()
+std::shared_ptr<FV::GraphicsDevice> VulkanInstance::makeDevice(
+    const std::string& identifier,
+    std::vector<std::string> requiredExtensions,
+    std::vector<std::string> optionalExtensions)
 {
+    if (auto iter = std::find_if(physicalDevices.begin(), physicalDevices.end(),
+                                 [&](const auto& device)
+                                 {
+                                     return device.registryID().compare(identifier) == 0;
+                                 }); iter != physicalDevices.end())
+    {
+        const auto& device = *iter;
+        try
+        {
+            return std::make_shared<GraphicsDevice>(shared_from_this(),
+                                                    device,
+                                                    requiredExtensions,
+                                                    optionalExtensions);
+        }
+        catch (const std::exception& err)
+        {
+            Log::error(std::format("GrahicsDevice creation failed: {}",
+                                   err.what()));
+        }
+    }
+    return nullptr;
+}
+
+std::shared_ptr<FV::GraphicsDevice> VulkanInstance::makeDevice(
+    std::vector<std::string> requiredExtensions,
+    std::vector<std::string> optionalExtensions)
+{
+    for (auto& device : this->physicalDevices)
+    {
+        try
+        {
+            return std::make_shared<GraphicsDevice>(shared_from_this(),
+                                                    device,
+                                                    requiredExtensions,
+                                                    optionalExtensions);
+        }
+        catch (const std::exception& err)
+        {
+            Log::error(std::format("GrahicsDevice creation failed: {}",
+                                   err.what()));
+        }
+    }
     return nullptr;
 }
 

@@ -14,7 +14,8 @@ namespace FV
 	public:
 		enum TypeFlags : uint32_t
 		{
-            Graphics = 1,
+			Copy = 0,
+			Render = 1,
             Compute = 1 << 1,
 		};
 
@@ -23,7 +24,7 @@ namespace FV
 		virtual std::shared_ptr<CommandBuffer> makeCommandBuffer() = 0;
 		virtual std::shared_ptr<SwapChain> makeSwapChain(std::shared_ptr<Window>) = 0;
 
-		virtual uint32_t type() const = 0;
+		virtual uint32_t flags() const = 0;
 		virtual std::shared_ptr<GraphicsDevice> device() const = 0;
     };
 
