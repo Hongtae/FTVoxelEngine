@@ -232,6 +232,7 @@
     <ClInclude Include="Framework\Private\Vulkan\Vulkan.h" />
     <ClInclude Include="Framework\Private\Win32\Application.h" />
     <ClInclude Include="Framework\Private\Win32\DropTarget.h" />
+    <ClInclude Include="Framework\Private\Win32\Logger.h" />
     <ClInclude Include="Framework\Private\Win32\VirtualKey.h" />
     <ClInclude Include="Framework\Private\Win32\Window.h" />
     <ClInclude Include="Framework\Quaternion.h" />
@@ -303,6 +304,7 @@
     <ClCompile Include="Framework\Private\Vulkan\Vulkan.cpp" />
     <ClCompile Include="Framework\Private\Win32\Application.cpp" />
     <ClCompile Include="Framework\Private\Win32\DropTarget.cpp" />
+    <ClCompile Include="Framework\Private\Win32\Logger.cpp" />
     <ClCompile Include="Framework\Private\Win32\Window.cpp" />
     <ClCompile Include="Framework\Quaternion.cpp" />
     <ClCompile Include="Framework\Rect.cpp" />

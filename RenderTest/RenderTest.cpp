@@ -11,12 +11,14 @@ class RenderTestApp : public Application
 public:
     void initialize() override
     {
+        Log::debug("OnInitialize");
 
+        this->terminate(1234);
     }
 
     void finalize() override
     {
-
+        Log::debug("OnFinalize");
     }
 };
 
@@ -27,4 +29,3 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 {
     return RenderTestApp().run();
 }
-

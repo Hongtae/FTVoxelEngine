@@ -8,6 +8,9 @@ using namespace FV;
 
 void Application::terminate(int exitCode)
 {
+#ifdef _WIN32
+    Win32::terminateApplication(exitCode);
+#endif
 }
 
 int Application::run()

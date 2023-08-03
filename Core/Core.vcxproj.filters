@@ -290,6 +290,9 @@
     <ClInclude Include="Framework\Private\Win32\Application.h">
       <Filter>Private\Win32</Filter>
     </ClInclude>
+    <ClInclude Include="Framework\Private\Win32\Logger.h">
+      <Filter>Private\Win32</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -453,6 +456,9 @@
     </ClCompile>
     <ClCompile Include="Framework\Window.cpp">
       <Filter>Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Private\Win32\Logger.cpp">
+      <Filter>Private\Win32</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

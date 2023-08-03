@@ -1,6 +1,9 @@
+#include <chrono>
+#include <ctime>
+#include <iomanip>
 #include "Application.h"
 #include "Window.h"
-#include "../../Logger.h"
+#include "Logger.h"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -50,6 +53,8 @@ namespace FV::Win32
     int runApplication(FV::Application* app)
     {
         std::scoped_lock guard(mainLoopLock);
+        auto logger = std::make_shared<Win32::Logger>();
+        logger->bind(false);
 
         mainThreadID = ::GetCurrentThreadId();
 
@@ -96,10 +101,13 @@ namespace FV::Win32
         if (app)
             app->initialize();
 
-        UINT_PTR timerID = 0;
+        auto timezone = std::chrono::current_zone();
+        auto const initializedAt = std::chrono::system_clock::now();
+        Log::info(std::format("Application initialized at: {}",
+                              timezone->to_local(initializedAt)));
+
         MSG	msg;
         BOOL ret;
-
         PostMessageW(NULL, WM_NULL, 0, 0); // To process first enqueued events.
         while ((ret = GetMessageW(&msg, nullptr, 0, 0)) != 0)
         {
@@ -133,16 +141,22 @@ namespace FV::Win32
                 }
             }
         }
-        if (timerID)
-            ::KillTimer(nullptr, timerID);
 
         if (app)
             app->finalize();
+
+        auto const finalizedAt = std::chrono::system_clock::now();
+        auto running = finalizedAt - initializedAt;
+
+        Log::info(std::format("Application finalized at: {} ({} seconds)",
+                              timezone->to_local(finalizedAt),
+                              std::chrono::duration<double>(running).count()));
 
         if (keyboardHook)
             ::UnhookWindowsHookEx(keyboardHook);
         keyboardHook = nullptr;
 
+        logger->unbind();
         mainThreadID = 0;
 
         return exitCode;
