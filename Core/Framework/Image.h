@@ -2,6 +2,10 @@
 #include "../include.h"
 #include <vector>
 #include <functional>
+#include <string>
+
+#include "Texture.h"
+#include "CommandQueue.h"
 
 namespace FV
 {
@@ -41,24 +45,32 @@ namespace FV
         Quadratic,
     };
 
-	class FVCORE_API Image 
+	class FVCORE_API Image : public std::enable_shared_from_this<Image>
 	{
     public:
-        Image();
+        Image(uint32_t width, uint32_t height, ImagePixelFormat, const void* data);
+        Image(const void* encoded, size_t);
+        Image(const std::vector<uint8_t>& encodedData);
+        Image(const char* path);
         ~Image();
 
-        uint32_t width;
-        uint32_t height;
-        uint32_t depth;
+        const uint32_t width;
+        const uint32_t height;
+        const ImagePixelFormat pixelFormat;
 
-        ImagePixelFormat pixelFormat;
         uint32_t bytesPerPixel() const;
 
         bool canEncode(ImageFormat format) const;
         bool encode(ImageFormat format, std::function<void(void*, size_t)>) const;
 
+        std::shared_ptr<Image> resample(ImagePixelFormat) const;
         std::shared_ptr<Image> resample(uint32_t width, uint32_t height, ImagePixelFormat format, ImageInterpolation interpolation) const;
+
+        std::shared_ptr<Texture> makeTexture(std::shared_ptr<CommandQueue>) const;
     private:
         std::vector<uint8_t> data;
+
+        struct _DecodeContext;
+        Image(_DecodeContext);
 	};
 }
