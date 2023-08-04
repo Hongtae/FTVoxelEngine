@@ -7,7 +7,7 @@
 #pragma pack(push, 4)
 namespace FV
 {
-    struct Color
+    struct FVCORE_API Color
     {
 		union RGBA32  ///< 32bit int format (RGBA order).
 		{
@@ -28,7 +28,7 @@ namespace FV
 
 		Color() : r(0.0f), g(0.0f), b(0.0f), a(1.0f) {}
 		Color(const Color& c) : r(c.r), g(c.g), b(c.b), a(c.a) {}
-		Color(float _r, float _g, float _b, float _a)
+		Color(float _r, float _g, float _b, float _a = 1.0f)
 			: r(_r), g(_g), b(_b), a(_a) {}
 		Color(RGBA32 rgba)
 			: r(static_cast<float>(rgba.r) / 255.0f)
@@ -82,6 +82,36 @@ namespace FV
 
 		Vector4 vector4() const { return Vector4(r, g, b, a); }
 
+		// predefined values
+        static const Color black;
+        static const Color white;
+        static const Color blue;
+        static const Color brown;
+        static const Color cyan;
+        static const Color gray;
+        static const Color darkGray;
+        static const Color lightGray;
+        static const Color green;
+        static const Color magenta;
+        static const Color orange;
+        static const Color purple;
+        static const Color red;
+        static const Color yellow;
+        static const Color clear;
+
+        static const Color nonLinearRed;
+        static const Color nonLinearOrange;
+        static const Color nonLinearYellow;
+        static const Color nonLinearGreen;
+        static const Color nonLinearMint;
+        static const Color nonLinearTeal;
+        static const Color nonLinearCyan;
+        static const Color nonLinearBlue;
+        static const Color nonLinearIndigo;
+        static const Color nonLinearPurple;
+        static const Color nonLinearPink;
+        static const Color nonLinearBrown;
+        static const Color nonLinearGray;
     };
 }
 #pragma pack(pop)

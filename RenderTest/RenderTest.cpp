@@ -65,6 +65,16 @@ public:
 
         while (stop.stop_requested() == false)
         {
+            auto rp = swapchain->currentRenderPassDescriptor();
+            rp.colorAttachments.front().clearColor = Color::nonLinearMint;
+
+            auto buffer = queue->makeCommandBuffer();
+            auto encoder = buffer->makeRenderCommandEncoder(rp);
+            encoder->endEncoding();
+            buffer->commit();
+            
+            swapchain->present();
+
             std::this_thread::sleep_for(std::chrono::duration<double>(1.0));
         }
     }

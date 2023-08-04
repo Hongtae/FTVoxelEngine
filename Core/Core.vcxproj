@@ -285,6 +285,7 @@
     <ClCompile Include="Framework\AudioPlayer.cpp" />
     <ClCompile Include="Framework\AudioSource.cpp" />
     <ClCompile Include="Framework\AudioStream.cpp" />
+    <ClCompile Include="Framework\Color.cpp" />
     <ClCompile Include="Framework\Compression.cpp" />
     <ClCompile Include="Framework\GraphicsDeviceContext.cpp" />
     <ClCompile Include="Framework\Hash.cpp" />

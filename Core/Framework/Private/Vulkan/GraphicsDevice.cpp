@@ -229,6 +229,7 @@ GraphicsDevice::~GraphicsDevice()
 
     vkDeviceWaitIdle(device);
     fenceCompletionThread.request_stop();
+    fenceCompletionCond.notify_all();
     fenceCompletionThread.join();
 
     FVASSERT_DEBUG(pendingFenceCallbacks.empty());

@@ -466,5 +466,8 @@
     <ClCompile Include="Framework\GraphicsDeviceContext.cpp">
       <Filter>Framework</Filter>
     </ClCompile>
+    <ClCompile Include="Framework\Color.cpp">
+      <Filter>Framework</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
