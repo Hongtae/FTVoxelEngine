@@ -296,6 +296,9 @@
     <ClInclude Include="Framework\GraphicsDeviceContext.h">
       <Filter>Framework</Filter>
     </ClInclude>
+    <ClInclude Include="Framework\Unicode.h">
+      <Filter>Framework</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -467,6 +470,9 @@
       <Filter>Framework</Filter>
     </ClCompile>
     <ClCompile Include="Framework\Color.cpp">
+      <Filter>Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Unicode.cpp">
       <Filter>Framework</Filter>
     </ClCompile>
   </ItemGroup>

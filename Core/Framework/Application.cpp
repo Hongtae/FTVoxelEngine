@@ -6,7 +6,7 @@
 
 namespace {
     FV::Application* shared;
-    std::vector<std::string> commandLineArgs;
+    std::vector<std::u8string> commandLineArgs;
 }
 
 using namespace FV;
@@ -20,23 +20,29 @@ void Application::terminate(int exitCode)
 
 int Application::run()
 {
-    std::vector<std::string> args;
+    std::vector<std::u8string> args;
 #ifdef _WIN32
     args = Win32::commandLineArguments();
 #endif
     return run(args);
 }
 
-int Application::run(int argc, char** argv)
+int Application::run(int argc, char8_t** argv)
 {
-    std::vector<std::string> args;
+    std::vector<std::u8string> args;
     args.reserve(argc);
     for (int i = 0; i < argc; ++i)
         args.push_back(argv[i]);
     return run(args);
 }
 
-int Application::run(std::vector<std::string> args)
+int Application::run(int argc, wchar_t** argv)
+{
+    std::vector<std::u8string> args;
+    return run(args);
+}
+
+int Application::run(std::vector<std::u8string> args)
 {
     commandLineArgs = std::move(args);
     shared = this;
@@ -49,7 +55,7 @@ int Application::run(std::vector<std::string> args)
     return result;
 }
 
-std::vector<std::string> Application::commandLineArguments()
+std::vector<std::u8string> Application::commandLineArguments()
 {
     return commandLineArgs;
 }
@@ -59,7 +65,7 @@ Application* Application::sharedInstance()
     return shared;
 }
 
-std::string Application::environmentPath(EnvironmentPath path)
+std::filesystem::path Application::environmentPath(EnvironmentPath path)
 {
 #ifdef _WIN32
     return Win32::environmentPath(path);

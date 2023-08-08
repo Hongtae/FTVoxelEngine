@@ -12,7 +12,7 @@ namespace FV::Win32
     class Window : public FV::Window, public std::enable_shared_from_this<Window>
     {
     public:
-        Window(const std::string& name, Style style, const WindowCallback& callback);
+        Window(const std::u8string& name, Style style, const WindowCallback& callback);
         ~Window();
 
 		bool isActivated() const override { return activated; }
@@ -34,8 +34,8 @@ namespace FV::Win32
 		void activate() override;
 		void minimize() override;
 
-		std::string title() const override;
-		void setTitle(const std::string&) override;
+		std::u8string title() const override;
+		void setTitle(const std::u8string&) override;
 
 		void showMouse(int deviceID, bool) override;
 		bool isMouseVisible(int deviceID) const override;
@@ -67,7 +67,7 @@ namespace FV::Win32
 		Rect bounds;
 		Rect frame;
 		float scaleFactor;
-		std::string name;
+		std::u8string name;
 
 		bool activated;
 		bool visible;

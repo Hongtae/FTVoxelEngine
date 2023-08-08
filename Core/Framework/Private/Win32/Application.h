@@ -12,7 +12,7 @@ namespace FV::Win32
 
     void postOperation(std::function<void()>);
 
-    std::vector<std::string> commandLineArguments();
-    std::string environmentPath(Application::EnvironmentPath);
+    std::vector<std::u8string> commandLineArguments();
+    std::u8string environmentPath(Application::EnvironmentPath);
 }
 #endif //#ifdef _WIN32

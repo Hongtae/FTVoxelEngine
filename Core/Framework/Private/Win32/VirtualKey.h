@@ -6,29 +6,6 @@
 
 namespace FV::Win32
 {
-    inline std::string toUTF8(const std::wstring& wstr)
-    {
-        int length = WideCharToMultiByte(CP_ACP, 0, wstr.data(), -1, NULL, 0, NULL, NULL);
-        if (length <= 0)
-            return {};
-
-        std::string result;
-        result.resize(length);
-        WideCharToMultiByte(CP_ACP, 0, wstr.data(), -1, (LPSTR)result.data(), length, NULL, NULL);
-        return result;
-    }
-    inline std::wstring toUTF16(const std::string& str)
-    {
-        int length = MultiByteToWideChar(CP_UTF8, 0, str.data(), -1, NULL, 0);
-        if (length <= 0)
-            return {};
-
-        std::wstring result;
-        result.resize(length);
-        MultiByteToWideChar(CP_UTF8, 0, str.data(), -1, (LPWSTR)result.data(), length);
-        return result;
-    }
-
     inline VirtualKey getVirtualKey(int key)
     {
         switch (key)

@@ -69,7 +69,7 @@ namespace FV
 			std::weak_ptr<Window> window;
 			int deviceId;
 			VirtualKey key;
-			std::string text;
+			std::u8string text;
 		};
 
 		/// Window event, reposition, resize etc.
@@ -120,7 +120,7 @@ namespace FV
 		/// Callback function is required for some events that cannot be processed asynchronously.
 		struct WindowCallback
 		{
-			using DragOperationCallback = std::function<DragOperation(Window*, DraggingState, const Point&, const std::vector<std::string>&)>;
+			using DragOperationCallback = std::function<DragOperation(Window*, DraggingState, const Point&, const std::vector<std::u8string>&)>;
 			DragOperationCallback draggingFeedback;
 			std::function<Size(Window*)> contentMinSize;
 			std::function<Size(Window*)> contentMaxSize;
@@ -149,8 +149,8 @@ namespace FV
 		virtual void activate() = 0;
 		virtual void minimize() = 0;
 
-		virtual std::string title() const = 0;
-		virtual void setTitle(const std::string&) = 0;
+		virtual std::u8string title() const = 0;
+		virtual void setTitle(const std::u8string&) = 0;
 
 		virtual void showMouse(int deviceID, bool) = 0;
 		virtual bool isMouseVisible(int deviceID) const = 0;
@@ -178,7 +178,7 @@ namespace FV
 
 		const WindowCallback& callback() const { return _callback; }
 
-		static std::shared_ptr<Window> makeWindow(const std::string& name, Style style, const WindowCallback& callback);
+		static std::shared_ptr<Window> makeWindow(const std::u8string& name, Style style, const WindowCallback& callback);
 
     protected:
 		WindowCallback _callback;

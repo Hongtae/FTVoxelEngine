@@ -14,7 +14,6 @@ namespace FV::Win32
 
         void log(Level level, const std::string& mesg) const override;
 
-        void writeLog(WORD attr, const char* str) const;
         void writeLog(WORD attr, const wchar_t* str) const;
 
         HANDLE console;

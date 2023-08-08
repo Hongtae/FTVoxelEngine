@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <thread>
+#include <filesystem>
 #include <FVCore.h>
 
 using namespace FV;
@@ -17,14 +18,16 @@ public:
     std::jthread renderThread;
 
     std::shared_ptr<GraphicsDeviceContext> graphicsContext;
+    std::filesystem::path appResourcesRoot;
 
     void initialize() override
     {
-        Log::debug("OnInitialize");
+        appResourcesRoot = environmentPath(EnvironmentPath::AppRoot) / "RenderTest.Resources";
+        Log::debug(std::format("App-Resources: \"{}\"", appResourcesRoot.generic_u8string()));
 
         graphicsContext = GraphicsDeviceContext::makeDefault();
 
-        window = Window::makeWindow("RenderTest",
+        window = Window::makeWindow(u8"RenderTest",
                                     Window::StyleGenericWindow,
                                     Window::WindowCallback
         {
@@ -49,8 +52,6 @@ public:
 
     void finalize() override
     {
-        Log::debug("OnFinalize");
-
         renderThread.join();
         window = nullptr;
         graphicsContext = nullptr;

@@ -25,7 +25,7 @@ namespace FV::Win32
         STDMETHODIMP DragLeave();
         STDMETHODIMP Drop(IDataObject* pdto, DWORD grfKeyState, POINTL ptl, DWORD* pdwEffect);
 
-        std::vector<std::string> filesFromDataObject(IDataObject*);
+        std::vector<std::u8string> filesFromDataObject(IDataObject*);
 
     private:
         POINT lastPosition;
@@ -34,7 +34,7 @@ namespace FV::Win32
         BOOL dropAllowed;
         BOOL periodicUpdate;
         LONG refCount;
-        std::vector<std::string> source;
+        std::vector<std::u8string> source;
         Window* target;
     };
 }

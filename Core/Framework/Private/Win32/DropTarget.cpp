@@ -1,6 +1,6 @@
 #include <string>
+#include "../../Unicode.h"
 #include "DropTarget.h"
-#include "VirtualKey.h"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -211,9 +211,9 @@ HRESULT DropTarget::Drop(IDataObject* pDataObject, DWORD grfKeyState, POINTL pt,
 	return S_OK;
 }
 
-std::vector<std::string> DropTarget::filesFromDataObject(IDataObject* pDataObject)
+std::vector<std::u8string> DropTarget::filesFromDataObject(IDataObject* pDataObject)
 {
-	std::vector<std::string> filenames;
+	std::vector<std::u8string> filenames;
 
 	FORMATETC fmte = { CF_HDROP, NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
 	STGMEDIUM stgm;

@@ -1,6 +1,7 @@
 #include <cmath>
 #include <algorithm>
 #include "../../Logger.h"
+#include "../../Unicode.h"
 #include "Window.h"
 #include "VirtualKey.h"
 #include "DropTarget.h"
@@ -34,7 +35,7 @@ namespace
         return 1.0f;
     }
 
-    std::string win32ErrorString(DWORD code)
+    std::u8string win32ErrorString(DWORD code)
     {
         LPVOID lpMsgBuf;
         ::FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, nullptr, code,
@@ -42,11 +43,11 @@ namespace
 
         std::wstring ret = (const wchar_t*)lpMsgBuf;
         ::LocalFree(lpMsgBuf);
-        return toUTF8(ret);
+        return FV::toUTF8(ret);
     }
 }
 
-Window::Window(const std::string& title, Style s, const WindowCallback& cb)
+Window::Window(const std::u8string& title, Style s, const WindowCallback& cb)
     : FV::Window(cb)
     , hWnd(nullptr)
     , dropTarget(nullptr)
@@ -102,7 +103,7 @@ Window::Window(const std::string& title, Style s, const WindowCallback& cb)
     DWORD dwStyleEx = 0;
 
     hWnd = CreateWindowExW(dwStyleEx, FV_WindowClass,
-                           toUTF16(name).c_str(), dwStyle,
+                           (const wchar_t*)toUTF16(name).c_str(), dwStyle,
                            CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
                            nullptr, nullptr, GetModuleHandleW(nullptr), 0);
 
@@ -304,7 +305,7 @@ void Window::minimize()
         ::ShowWindow(hWnd, SW_MINIMIZE);
 }
 
-std::string Window::title() const 
+std::u8string Window::title() const 
 {
     if (hWnd)
     {
@@ -320,11 +321,11 @@ std::string Window::title() const
     return name; 
 }
 
-void Window::setTitle(const std::string& title)
+void Window::setTitle(const std::u8string& title)
 {
     if (hWnd)
     {
-        ::SetWindowTextW(hWnd, toUTF16(title).c_str());
+        ::SetWindowTextW(hWnd, (const wchar_t*)toUTF16(title).c_str());
     }
     name = title;
 }
@@ -413,7 +414,7 @@ void Window::resetKeyStates()
         {
             postKeyboardEvent({
                 KeyboardEvent::KeyUp,
-                weak_from_this(), 0, key, "" });
+                weak_from_this(), 0, key, u8"" });
         }
     }
 
@@ -421,7 +422,7 @@ void Window::resetKeyStates()
     {
         postKeyboardEvent({
             KeyboardEvent::KeyUp,
-            weak_from_this(), 0, VirtualKey::Capslock, "" });
+            weak_from_this(), 0, VirtualKey::Capslock, u8"" });
     }
 
     BYTE tmp[256];
@@ -505,7 +506,7 @@ void Window::synchronizeKeyStates()
             {
                 postKeyboardEvent({
                     KeyboardEvent::KeyDown,
-                    weak_from_this(), 0, key, "" });
+                    weak_from_this(), 0, key, u8"" });
 
                 keyboardStates.set(index);
             }
@@ -516,7 +517,7 @@ void Window::synchronizeKeyStates()
             {
                 postKeyboardEvent({
                     KeyboardEvent::KeyUp,
-                    weak_from_this(), 0, key, "" });
+                    weak_from_this(), 0, key, u8"" });
 
                 keyboardStates.reset(index);
             }
@@ -529,7 +530,7 @@ void Window::synchronizeKeyStates()
         {
             postKeyboardEvent({
                 KeyboardEvent::KeyDown,
-                weak_from_this(), 0, VirtualKey::Capslock, "" });
+                weak_from_this(), 0, VirtualKey::Capslock, u8"" });
 
             keyboardStates.set(std::size_t(VirtualKey::Capslock));
         }
@@ -540,7 +541,7 @@ void Window::synchronizeKeyStates()
         {
             postKeyboardEvent({
                 KeyboardEvent::KeyUp,
-                weak_from_this(), 0, VirtualKey::Capslock, "" });
+                weak_from_this(), 0, VirtualKey::Capslock, u8"" });
 
             keyboardStates.reset(std::size_t(VirtualKey::Capslock));
         }
@@ -1060,7 +1061,7 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                         KeyboardEvent::TextComposition, 
                         window->weak_from_this(),
                         window->keyboardID,
-                        VirtualKey::None, ""});
+                        VirtualKey::None, u8""});
                 }
                 if (lParam & GCS_COMPSTR) // composition in progress.
                 {
@@ -1091,7 +1092,7 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                                     KeyboardEvent::TextComposition,
                                     window->weak_from_this(),
                                     window->keyboardID,
-                                    VirtualKey::None, ""});
+                                    VirtualKey::None, u8""});
                             }
                         }
                         else // not text-input mode.

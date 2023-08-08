@@ -44,6 +44,7 @@
 #include "Framework/ShaderResource.h"
 #include "Framework/SwapChain.h"
 #include "Framework/Texture.h"
+#include "Framework/Unicode.h"
 #include "Framework/Vector2.h"
 #include "Framework/Vector3.h"
 #include "Framework/Vector4.h"

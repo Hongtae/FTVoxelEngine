@@ -265,6 +265,7 @@
     <ClInclude Include="Framework\ShaderResource.h" />
     <ClInclude Include="Framework\SwapChain.h" />
     <ClInclude Include="Framework\Texture.h" />
+    <ClInclude Include="Framework\Unicode.h" />
     <ClInclude Include="Framework\Vector2.h" />
     <ClInclude Include="Framework\Vector3.h" />
     <ClInclude Include="Framework\Vector4.h" />
@@ -328,6 +329,7 @@
     <ClCompile Include="Framework\Quaternion.cpp" />
     <ClCompile Include="Framework\Rect.cpp" />
     <ClCompile Include="Framework\Shader.cpp" />
+    <ClCompile Include="Framework\Unicode.cpp" />
     <ClCompile Include="Framework\Vector2.cpp" />
     <ClCompile Include="Framework\Vector3.cpp" />
     <ClCompile Include="Framework\Vector4.cpp" />

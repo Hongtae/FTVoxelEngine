@@ -65,7 +65,7 @@ void Window::postWindowEvent(const WindowEvent& event)
             handler(event);
 }
 
-std::shared_ptr<Window> Window::makeWindow(const std::string& name, Style style, const WindowCallback& cb)
+std::shared_ptr<Window> Window::makeWindow(const std::u8string& name, Style style, const WindowCallback& cb)
 {
     try
     {

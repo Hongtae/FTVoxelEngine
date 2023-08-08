@@ -2,6 +2,7 @@
 #include "../include.h"
 #include <vector>
 #include <string>
+#include <filesystem>
 
 namespace FV
 {
@@ -29,12 +30,13 @@ namespace FV
 
         void terminate(int exitCode);
         int run();
-        int run(int argc, char** argv);
-        int run(std::vector<std::string>);
+        int run(int argc, char8_t** argv);
+        int run(int argc, wchar_t** argv);
+        int run(std::vector<std::u8string>);
 
         static Application* sharedInstance();
-        static std::vector<std::string> commandLineArguments();
+        static std::vector<std::u8string> commandLineArguments();
 
-        static std::string environmentPath(EnvironmentPath);
+        static std::filesystem::path environmentPath(EnvironmentPath);
     };
 }

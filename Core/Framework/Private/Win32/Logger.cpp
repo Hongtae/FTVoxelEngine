@@ -1,5 +1,5 @@
 #include "Logger.h"
-#include "VirtualKey.h"
+#include "../../Unicode.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -107,21 +107,8 @@ void Logger::log(Level level, const std::string& mesg) const
         mesg2 += "\n";
 
     auto ws = toUTF16(mesg2);
-    ::OutputDebugStringW(ws.c_str());
-    writeLog(attr, ws.c_str());
-}
-
-void Logger::writeLog(WORD attr, const char* str) const
-{
-    if (console)
-    {
-        SetConsoleTextAttribute(console, attr);
-        DWORD dwWritten = 0;
-        WriteConsoleA(console, str, (DWORD)strlen(str), &dwWritten, 0);
-        return;
-    }
-    else
-        printf(str);
+    ::OutputDebugStringW((const wchar_t*)ws.c_str());
+    writeLog(attr, (const wchar_t*)ws.c_str());
 }
 
 void Logger::writeLog(WORD attr, const wchar_t* str) const

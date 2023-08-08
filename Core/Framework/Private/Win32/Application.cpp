@@ -2,10 +2,10 @@
 #include <ctime>
 #include <iomanip>
 #include <string>
+#include "../../Unicode.h"
 #include "Application.h"
 #include "Window.h"
 #include "Logger.h"
-#include "VirtualKey.h"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -186,9 +186,9 @@ namespace FV::Win32
         }
     }
 
-    std::vector<std::string> commandLineArguments()
+    std::vector<std::u8string> commandLineArguments()
     {
-        std::vector<std::string> result;
+        std::vector<std::u8string> result;
         int argc = 0;
         LPWSTR* args = ::CommandLineToArgvW(::GetCommandLineW(), &argc);
         if (args)
@@ -203,10 +203,10 @@ namespace FV::Win32
         return result;
     }
 
-    std::string environmentPath(Application::EnvironmentPath aep)
+    std::u8string environmentPath(Application::EnvironmentPath aep)
     {
         WCHAR path[MAX_PATH];
-        auto getWindowsFolder = [&path](std::initializer_list<int> folders)->std::string
+        auto getWindowsFolder = [&path](std::initializer_list<int> folders)->std::u8string
         {
             ITEMIDLIST* pidl;
             for (int fid : folders)
@@ -217,7 +217,7 @@ namespace FV::Win32
                     return toUTF8(path);
                 }
             }
-            return "C:\\";
+            return (const char8_t*)"C:\\";
         };
 
         switch (aep)
@@ -238,7 +238,7 @@ namespace FV::Win32
                     return toUTF8(path);
                 }
             }
-            return "C:\\";
+            return (const char8_t*)"C:\\";
             break;
         case Application::EnvironmentPath::AppData:			// application's data
             return getWindowsFolder({ CSIDL_APPDATA, CSIDL_LOCAL_APPDATA, CSIDL_COMMON_APPDATA });
