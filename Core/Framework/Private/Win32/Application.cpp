@@ -1,6 +1,7 @@
 #include <chrono>
 #include <ctime>
 #include <iomanip>
+#include <string>
 #include "Application.h"
 #include "Window.h"
 #include "Logger.h"
@@ -8,7 +9,9 @@
 
 #ifdef _WIN32
 #include <Windows.h>
-
+#include <tchar.h>
+#include <Sddl.h>
+#include <shlobj.h>
 
 namespace FV::Win32
 {
@@ -198,6 +201,71 @@ namespace FV::Win32
             }
         }
         return result;
+    }
+
+    std::string environmentPath(Application::EnvironmentPath aep)
+    {
+        WCHAR path[MAX_PATH];
+        auto getWindowsFolder = [&path](std::initializer_list<int> folders)->std::string
+        {
+            ITEMIDLIST* pidl;
+            for (int fid : folders)
+            {
+                if (SHGetSpecialFolderLocation(NULL, fid | CSIDL_FLAG_CREATE, &pidl) == NOERROR &&
+                    SHGetPathFromIDListW(pidl, path))
+                {
+                    return toUTF8(path);
+                }
+            }
+            return "C:\\";
+        };
+
+        switch (aep)
+        {
+        case Application::EnvironmentPath::SystemRoot:		// system root, (boot volume)
+            ::GetWindowsDirectoryW(path, MAX_PATH);
+            path[2] = NULL;
+            return toUTF8(path);
+            break;
+        case Application::EnvironmentPath::AppRoot:			// root directory of executable
+        case Application::EnvironmentPath::AppResource:
+        case Application::EnvironmentPath::AppExecutable:
+            for (DWORD len = ::GetModuleFileNameW(::GetModuleHandle(NULL), path, MAX_PATH); len > 0; len--)
+            {
+                if (path[len - 1] == L'\\')
+                {
+                    path[len - 1] = L'\0';
+                    return toUTF8(path);
+                }
+            }
+            return "C:\\";
+            break;
+        case Application::EnvironmentPath::AppData:			// application's data
+            return getWindowsFolder({ CSIDL_APPDATA, CSIDL_LOCAL_APPDATA, CSIDL_COMMON_APPDATA });
+            break;
+        case Application::EnvironmentPath::UserHome:		// user's home dir
+            return getWindowsFolder({ CSIDL_PROFILE, CSIDL_MYDOCUMENTS, CSIDL_DESKTOPDIRECTORY });
+            break;
+        case Application::EnvironmentPath::UserDocuments:	// user's documents dir
+            return getWindowsFolder({ CSIDL_MYDOCUMENTS, CSIDL_PROFILE, CSIDL_DESKTOPDIRECTORY });
+            break;
+        case Application::EnvironmentPath::UserPreferences:	// user's setting(config) dir
+            return getWindowsFolder({ CSIDL_LOCAL_APPDATA, CSIDL_APPDATA, CSIDL_PROFILE });
+            break;
+        case Application::EnvironmentPath::UserCache:		// user's cache dir
+            return getWindowsFolder({ CSIDL_LOCAL_APPDATA, CSIDL_APPDATA, CSIDL_PROFILE });
+            break;
+        case Application::EnvironmentPath::UserTemp:		// user's temporary dir
+            do
+            {
+                DWORD ret = ::GetTempPathW(MAX_PATH, path);
+                if (ret > MAX_PATH || ret == 0)
+                    return getWindowsFolder({ CSIDL_PROFILE, CSIDL_MYDOCUMENTS, CSIDL_DESKTOPDIRECTORY });
+                return toUTF8(path);
+            } while (0);
+            break;
+        }
+        return toUTF8(path);
     }
 }
 #endif //#ifdef _WIN32

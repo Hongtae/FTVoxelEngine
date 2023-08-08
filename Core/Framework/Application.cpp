@@ -58,3 +58,11 @@ Application* Application::sharedInstance()
 {
     return shared;
 }
+
+std::string Application::environmentPath(EnvironmentPath path)
+{
+#ifdef _WIN32
+    return Win32::environmentPath(path);
+#endif
+    return {};
+}
