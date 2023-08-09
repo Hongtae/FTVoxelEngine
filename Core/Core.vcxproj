@@ -270,6 +270,7 @@
     <ClInclude Include="Framework\Vector3.h" />
     <ClInclude Include="Framework\Vector4.h" />
     <ClInclude Include="Framework\VertexDescriptor.h" />
+    <ClInclude Include="Framework\ViewProjection.h" />
     <ClInclude Include="Framework\VirtualKey.h" />
     <ClInclude Include="Framework\Window.h" />
     <ClInclude Include="FVCore.h" />

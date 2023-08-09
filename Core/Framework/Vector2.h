@@ -21,6 +21,8 @@ namespace FV
 
         Vector2 applying(const Matrix2&) const;
         Vector2 applying(const AffineTransform2&) const;
+        Vector2& apply(const Matrix2& m)          { *this = applying(m); return *this; }
+        Vector2& apply(const AffineTransform2& t) { *this = applying(t); return *this; }
 
         Vector2 normalized() const;
         Vector2& normalize() { *this = normalized(); return *this; }

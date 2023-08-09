@@ -49,5 +49,6 @@
 #include "Framework/Vector3.h"
 #include "Framework/Vector4.h"
 #include "Framework/VertexDescriptor.h"
+#include "Framework/ViewProjection.h"
 #include "Framework/VirtualKey.h"
 #include "Framework/Window.h"

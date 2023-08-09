@@ -22,6 +22,8 @@ namespace FV
 
         Vector3 applying(const Matrix3&) const;
         Vector3 applying(const AffineTransform3&) const;
+        Vector3& apply(const Matrix3& m)          { *this = applying(m); return *this; }
+        Vector3& apply(const AffineTransform3& t) { *this = applying(t); return *this; }
 
         Vector3 normalized() const;
         Vector3& normalize() { *this = normalized(); return *this; }
