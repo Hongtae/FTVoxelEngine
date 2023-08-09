@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{7fd2cf4c-4044-4012-b8bc-c448e8b9e85b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -45,5 +48,16 @@
     <Image Include="RenderTest.ico">
       <Filter>Resource Files</Filter>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\shaders\sample.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Resources\shaders\sample.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Resources\shaders\compileshaders.py">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

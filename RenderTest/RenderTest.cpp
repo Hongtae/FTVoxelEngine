@@ -7,7 +7,13 @@
 #include <memory>
 #include <thread>
 #include <filesystem>
+#include <chrono>
 #include <FVCore.h>
+
+#define TINYGLTF_IMPLEMENTATION
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "../Utils/tinygltf/tiny_gltf.h"
 
 using namespace FV;
 
@@ -57,12 +63,48 @@ public:
         graphicsContext = nullptr;
     }
 
+    bool loadModel(tinygltf::Model& model, std::filesystem::path path)
+    {
+        tinygltf::TinyGLTF loader;
+        std::string err, warn;
+        bool result = loader.LoadBinaryFromFile(&model, &err, &warn, path.generic_string());
+        if (warn.empty() == false)
+            Log::warning(std::format("glTF warning: {}", warn));
+        if (err.empty() == false)
+            Log::error(std::format("glTF error: {}", err));
+
+        return result;
+    }
+
+    bool loadShader(Shader& shader, std::filesystem::path path)
+    {
+        return false;
+    }
+
     void renderLoop(std::stop_token stop)
     {
         auto queue = graphicsContext->renderQueue();
         auto swapchain = queue->makeSwapChain(window);
         if (swapchain == nullptr)
             throw std::runtime_error("swapchain creation failed");
+
+        // load gltf
+        auto modelPath = this->appResourcesRoot / "glTF/Duck/glTF-Binary/Duck.glb";
+        tinygltf::Model model;
+        if (loadModel(model, modelPath) == false)
+            throw std::runtime_error("failed to load glTF");
+
+        // load shader
+        Shader vertexShader, fragmentShader;
+        auto vsPath = this->appResourcesRoot / "shaders/sample.vert.spv";
+        auto fsPath = this->appResourcesRoot / "shaders/sample.frag.spv";
+        if (loadShader(vertexShader, vsPath) == false)
+            throw std::runtime_error("failed to load shader");
+        if (loadShader(fragmentShader, fsPath) == false)
+            throw std::runtime_error("failed to load shader");
+
+        constexpr auto frameInterval = 1.0 / 60.0;
+        auto timestamp = std::chrono::high_resolution_clock::now();
 
         while (stop.stop_requested() == false)
         {
@@ -76,7 +118,19 @@ public:
             
             swapchain->present();
 
-            std::this_thread::sleep_for(std::chrono::duration<double>(1.0));
+            auto t = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> delta = t - timestamp;
+            timestamp = t;
+
+            auto interval = std::max(frameInterval - delta.count(), 0.0);
+            if (interval > 0.0)
+            {
+                std::this_thread::sleep_for(std::chrono::duration<double>(interval));
+            }
+            else
+            {
+                std::this_thread::yield();
+            }
         }
     }
 };
