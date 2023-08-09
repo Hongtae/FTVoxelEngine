@@ -20,6 +20,8 @@ namespace {
         virtual uint64_t remainLength() = 0;
         virtual uint64_t totalLength() = 0;
         virtual uint64_t read(void* buff, size_t) = 0;
+
+        DKStream* proxy;
     };
 
     class FileStreamSource : public StreamSource
@@ -108,9 +110,42 @@ namespace {
     {
         if (source)
         {
-            DKAudioStream* stream = new DKAudioStream();
+            DKStream* proxy = new DKStream{};
+            proxy->userContext = source;
+            proxy->read = [](void* p, void* buffer, size_t length)->uint64_t
+            {
+                StreamSource* source = (StreamSource*)p;
+                return source->read(buffer, length);
+            };
+            proxy->write = nullptr;
+            proxy->setPosition = [](void* p, uint64_t off)->uint64_t
+            {
+                StreamSource* source = (StreamSource*)p;
+                return source->setPosition(off);
+            };
+            proxy->getPosition = [](void* p)->uint64_t
+            {
+                StreamSource* source = (StreamSource*)p;
+                return source->getPosition();
+            };
+            proxy->remainLength = [](void* p)->uint64_t
+            {
+                StreamSource* source = (StreamSource*)p;
+                return source->remainLength();
+            };
+            proxy->totalLength = [](void* p)->uint64_t
+            {
+                StreamSource* source = (StreamSource*)p;
+                return source->totalLength();
+            };
 
-            return stream;
+            DKAudioStream* stream = DKAudioStreamCreate(source->proxy);
+            if (stream)
+            {
+                source->proxy = proxy;
+                return stream;
+            }
+            delete proxy;
         }
         return nullptr;
     }
@@ -119,8 +154,11 @@ namespace {
         if (stream)
         {
             StreamSource* src = (StreamSource*)(stream->userContext);
+            DKStream* proxy = src->proxy;
             DKAudioStreamDestroy(stream);
             delete stream;
+            delete proxy;
+            src->proxy = nullptr;
             return src;
         }
         return nullptr;

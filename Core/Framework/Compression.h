@@ -14,7 +14,6 @@ namespace FV
         Automatic, // Default method for compression, Auto-detected method for decompression.
     };
 
-
     struct FVCORE_API CompressionMethod
     {
         CompressionAlgorithm algorithm;
@@ -39,7 +38,7 @@ namespace FV
         UnknownFormat,
     };
 
-    CompressionResult FVCORE_API compress(std::istream input, size_t, std::ostream, CompressionMethod method = CompressionMethod::automatic);
-    CompressionResult FVCORE_API decompress(std::istream input, std::ostream, CompressionAlgorithm algorithm = CompressionAlgorithm::Automatic);
+    CompressionResult FVCORE_API compress(std::istream& input, std::ostream&, CompressionMethod method = CompressionMethod::automatic, size_t inputBytes = size_t(-1));
+    CompressionResult FVCORE_API decompress(std::istream& input, std::ostream&, CompressionAlgorithm algorithm = CompressionAlgorithm::Automatic);
 }
 
