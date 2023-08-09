@@ -197,7 +197,7 @@ namespace FV::Win32
             for (int i = 0; i < argc; ++i)
             {
                 std::wstring warg = args[i];
-                result.push_back(toUTF8(warg));
+                result.push_back(u8string(warg));
             }
         }
         return result;
@@ -214,7 +214,7 @@ namespace FV::Win32
                 if (SHGetSpecialFolderLocation(NULL, fid | CSIDL_FLAG_CREATE, &pidl) == NOERROR &&
                     SHGetPathFromIDListW(pidl, path))
                 {
-                    return toUTF8(path);
+                    return u8string(path);
                 }
             }
             return (const char8_t*)"C:\\";
@@ -225,7 +225,7 @@ namespace FV::Win32
         case Application::EnvironmentPath::SystemRoot:		// system root, (boot volume)
             ::GetWindowsDirectoryW(path, MAX_PATH);
             path[2] = NULL;
-            return toUTF8(path);
+            return u8string(path);
             break;
         case Application::EnvironmentPath::AppRoot:			// root directory of executable
         case Application::EnvironmentPath::AppResource:
@@ -235,7 +235,7 @@ namespace FV::Win32
                 if (path[len - 1] == L'\\')
                 {
                     path[len - 1] = L'\0';
-                    return toUTF8(path);
+                    return u8string(path);
                 }
             }
             return (const char8_t*)"C:\\";
@@ -261,11 +261,11 @@ namespace FV::Win32
                 DWORD ret = ::GetTempPathW(MAX_PATH, path);
                 if (ret > MAX_PATH || ret == 0)
                     return getWindowsFolder({ CSIDL_PROFILE, CSIDL_MYDOCUMENTS, CSIDL_DESKTOPDIRECTORY });
-                return toUTF8(path);
+                return u8string(path);
             } while (0);
             break;
         }
-        return toUTF8(path);
+        return u8string(path);
     }
 }
 #endif //#ifdef _WIN32

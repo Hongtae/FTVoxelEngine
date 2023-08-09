@@ -5,25 +5,66 @@
 
 namespace FV
 {
-    FVCORE_API std::u8string toUTF8(const char*, bool = true);
-    FVCORE_API std::u8string toUTF8(const wchar_t*, bool strict = true);
-    FVCORE_API std::u8string toUTF8(const char16_t*, bool strict = true);
-    FVCORE_API std::u8string toUTF8(const char32_t*, bool strict = true);
+    FVCORE_API std::string string(const std::string&, bool strict = true);
+    FVCORE_API std::string string(const std::wstring&, bool strict = true);
+    FVCORE_API std::string string(const std::u8string&, bool strict = true);
+    FVCORE_API std::string string(const std::u16string&, bool strict = true);
+    FVCORE_API std::string string(const std::u32string&, bool strict = true);
 
-    FVCORE_API std::u8string toUTF8(const std::string&, bool = true);
-    FVCORE_API std::u8string toUTF8(const std::wstring&, bool strict = true);
-    FVCORE_API std::u8string toUTF8(const std::u16string&, bool strict = true);
-    FVCORE_API std::u8string toUTF8(const std::u32string&, bool strict = true);
+    FVCORE_API std::wstring wstring(const std::string&, bool strict = true);
+    FVCORE_API std::wstring wstring(const std::wstring&, bool strict = true);
+    FVCORE_API std::wstring wstring(const std::u8string&, bool strict = true);
+    FVCORE_API std::wstring wstring(const std::u16string&, bool strict = true);
+    FVCORE_API std::wstring wstring(const std::u32string&, bool strict = true);
 
-    FVCORE_API std::u16string toUTF16(const std::string&, bool strict = true);
-    FVCORE_API std::u16string toUTF16(const std::wstring&, bool strict = true);
-    FVCORE_API std::u16string toUTF16(const std::u8string&, bool strict = true);
-    FVCORE_API std::u16string toUTF16(const std::u32string&, bool strict = true);
-     
-    FVCORE_API std::u32string toUTF32(const std::string&, bool strict = true);
-    FVCORE_API std::u32string toUTF32(const std::wstring&, bool strict = true);
-    FVCORE_API std::u32string toUTF32(const std::u8string&, bool strict = true);
-    FVCORE_API std::u32string toUTF32(const std::u16string&, bool strict = true);
+    FVCORE_API std::u8string u8string(const std::string&, bool strict = true);
+    FVCORE_API std::u8string u8string(const std::wstring&, bool strict = true);
+    FVCORE_API std::u8string u8string(const std::u8string&, bool strict = true);
+    FVCORE_API std::u8string u8string(const std::u16string&, bool strict = true);
+    FVCORE_API std::u8string u8string(const std::u32string&, bool strict = true);
+
+    FVCORE_API std::u16string u16string(const std::string&, bool strict = true);
+    FVCORE_API std::u16string u16string(const std::wstring&, bool strict = true);
+    FVCORE_API std::u16string u16string(const std::u8string&, bool strict = true);
+    FVCORE_API std::u16string u16string(const std::u16string&, bool strict = true);
+    FVCORE_API std::u16string u16string(const std::u32string&, bool strict = true);
+
+    FVCORE_API std::u32string u32string(const std::string&, bool strict = true);
+    FVCORE_API std::u32string u32string(const std::wstring&, bool strict = true);
+    FVCORE_API std::u32string u32string(const std::u8string&, bool strict = true);
+    FVCORE_API std::u32string u32string(const std::u16string&, bool strict = true);
+    FVCORE_API std::u32string u32string(const std::u32string&, bool strict = true);
+
+    template <typename T>
+    inline std::u8string toUTF8(const std::basic_string<T>& str)
+    {
+        return u8string(str);
+    }
+    template <typename T>
+    inline std::u16string toUTF16(const std::basic_string<T>& str)
+    {
+        return u16string(str);
+    }
+    template <typename T>
+    inline std::u32string toUTF32(const std::basic_string<T>& str)
+    {
+        return u32string(str);
+    }
+    template <typename T>
+    inline std::u8string toUTF8(const T* str)
+    {
+        return u8string(std::basic_string<T>(str));
+    }
+    template <typename T>
+    inline std::u8string toUTF16(const T* str)
+    {
+        return u16string(std::basic_string<T>(str));
+    }
+    template <typename T>
+    inline std::u8string toUTF32(const T* str)
+    {
+        return u32string(std::basic_string<T>(str));
+    }
 }
 
 #ifndef FVCORE_NO_UNICODE_FORMATTER
@@ -49,7 +90,7 @@ namespace std
     {
         auto format(const std::u16string& arg, format_context& ctx)
         {
-            return formatter<u8string>::format(FV::toUTF8(arg), ctx);
+            return formatter<u8string>::format(FV::u8string(arg), ctx);
         }
     };
 
@@ -65,7 +106,7 @@ namespace std
     {
         auto format(const std::u32string& arg, format_context& ctx)
         {
-            return formatter<u8string>::format(FV::toUTF8(arg), ctx);
+            return formatter<u8string>::format(FV::u8string(arg), ctx);
         }
     };
 

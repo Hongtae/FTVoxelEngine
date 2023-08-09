@@ -326,131 +326,39 @@ namespace
 
 namespace FV
 {
-    FVCORE_API std::u8string toUTF8(const char* input, bool)
+    template <typename T, size_t S=sizeof(T)> struct _WNativeString;
+    template <> struct _WNativeString<wchar_t, 4>
     {
-        size_t length = 0;
-        for (length = 0; input[length]; ++length) {}
+        static std::u32string get(const std::wstring& input)
+        {
+            return { reinterpret_cast<const char32_t*>(input.c_str()) };
+        }
+    };
+    template <> struct _WNativeString<wchar_t, 2>
+    {
+        static std::u16string get(const std::wstring& input)
+        {
+            return { reinterpret_cast<const char16_t*>(input.c_str()) };
+        }
+    };
+    using WNativeString = _WNativeString<wchar_t>;
 
-        return { input, input + length };
+    FVCORE_API std::string string(const std::string& input, bool strict)
+    {
+        return { input.c_str() };
     }
 
-    FVCORE_API std::u8string toUTF8(const wchar_t* input, bool strict)
+    FVCORE_API std::string string(const std::wstring& input, bool strict)
     {
-        size_t length = 0;
-        for (length = 0; input[length]; ++length) {}
-
-        std::vector<char8_t> output;
-
-        if (sizeof(wchar_t) == sizeof(char16_t))
-        {
-            output.reserve(length * 2);
-            if (convertUTF16toUTF8((const char16_t*)input,
-                                   (const char16_t*)(input + length),
-                                   strict,
-                                   [&](char8_t ch) {
-                                       output.push_back(ch);
-                                   }) == false)
-            {
-                return {};
-            }
-
-        }
-        else if (sizeof(wchar_t) == sizeof(char32_t))
-        {
-            output.reserve(length * 4);
-            if (convertUTF32toUTF8((const char32_t*)input,
-                                   (const char32_t*)(input + length),
-                                   strict,
-                                   [&](char8_t ch) {
-                                       output.push_back(ch);
-                                   }) == false)
-            {
-                return {};
-            }
-        }
-        return {};
+        return string(WNativeString::get(input), strict);
     }
 
-    FVCORE_API std::u8string toUTF8(const char16_t* input, bool strict)
+    FVCORE_API std::string string(const std::u8string& input, bool strict)
     {
-        size_t length = 0;
-        for (length = 0; input[length]; ++length) {}
-
-        std::vector<char8_t> output;
-        output.reserve(length * 2);
-
-        if (convertUTF16toUTF8(input,
-                               input + length,
-                               strict,
-                               [&](char8_t ch) {
-                                   output.push_back(ch);
-                               }) == false)
-        {
-            return {};
-        }
-        return { output.begin(), output.end() };
+        return { reinterpret_cast<const char*>(input.c_str()) };
     }
 
-    FVCORE_API std::u8string toUTF8(const char32_t* input, bool strict)
-    {
-        size_t length = 0;
-        for (length = 0; input[length]; ++length) {}
-
-        std::vector<char8_t> output;
-        output.reserve(length * 4);
-
-        if (convertUTF32toUTF8(input,
-                               input + length,
-                               strict,
-                               [&](char8_t ch) {
-                                   output.push_back(ch);
-                               }) == false)
-        {
-            return {};
-        }
-        return { output.begin(), output.end() };
-    }
-
-    FVCORE_API std::u8string toUTF8(const std::string& input, bool)
-    {
-        return { input.begin(), input.end() };
-    }
-
-    FVCORE_API std::u8string toUTF8(const std::wstring& input, bool strict)
-    {
-        auto length = input.size();
-        std::vector<char8_t> output;
-
-        if (sizeof(wchar_t) == sizeof(char16_t))
-        {
-            output.reserve(length * 2);
-            if (convertUTF16toUTF8((const char16_t*)input.data(),
-                                   (const char16_t*)(input.data() + length),
-                                   strict,
-                                   [&](char8_t ch) {
-                                       output.push_back(ch);
-                                   }) == false)
-            {
-                return {};
-            }
-        }
-        else if (sizeof(wchar_t) == sizeof(char32_t))
-        {
-            output.reserve(length * 4);
-            if (convertUTF32toUTF8((const char32_t*)input.data(),
-                                   (const char32_t*)(input.data() + length),
-                                   strict,
-                                   [&](char8_t ch) {
-                                       output.push_back(ch);
-                                   }) == false)
-            {
-                return {};
-            }
-        }
-        return { output.begin(), output.end() };
-    }
-
-    FVCORE_API std::u8string toUTF8(const std::u16string& input, bool strict)
+    FVCORE_API std::string string(const std::u16string& input, bool strict)
     {
         auto length = input.size();
         std::vector<char8_t> output;
@@ -468,7 +376,7 @@ namespace FV
         return { output.begin(), output.end() };
     }
 
-    FVCORE_API std::u8string toUTF8(const std::u32string& input, bool strict)
+    FVCORE_API std::string string(const std::u32string& input, bool strict)
     {
         auto length = input.size();
         std::vector<char8_t> output;
@@ -486,16 +394,93 @@ namespace FV
         return { output.begin(), output.end() };
     }
 
-    FVCORE_API std::u16string toUTF16(const std::string& input, bool strict)
+    FVCORE_API std::wstring wstring(const std::string& input, bool strict)
+    {
+        return wstring(std::u8string(input.begin(), input.end()), strict);
+    }
+
+    FVCORE_API std::wstring wstring(const std::wstring& input, bool strict)
+    {
+        return { input.c_str() };
+    }
+
+    FVCORE_API std::wstring wstring(const std::u8string& input, bool strict)
+    {
+        switch (sizeof(wchar_t))
+        {
+        case (sizeof(char16_t)):
+            do {
+                auto s = u16string(input, strict);
+                return { reinterpret_cast<const wchar_t*>(s.c_str()) };
+            } while (0);
+            break;
+        case (sizeof(char32_t)):
+            do {
+                auto s = u32string(input, strict);
+                return { reinterpret_cast<const wchar_t*>(s.c_str()) };
+            } while (0);
+            break;
+        }
+        return {};
+    }
+
+    FVCORE_API std::wstring wstring(const std::u16string& input, bool strict)
+    {
+        switch (sizeof(wchar_t))
+        {
+        case (sizeof(char16_t)):
+            return { reinterpret_cast<const wchar_t*>(input.c_str()) };
+        case (sizeof(char32_t)):
+            do {
+                auto s = u32string(input, strict);
+                return { reinterpret_cast<const wchar_t*>(s.c_str()) };
+            } while (0);
+            break;
+        }
+        return {};
+    }
+
+    FVCORE_API std::wstring wstring(const std::u32string& input, bool strict)
+    {
+        switch (sizeof(wchar_t))
+        {
+        case (sizeof(char16_t)):
+            do {
+                auto s = u16string(input, strict);
+                return { reinterpret_cast<const wchar_t*>(s.c_str()) };
+            } while (0);
+            break;
+        case (sizeof(char32_t)):
+            return { reinterpret_cast<const wchar_t*>(input.c_str()) };
+        }
+        return {};
+    }
+
+    FVCORE_API std::u8string u8string(const std::string& input, bool strict)
+    {
+        return { reinterpret_cast<const char8_t*>(input.c_str()) };
+    }
+
+    FVCORE_API std::u8string u8string(const std::wstring& input, bool strict)
+    {
+        return u8string(WNativeString::get(input), strict);
+    }
+
+    FVCORE_API std::u8string u8string(const std::u8string& input, bool strict)
+    {
+        return { input.c_str() };
+    }
+
+    FVCORE_API std::u8string u8string(const std::u16string& input, bool strict)
     {
         auto length = input.size();
-        std::vector<char16_t> output;
-        output.reserve(length);
+        std::vector<char8_t> output;
+        output.reserve(length * 2);
 
-        if (convertUTF8toUTF16((const char8_t*)input.data(),
-                               (const char8_t*)(input.data() + length),
+        if (convertUTF16toUTF8(input.data(),
+                               input.data() + length,
                                strict,
-                               [&](char16_t ch) {
+                               [&](char8_t ch) {
                                    output.push_back(ch);
                                }) == false)
         {
@@ -504,33 +489,35 @@ namespace FV
         return { output.begin(), output.end() };
     }
 
-    FVCORE_API std::u16string toUTF16(const std::wstring& input, bool strict)
+    FVCORE_API std::u8string u8string(const std::u32string& input, bool strict)
     {
-        if (sizeof(wchar_t) == sizeof(char16_t))
-        {
-            return { input.begin(), input.end() };
-        }
-        else if (sizeof(wchar_t) == sizeof(char32_t))
-        {
-            auto length = input.size();
-            std::vector<char16_t> output;
-            output.reserve(length);
+        auto length = input.size();
+        std::vector<char8_t> output;
+        output.reserve(length * 4);
 
-            if (convertUTF32toUTF16((const char32_t*)input.data(),
-                                   (const char32_t*)(input.data() + length),
-                                   strict,
-                                   [&](char16_t ch) {
-                                       output.push_back(ch);
-                                   }) == false)
-            {
-                return {};
-            }
-            return { output.begin(), output.end() };
+        if (convertUTF32toUTF8(input.data(),
+                               input.data() + length,
+                               strict,
+                               [&](char8_t ch) {
+                                   output.push_back(ch);
+                               }) == false)
+        {
+            return {};
         }
-        return {};
+        return { output.begin(), output.end() };
     }
 
-    FVCORE_API std::u16string toUTF16(const std::u8string& input, bool strict)
+    FVCORE_API std::u16string u16string(const std::string& input, bool strict)
+    {
+        return u16string(std::u8string(input.begin(), input.end()), strict);
+    }
+
+    FVCORE_API std::u16string u16string(const std::wstring& input, bool strict)
+    {
+        return u16string(WNativeString::get(input), strict);
+    }
+
+    FVCORE_API std::u16string u16string(const std::u8string& input, bool strict)
     {
         auto length = input.size();
         std::vector<char16_t> output;
@@ -548,69 +535,40 @@ namespace FV
         return { output.begin(), output.end() };
     }
 
-    FVCORE_API std::u16string toUTF16(const std::u32string& input, bool strict)
+    FVCORE_API std::u16string u16string(const std::u16string& input, bool strict)
+    {
+        return { input.c_str() };
+    }
+
+    FVCORE_API std::u16string u16string(const std::u32string& input, bool strict)
     {
         auto length = input.size();
         std::vector<char16_t> output;
         output.reserve(length);
 
         if (convertUTF32toUTF16(input.data(),
-                               input.data() + length,
-                               strict,
-                               [&](char16_t ch) {
-                                   output.push_back(ch);
-                               }) == false)
+                                input.data() + length,
+                                strict,
+                                [&](char16_t ch) {
+                                    output.push_back(ch);
+                                }) == false)
         {
             return {};
         }
         return { output.begin(), output.end() };
     }
 
-    FVCORE_API std::u32string toUTF32(const std::string& input, bool strict)
+    FVCORE_API std::u32string u32string(const std::string& input, bool strict)
     {
-        auto length = input.size();
-        std::vector<char32_t> output;
-        output.reserve(length);
-
-        if (convertUTF8toUTF32((const char8_t*)input.data(),
-                               (const char8_t*)(input.data() + length),
-                               strict,
-                               [&](char32_t ch) {
-                                   output.push_back(ch);
-                               }) == false)
-        {
-            return {};
-        }
-        return { output.begin(), output.end() };
+        return u32string(std::u8string(input.begin(), input.end()), strict);
     }
 
-    FVCORE_API std::u32string toUTF32(const std::wstring& input, bool strict)
+    FVCORE_API std::u32string u32string(const std::wstring& input, bool strict)
     {
-        if (sizeof(wchar_t) == sizeof(char16_t))
-        {
-            auto length = input.size();
-            std::vector<char32_t> output;
-            output.reserve(length);
-
-            if (convertUTF16toUTF32((const char16_t*)input.data(),
-                                    (const char16_t*)(input.data() + length),
-                                    strict,
-                                    [&](char32_t ch) {
-                                        output.push_back(ch);
-                                    }) == false)
-            {
-                return {};
-            }
-            return { output.begin(), output.end() };
-        }
-        else if (sizeof(wchar_t) == sizeof(char32_t))
-        {
-            return { input.begin(), input.end() };
-        }
-        return {};
+        return u32string(WNativeString::get(input), strict);
     }
 
-    FVCORE_API std::u32string toUTF32(const std::u8string& input, bool strict)
+    FVCORE_API std::u32string u32string(const std::u8string& input, bool strict)
     {
         auto length = input.size();
         std::vector<char32_t> output;
@@ -628,21 +586,26 @@ namespace FV
         return { output.begin(), output.end() };
     }
 
-    FVCORE_API std::u32string toUTF32(const std::u16string& input, bool strict)
+    FVCORE_API std::u32string u32string(const std::u16string& input, bool strict)
     {
         auto length = input.size();
         std::vector<char32_t> output;
         output.reserve(length);
 
         if (convertUTF16toUTF32(input.data(),
-                               input.data() + length,
-                               strict,
-                               [&](char32_t ch) {
-                                   output.push_back(ch);
-                               }) == false)
+                                input.data() + length,
+                                strict,
+                                [&](char32_t ch) {
+                                    output.push_back(ch);
+                                }) == false)
         {
             return {};
         }
         return { output.begin(), output.end() };
+    }
+
+    FVCORE_API std::u32string u32string(const std::u32string& input, bool strict)
+    {
+        return { input.c_str() };
     }
 }

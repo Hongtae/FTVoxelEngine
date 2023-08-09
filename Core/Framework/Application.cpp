@@ -1,4 +1,5 @@
 #include "Application.h"
+#include "Unicode.h"
 
 #ifdef _WIN32
 #include "Private/Win32/Application.h"
@@ -39,6 +40,9 @@ int Application::run(int argc, char8_t** argv)
 int Application::run(int argc, wchar_t** argv)
 {
     std::vector<std::u8string> args;
+    args.reserve(argc);
+    for (int i = 0; i < argc; ++i)
+        args.push_back(u8string(std::wstring(argv[i])));
     return run(args);
 }
 

@@ -43,7 +43,7 @@ namespace
 
         std::wstring ret = (const wchar_t*)lpMsgBuf;
         ::LocalFree(lpMsgBuf);
-        return FV::toUTF8(ret);
+        return FV::u8string(ret);
     }
 }
 
@@ -314,7 +314,7 @@ std::u8string Window::title() const
             std::wstring title;
             title.resize(len + 1);
             ::GetWindowTextW(hWnd, title.data(), len + 1);
-            return toUTF8(title);
+            return u8string(title);
         }
         return {};
     }
@@ -1044,7 +1044,7 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                         window->weak_from_this(),
                         window->keyboardID, 
                         VirtualKey::None,
-                        toUTF8(c) });
+                        u8string(c) });
                 }
                 return 0;
             case WM_IME_STARTCOMPOSITION:
@@ -1084,7 +1084,7 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                                     KeyboardEvent::TextComposition,
                                     window->weak_from_this(),
                                     window->keyboardID,
-                                    VirtualKey::None, toUTF8(compositionText) });
+                                    VirtualKey::None, u8string(compositionText) });
                             }
                             else // composition character's length become 0. (erased)
                             {

@@ -228,7 +228,7 @@ std::vector<std::u8string> DropTarget::filesFromDataObject(IDataObject* pDataObj
 			UINT r = DragQueryFileW(hdrop, i, buff, len + 1);
 			buff[r] = 0;
 
-			filenames.push_back(toUTF8(buff));
+			filenames.push_back(u8string(buff));
 
 			free(buff);
 		}
