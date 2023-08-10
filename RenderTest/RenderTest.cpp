@@ -10,9 +10,6 @@
 #include <chrono>
 #include <FVCore.h>
 
-#define TINYGLTF_IMPLEMENTATION
-#define STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../Utils/tinygltf/tiny_gltf.h"
 
 using namespace FV;

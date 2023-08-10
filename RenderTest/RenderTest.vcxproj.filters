@@ -16,6 +16,9 @@
     <Filter Include="Shaders">
       <UniqueIdentifier>{7fd2cf4c-4044-4012-b8bc-c448e8b9e85b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="tinygltf">
+      <UniqueIdentifier>{c55f4ca6-a78b-4b05-b530-cf3ed3bd7370}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -30,10 +33,25 @@
     <ClInclude Include="RenderTest.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\Utils\tinygltf\json.hpp">
+      <Filter>tinygltf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utils\tinygltf\stb_image.h">
+      <Filter>tinygltf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utils\tinygltf\stb_image_write.h">
+      <Filter>tinygltf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utils\tinygltf\tiny_gltf.h">
+      <Filter>tinygltf</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="RenderTest.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utils\tinygltf\tiny_gltf.cc">
+      <Filter>tinygltf</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

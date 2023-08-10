@@ -175,12 +175,17 @@ xcopy /Y /D /R /Q /E "$(ProjectDir)Resources" "$(OutDir)$(ProjectName).Resources
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\Utils\tinygltf\json.hpp" />
+    <ClInclude Include="..\Utils\tinygltf\stb_image.h" />
+    <ClInclude Include="..\Utils\tinygltf\stb_image_write.h" />
+    <ClInclude Include="..\Utils\tinygltf\tiny_gltf.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="RenderTest.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\Utils\tinygltf\tiny_gltf.cc" />
     <ClCompile Include="RenderTest.cpp" />
   </ItemGroup>
   <ItemGroup>
