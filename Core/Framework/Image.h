@@ -3,7 +3,7 @@
 #include <vector>
 #include <functional>
 #include <string>
-
+#include <filesystem>
 #include "Texture.h"
 #include "CommandQueue.h"
 
@@ -51,7 +51,7 @@ namespace FV
         Image(uint32_t width, uint32_t height, ImagePixelFormat, const void* data);
         Image(const void* encoded, size_t);
         Image(const std::vector<uint8_t>& encodedData);
-        Image(const char* path);
+        Image(const std::filesystem::path& path);
         ~Image();
 
         const uint32_t width;

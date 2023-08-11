@@ -73,9 +73,17 @@ public:
         return result;
     }
 
-    bool loadShader(Shader& shader, std::filesystem::path path)
+    std::shared_ptr<ShaderFunction> loadShader(std::filesystem::path path, GraphicsDevice* device)
     {
-        return false;
+        if (Shader shader(path); shader.validate())
+        {
+            if (auto module = device->makeShaderModule(shader); module)
+            {
+                auto names = module->functionNames();
+                return module->makeFunction(names.front());
+            }
+        }
+        return nullptr;
     }
 
     void renderLoop(std::stop_token stop)
@@ -92,12 +100,13 @@ public:
             throw std::runtime_error("failed to load glTF");
 
         // load shader
-        Shader vertexShader, fragmentShader;
         auto vsPath = this->appResourcesRoot / "shaders/sample.vert.spv";
         auto fsPath = this->appResourcesRoot / "shaders/sample.frag.spv";
-        if (loadShader(vertexShader, vsPath) == false)
+        auto vertexShader = loadShader(vsPath, queue->device().get());
+        if (vertexShader == nullptr)
             throw std::runtime_error("failed to load shader");
-        if (loadShader(fragmentShader, fsPath) == false)
+        auto fragmentShader = loadShader(fsPath, queue->device().get());
+        if (fragmentShader == nullptr)
             throw std::runtime_error("failed to load shader");
 
         constexpr auto frameInterval = 1.0 / 60.0;

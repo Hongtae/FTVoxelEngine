@@ -338,7 +338,7 @@ std::shared_ptr<FV::ShaderModule> GraphicsDevice::makeShaderModule(const FV::Sha
     VkShaderModuleCreateInfo shaderModuleCreateInfo = {
         VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO
     };
-    shaderModuleCreateInfo.codeSize = spvData.size();
+    shaderModuleCreateInfo.codeSize = spvData.size() * sizeof(uint32_t);
     shaderModuleCreateInfo.pCode = spvData.data();
     VkResult err = vkCreateShaderModule(this->device, &shaderModuleCreateInfo, this->allocationCallbacks(), &shaderModule);
     if (err != VK_SUCCESS)

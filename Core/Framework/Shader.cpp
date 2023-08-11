@@ -1,4 +1,6 @@
 #include <algorithm>
+#include <fstream>
+#include <iterator>
 #include "../Libs/SPIRV-Cross/spirv_cross.hpp"
 #include "../Libs/SPIRV-Cross/spirv_common.hpp"
 #include "Shader.h"
@@ -224,6 +226,29 @@ Shader::Shader()
 {
 }
 
+Shader::Shader(const std::filesystem::path& path)
+    : Shader()
+{
+    std::ifstream fs(path, std::ifstream::binary | std::ifstream::in);
+    if (fs.good())
+    {
+        std::vector<uint8_t> data((std::istreambuf_iterator<char>(fs)),
+                                  std::istreambuf_iterator<char>());
+        if (data.empty() == false)
+        {
+            auto words = data.size() / sizeof(uint32_t);
+            auto ir = reinterpret_cast<const uint32_t*>(data.data());
+            _data = std::vector<uint32_t>(&ir[0], &ir[words]);
+            if (compile() == false)
+            {
+                Log::error("shader compilation failed.");
+                _stage = ShaderStage::Unknown;
+                _data = {};
+            }
+        }
+    }
+}
+
 Shader::Shader(const std::vector<uint32_t>& spv)
     : Shader(spv.data(), spv.size())
 {
@@ -233,6 +258,12 @@ Shader::Shader(const uint32_t* ir, size_t words)
     : Shader()
 {
     _data = std::vector<uint32_t>(&ir[0], &ir[words]);
+    if (compile() == false)
+    {
+        Log::error("shader compilation failed.");
+        _stage = ShaderStage::Unknown;
+        _data = {};
+    }
 }
 
 Shader::~Shader()

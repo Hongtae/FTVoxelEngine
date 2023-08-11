@@ -27,7 +27,7 @@ namespace {
     class FileStreamSource : public StreamSource
     {
     public:
-        FileStreamSource(const std::string& path)
+        FileStreamSource(const std::filesystem::path& path)
             : file(path, std::ios::binary | std::ios::in | std::ios::ate)
         {
             if (file.good())
@@ -171,7 +171,7 @@ AudioStream::AudioStream()
     this->stream = allocStream(nullptr);
 }
 
-AudioStream::AudioStream(const std::string& path)
+AudioStream::AudioStream(const std::filesystem::path& path)
     : stream(nullptr)
 {
     this->stream = allocStream(new FileStreamSource(path));

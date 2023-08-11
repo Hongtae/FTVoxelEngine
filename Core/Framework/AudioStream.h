@@ -1,5 +1,6 @@
 #pragma once
 #include "../include.h"
+#include <filesystem>
 
 namespace FV
 {
@@ -17,7 +18,7 @@ namespace FV
     {
     public:
         AudioStream();
-        AudioStream(const std::string& path);
+        AudioStream(const std::filesystem::path& path);
         AudioStream(const void* data, size_t size);
         ~AudioStream();
 
