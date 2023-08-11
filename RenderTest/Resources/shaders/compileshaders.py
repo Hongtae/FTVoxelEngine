@@ -23,14 +23,14 @@ glslang_path = find_glslc()
 dir_path = os.path.dirname(os.path.realpath(__file__))
 dir_path = dir_path.replace('\\', '/')
 
+flags = "-O0"
+target = "--target-env=vulkan1.3"
+
 for root, dirs, files in os.walk(dir_path):
     for file in files:
         if file.endswith(".vert") or file.endswith(".frag") or file.endswith(".comp"):
             input_file = os.path.join(root, file)
             output_file = input_file + ".spv"
-
-            flags = "-g"
-            target = "--target-env=vulkan1.3"
 
             res = subprocess.run([glslang_path, input_file, "-o", output_file, flags, target], stdout=sys.stdout, stderr=sys.stderr)
             ret = res.check_returncode()

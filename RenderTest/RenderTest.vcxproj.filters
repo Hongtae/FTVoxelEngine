@@ -45,6 +45,9 @@
     <ClInclude Include="..\Utils\tinygltf\tiny_gltf.h">
       <Filter>tinygltf</Filter>
     </ClInclude>
+    <ClInclude Include="ShaderReflection.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="RenderTest.cpp">

@@ -182,6 +182,7 @@ xcopy /Y /D /R /Q /E "$(ProjectDir)Resources" "$(OutDir)$(ProjectName).Resources
     <ClInclude Include="framework.h" />
     <ClInclude Include="RenderTest.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="ShaderReflection.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>

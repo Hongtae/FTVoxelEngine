@@ -37,6 +37,7 @@ GraphicsDevice::GraphicsDevice(std::shared_ptr<VulkanInstance> ins,
     , physicalDevice(pd)
     , device(VK_NULL_HANDLE)
     , pipelineCache(VK_NULL_HANDLE)
+    , numberOfFences(0)
     , extensionProc{}
 {
     std::vector<float> queuePriority = std::vector<float>(physicalDevice.maxQueues, 0.0f);

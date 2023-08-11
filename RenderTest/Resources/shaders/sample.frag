@@ -1,11 +1,11 @@
 #version 450
 
-layout (binding = 0) uniform UBO 
+layout (push_constant) uniform Constants 
 {
 	mat4 transform;
 	vec3 lightDirection;
 	vec3 lightColor;
-} ubo;
+} pc;
 
 layout (binding = 1) uniform sampler2D tex;
 
@@ -17,6 +17,6 @@ layout (location = 0) out vec4 outFragColor;
 
 void main() 
 {
-	float lum = max(dot(normal, normalize(-ubo.lightDirection)), 0.0);
-	outFragColor = texture(tex, texCoord) * vec4(ubo.lightColor * (0.3 + 0.7 * lum), 1.0);
+	float lum = max(dot(normal, normalize(-pc.lightDirection)), 0.0);
+	outFragColor = texture(tex, texCoord) * vec4(pc.lightColor * (0.3 + 0.7 * lum), 1.0);
 }

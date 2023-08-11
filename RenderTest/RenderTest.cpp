@@ -11,6 +11,7 @@
 #include <FVCore.h>
 
 #include "../Utils/tinygltf/tiny_gltf.h"
+#include "ShaderReflection.h"
 
 using namespace FV;
 
@@ -77,6 +78,8 @@ public:
     {
         if (Shader shader(path); shader.validate())
         {
+            Log::info(std::format("Shader description: \"{}\"", path.generic_u8string()));
+            printShaderReflection(shader);
             if (auto module = device->makeShaderModule(shader); module)
             {
                 auto names = module->functionNames();

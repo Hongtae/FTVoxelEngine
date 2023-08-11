@@ -4,12 +4,12 @@ layout (location = 0) in vec3 inPos;
 layout (location = 1) in vec3 inNormal;
 layout (location = 2) in vec2 inTexCoord;
 
-layout (binding = 0) uniform UBO 
+layout (push_constant) uniform Constants 
 {
 	mat4 transform;
 	vec3 lightDirection;
 	vec3 lightColor;
-} ubo;
+} pc;
 
 layout (location = 0) out vec3 outNormal;
 layout (location = 1) out vec3 outColor;
@@ -22,8 +22,8 @@ out gl_PerVertex
 
 void main() 
 {
-	gl_Position = ubo.transform * vec4(inPos, 1.0);
-	outNormal = normalize(mat3(ubo.transform) * inNormal);
+	gl_Position = vec4(inPos, 1.0) * pc.transform;
+	outNormal = normalize(inNormal * mat3(pc.transform));
 	outColor = vec3(1, 1, 1);
 	outTexCoord = inTexCoord;
 }
