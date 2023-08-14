@@ -45,8 +45,8 @@ namespace FV
         Quadratic,
     };
 
-	class FVCORE_API Image : public std::enable_shared_from_this<Image>
-	{
+    class FVCORE_API Image : public std::enable_shared_from_this<Image>
+    {
     public:
         Image(uint32_t width, uint32_t height, ImagePixelFormat, const void* data);
         Image(const void* encoded, size_t);
@@ -72,5 +72,5 @@ namespace FV
 
         struct _DecodeContext;
         Image(_DecodeContext);
-	};
+    };
 }

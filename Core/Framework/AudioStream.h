@@ -22,10 +22,10 @@ namespace FV
         AudioStream(const void* data, size_t size);
         ~AudioStream();
 
-         size_t read(void*, size_t);
-         uint64_t seekRaw(uint64_t); ///< seek by stream pos
-         uint64_t seekPcm(uint64_t); ///< seek by PCM
-         double seekTime(double);    ///< seek by time
+        size_t read(void*, size_t);
+        uint64_t seekRaw(uint64_t); ///< seek by stream pos
+        uint64_t seekPcm(uint64_t); ///< seek by PCM
+        double seekTime(double);    ///< seek by time
 
         uint64_t rawPosition() const;
         uint64_t pcmPosition() const;
