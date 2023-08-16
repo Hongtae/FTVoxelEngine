@@ -533,7 +533,7 @@ std::shared_ptr<Texture> Image::makeTexture(std::shared_ptr<CommandQueue> queue)
     // create buffer for staging
     auto stgBuffer = device->makeBuffer(data.size(),
                                         GPUBuffer::StorageModeShared,
-                                        CPUCacheModeWriteOnly);
+                                        CPUCacheModeWriteCombined);
     if (stgBuffer == nullptr)
     {
         Log::error("Failed to make buffer object.");

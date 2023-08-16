@@ -49,7 +49,7 @@ namespace FV
         Quaternion operator * (const Quaternion& v) const	{ return concatenating(v); }
         Quaternion operator / (const Quaternion& v) const	{ return { x / v.x, y / v.y, z / v.z, w / v.w }; }
         Quaternion operator * (float f) const				{ return { x * f, y * f, z * f, w * f }; }
-        Quaternion operator / (float f) const				{ return (*this) * (1.0 / f); }
+        Quaternion operator / (float f) const				{ return (*this) * (1.0f / f); }
         Quaternion operator - () const						{ return { -x, -y, -z, -w }; }
 
         Quaternion& operator += (const Quaternion& v) { *this = (*this) + v; return *this; }

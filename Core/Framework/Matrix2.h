@@ -34,7 +34,7 @@ namespace FV
         Matrix2 operator * (const Matrix2& m) const { return concatenating(m); }
         Matrix2 operator / (const Matrix2& m) const { return concatenating(m.inverted()); }
         Matrix2 operator * (float f) const;
-        Matrix2 operator / (float f) const { return (*this) * (1.0 / f); }
+        Matrix2 operator / (float f) const { return (*this) * (1.0f / f); }
 
         Matrix2& operator += (const Matrix2& m) { *this = (*this) + m; return *this; }
         Matrix2& operator -= (const Matrix2& m) { *this = (*this) - m; return *this; }
