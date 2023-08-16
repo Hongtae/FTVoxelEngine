@@ -14,6 +14,8 @@ namespace FV::Vulkan
         Sampler(std::shared_ptr<GraphicsDevice>, VkSampler);
         ~Sampler();
 
+        std::shared_ptr<FV::GraphicsDevice> device() const override;
+
         std::shared_ptr<GraphicsDevice> gdevice;
         VkSampler sampler;
     };

@@ -4,37 +4,43 @@
 
 namespace FV
 {
+    enum class SamplerMinMagFilter
+    {
+        Nearest,
+        Linear
+    };
+
+    enum class SamplerMipFilter
+    {
+        NotMipmapped,
+        Nearest,
+        Linear
+    };
+
+    enum class SamplerAddressMode
+    {
+        ClampToEdge,
+        Repeat,
+        MirrorRepeat,
+        ClampToZero
+    };
+
     struct SamplerDescriptor
     {
-        enum MinMagFilter
-        {
-            MinMagFilterNearest,
-            MinMagFilterLinear,
-        };
-        enum MipFilter
-        {
-            MipFilterNotMipmapped,
-            MipFilterNearest,
-            MipFilterLinear,
-        };
-        enum AddressMode
-        {
-            AddressModeClampToEdge,
-            AddressModeRepeat,
-            AddressModeMirrorRepeat,
-            AddressModeClampToZero,
-        };
+        using MinMagFilter = SamplerMinMagFilter;
+        using MipFilter = SamplerMipFilter;
+        using AddressMode = SamplerAddressMode;
 
-        AddressMode addressModeU = AddressModeClampToEdge;
-        AddressMode addressModeV = AddressModeClampToEdge;
-        AddressMode addressModeW = AddressModeClampToEdge;
+        AddressMode addressModeU = AddressMode::ClampToEdge;
+        AddressMode addressModeV = AddressMode::ClampToEdge;
+        AddressMode addressModeW = AddressMode::ClampToEdge;
 
-        MinMagFilter minFilter = MinMagFilterNearest;
-        MinMagFilter magFilter = MinMagFilterNearest;
-        MipFilter mipFilter = MipFilterNotMipmapped;
+        MinMagFilter minFilter = MinMagFilter::Nearest;
+        MinMagFilter magFilter = MinMagFilter::Nearest;
+        MipFilter mipFilter = MipFilter::NotMipmapped;
 
-        float minLod = 0.0f;
-        float maxLod = 3.402823466e+38F; // FLT_MAX
+        float lodMinClamp = 0.0f;
+        float lodMaxClamp = 3.402823466e+38F; // FLT_MAX
 
         uint32_t maxAnisotropy = 1; /// Values must be between 1 and 16
 
@@ -44,9 +50,11 @@ namespace FV
         CompareFunction compareFunction = CompareFunctionNever;
     };
 
+    class GraphicsDevice;
     class SamplerState
     {
     public:
         virtual ~SamplerState() {}
+        virtual std::shared_ptr<GraphicsDevice> device() const = 0;
     };
 }

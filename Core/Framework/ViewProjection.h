@@ -71,13 +71,13 @@ namespace FV
             FVASSERT_DEBUG(farZ > 0.0);
             FVASSERT_DEBUG(farZ > nearZ);
 
-            auto f = 1.0 / std::tan(fov * 0.5);
+            auto f = 1.0f / std::tan(fov * 0.5f);
             return {
                 Matrix4(
                     f / aspect, 0, 0, 0,
                     0, f, 0, 0,
                     0, 0, (farZ + nearZ) / (nearZ - farZ), -1,
-                    0, 0, (2.0 * farZ * nearZ) / (nearZ - farZ), 0)
+                    0, 0, (2.0f * farZ * nearZ) / (nearZ - farZ), 0)
             };
         }
 
@@ -89,9 +89,9 @@ namespace FV
 
             return {
                 Matrix4(
-                    2.0 / width, 0, 0, 0,
-                    0, 2.0 / height, 0, 0,
-                    0, 0, 2.0 / (nearZ - farZ), 0,
+                    2.0f / width, 0, 0, 0,
+                    0, 2.0f / height, 0, 0,
+                    0, 0, 2.0f / (nearZ - farZ), 0,
                     0, 0, (farZ + nearZ) / (nearZ - farZ), 1)
             };
         }
