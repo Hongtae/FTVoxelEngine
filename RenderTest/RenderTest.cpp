@@ -11,7 +11,7 @@
 #include <FVCore.h>
 
 #include "../Utils/tinygltf/tiny_gltf.h"
-#include "ShaderReflection.h"
+#include "Model.h"
 
 using namespace FV;
 
@@ -61,46 +61,12 @@ public:
         graphicsContext = nullptr;
     }
 
-    bool loadModel(tinygltf::Model& model, std::filesystem::path path)
-    {
-        tinygltf::TinyGLTF loader;
-        std::string err, warn;
-        bool result = loader.LoadBinaryFromFile(&model, &err, &warn, path.generic_string());
-        if (warn.empty() == false)
-            Log::warning(std::format("glTF warning: {}", warn));
-        if (err.empty() == false)
-            Log::error(std::format("glTF error: {}", err));
-
-        return result;
-    }
-
-    std::shared_ptr<ShaderFunction> loadShader(std::filesystem::path path, GraphicsDevice* device)
-    {
-        if (Shader shader(path); shader.validate())
-        {
-            Log::info(std::format("Shader description: \"{}\"", path.generic_u8string()));
-            printShaderReflection(shader);
-            if (auto module = device->makeShaderModule(shader); module)
-            {
-                auto names = module->functionNames();
-                return module->makeFunction(names.front());
-            }
-        }
-        return nullptr;
-    }
-
     void renderLoop(std::stop_token stop)
     {
         auto queue = graphicsContext->renderQueue();
         auto swapchain = queue->makeSwapChain(window);
         if (swapchain == nullptr)
             throw std::runtime_error("swapchain creation failed");
-
-        // load gltf
-        auto modelPath = this->appResourcesRoot / "glTF/Duck/glTF-Binary/Duck.glb";
-        tinygltf::Model model;
-        if (loadModel(model, modelPath) == false)
-            throw std::runtime_error("failed to load glTF");
 
         // load shader
         auto vsPath = this->appResourcesRoot / "shaders/sample.vert.spv";
@@ -111,6 +77,32 @@ public:
         auto fragmentShader = loadShader(fsPath, queue->device().get());
         if (fragmentShader == nullptr)
             throw std::runtime_error("failed to load shader");
+
+
+        struct PushConstantBuffer
+        {
+            Matrix4 transform;
+            Vector3 lightDir;
+            Vector3 color;
+        };
+
+        // setup shader binding
+        MaterialShaderMap shader = {};
+        shader.bindings[MaterialShaderMap::BindingLocation::pushConstant(0).value] = ShaderUniformSemantic::UserDefined;
+        //shader.bindings[MaterialShaderMap::BindingLocation::pushConstant(0).value] = ShaderUniformSemantic::ModelViewProjectionMatrix;
+        //shader.bindings[MaterialShaderMap::BindingLocation::pushConstant(64).value] = ShaderUniformSemantic::DirectionalLightDirection;
+        //shader.bindings[MaterialShaderMap::BindingLocation::pushConstant(80).value] = ShaderUniformSemantic::DirectionalLightDiffuseColor;
+
+        shader.inputs[0] = VertexAttributeSemantic::Position;
+        shader.inputs[1] = VertexAttributeSemantic::Normal;
+        shader.inputs[2] = VertexAttributeSemantic::TextureCoordinates;
+        shader.functions = { vertexShader, fragmentShader };
+
+        // load gltf
+        auto modelPath = this->appResourcesRoot / "glTF/Duck/glTF-Binary/Duck.glb";
+        auto model = loadModel(modelPath, shader, queue.get());
+        if (model == nullptr)
+            throw std::runtime_error("failed to load glTF");
 
         constexpr auto frameInterval = 1.0 / 60.0;
         auto timestamp = std::chrono::high_resolution_clock::now();

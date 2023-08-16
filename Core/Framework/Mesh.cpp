@@ -34,6 +34,24 @@ VertexDescriptor Submesh::vertexDescriptor(const MaterialShaderMap& shaderMap) c
         }
         return {};
     };
+    auto findBufferIndexAttributeByName = [this](const std::string& name)->
+        std::optional<std::tuple<uint32_t, VertexAttribute>>
+    {
+        for (uint32_t index = 0; index < vertexBuffers.size(); ++index)
+        {
+            auto& vb = vertexBuffers.at(index);
+            if (vb.buffer == nullptr)
+                continue;
+            for (auto& attr : vb.attributes)
+            {
+                if (attr.name == name)
+                {
+                    return std::make_tuple(index, attr);
+                }
+            }
+        }
+        return {};
+    };
 
     std::vector<VertexAttributeDescriptor> attributes;
     attributes.reserve(vertexInputs.size());
@@ -42,9 +60,17 @@ VertexDescriptor Submesh::vertexDescriptor(const MaterialShaderMap& shaderMap) c
         if (input.enabled == false)
             continue;
 
-        auto it = attributeSemantics.find(input.location);
+        auto it = attributeSemantics.find(input.location);        
         auto semantic = (it != attributeSemantics.end()) ? it->second : VertexAttributeSemantic::UserDefined;
-        if (auto bufferIndexAttr = findBufferIndexAttribute(semantic); bufferIndexAttr)
+
+        std::optional<std::tuple<uint32_t, VertexAttribute>> bufferIndexAttr = {};
+        if (semantic == VertexAttributeSemantic::UserDefined && input.name.empty() == false)
+            bufferIndexAttr = findBufferIndexAttributeByName(input.name);
+
+        if (bufferIndexAttr.has_value() == false)
+            bufferIndexAttr = findBufferIndexAttribute(semantic);
+
+        if (bufferIndexAttr)
         {
             auto [bufferIndex, attr] = bufferIndexAttr.value();
             auto& buffer = vertexBuffers.at(bufferIndex);
