@@ -448,8 +448,11 @@ std::shared_ptr<Image> Image::resample(uint32_t width, uint32_t height, ImagePix
     return image;
 }
 
-std::shared_ptr<Texture> Image::makeTexture(std::shared_ptr<CommandQueue> queue) const
+std::shared_ptr<Texture> Image::makeTexture(CommandQueue* queue) const
 {
+    if (queue == nullptr)
+        return nullptr;
+
     PixelFormat textureFormat = PixelFormat::Invalid;
     ImagePixelFormat imageFormat = this->pixelFormat;
 
