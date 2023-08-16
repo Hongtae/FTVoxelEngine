@@ -528,7 +528,7 @@ std::shared_ptr<Texture> Image::makeTexture(CommandQueue* queue) const
             width,
             height,
             1, 1, 1, 1,
-            TextureUsageCopyDestination & TextureUsageSampled
+            TextureUsageCopyDestination | TextureUsageSampled
         });
     if (texture == nullptr)
         return nullptr;
