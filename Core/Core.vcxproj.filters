@@ -302,6 +302,9 @@
     <ClInclude Include="Framework\ViewProjection.h">
       <Filter>Framework</Filter>
     </ClInclude>
+    <ClInclude Include="Framework\Float16.h">
+      <Filter>Framework</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -479,6 +482,9 @@
       <Filter>Framework</Filter>
     </ClCompile>
     <ClCompile Include="Framework\BlendState.cpp">
+      <Filter>Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Float16.cpp">
       <Filter>Framework</Filter>
     </ClCompile>
   </ItemGroup>

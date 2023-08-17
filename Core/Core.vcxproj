@@ -206,6 +206,7 @@
     <ClInclude Include="Framework\ComputePipeline.h" />
     <ClInclude Include="Framework\CopyCommandEncoder.h" />
     <ClInclude Include="Framework\DepthStencil.h" />
+    <ClInclude Include="Framework\Float16.h" />
     <ClInclude Include="Framework\GPUBuffer.h" />
     <ClInclude Include="Framework\GPUResource.h" />
     <ClInclude Include="Framework\GraphicsDevice.h" />
@@ -290,6 +291,7 @@
     <ClCompile Include="Framework\BlendState.cpp" />
     <ClCompile Include="Framework\Color.cpp" />
     <ClCompile Include="Framework\Compression.cpp" />
+    <ClCompile Include="Framework\Float16.cpp" />
     <ClCompile Include="Framework\GraphicsDeviceContext.cpp" />
     <ClCompile Include="Framework\Hash.cpp" />
     <ClCompile Include="Framework\Image.cpp" />

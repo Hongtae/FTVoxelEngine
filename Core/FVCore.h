@@ -19,6 +19,7 @@
 #include "Framework/ComputePipeline.h"
 #include "Framework/CopyCommandEncoder.h"
 #include "Framework/DepthStencil.h"
+#include "Framework/Float16.h"
 #include "Framework/GPUBuffer.h"
 #include "Framework/GPUResource.h"
 #include "Framework/GraphicsDevice.h"
