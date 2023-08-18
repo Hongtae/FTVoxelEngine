@@ -1,6 +1,7 @@
 #include "Vector3.h"
 #include "Matrix3.h"
 #include "AffineTransform3.h"
+#include "Quaternion.h"
 
 using namespace FV;
 
@@ -30,7 +31,17 @@ Vector3 Vector3::applying(const Matrix3& m) const
 
 Vector3 Vector3::applying(const AffineTransform3& t) const
 {
-	return applying(t.linear) + t.translation;
+	return applying(t.matrix3) + t.translation;
+}
+
+Vector3 Vector3::applying(const Quaternion& q) const
+{
+	auto vec = Vector3(q.x, q.y, q.z);
+	auto uv = Vector3::cross(vec, *this);
+	auto uuv = Vector3::cross(vec, uv);
+	uv *= (2.0f * q.w);
+	uuv *= 2.0f;
+	return (*this) + uv + uuv;
 }
 
 Vector3 Vector3::normalized() const

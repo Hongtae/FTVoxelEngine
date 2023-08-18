@@ -15,7 +15,7 @@ Vector2 Vector2::applying(const Matrix2& m) const
 
 Vector2 Vector2::applying(const AffineTransform2& t) const
 {
-	return applying(t.linear) + t.translation;
+	return applying(t.matrix2) + t.translation;
 }
 
 Vector2 Vector2::normalized() const
