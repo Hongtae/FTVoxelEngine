@@ -13,11 +13,6 @@
 #include "GPUResource.h"
 #include "ShaderBindingSet.h"
 
-#ifdef _WIN32
-#undef CreateEvent
-#undef CreateSemaphore
-#endif
-
 namespace FV
 {
     class GraphicsDevice

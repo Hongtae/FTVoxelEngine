@@ -72,12 +72,11 @@ public:
         auto vsPath = this->appResourcesRoot / "shaders/sample.vert.spv";
         auto fsPath = this->appResourcesRoot / "shaders/sample.frag.spv";
         auto vertexShader = loadShader(vsPath, queue->device().get());
-        if (vertexShader == nullptr)
+        if (vertexShader.has_value() == false)
             throw std::runtime_error("failed to load shader");
         auto fragmentShader = loadShader(fsPath, queue->device().get());
-        if (fragmentShader == nullptr)
+        if (fragmentShader.has_value() == false)
             throw std::runtime_error("failed to load shader");
-
 
         struct PushConstantBuffer
         {
@@ -88,15 +87,15 @@ public:
 
         // setup shader binding
         MaterialShaderMap shader = {};
-        shader.bindings[MaterialShaderMap::BindingLocation::pushConstant(0).value] = ShaderUniformSemantic::UserDefined;
-        //shader.bindings[MaterialShaderMap::BindingLocation::pushConstant(0).value] = ShaderUniformSemantic::ModelViewProjectionMatrix;
-        //shader.bindings[MaterialShaderMap::BindingLocation::pushConstant(64).value] = ShaderUniformSemantic::DirectionalLightDirection;
-        //shader.bindings[MaterialShaderMap::BindingLocation::pushConstant(80).value] = ShaderUniformSemantic::DirectionalLightDiffuseColor;
+        shader.resourceSemantics[MaterialShaderMap::BindingLocation::pushConstant(0).value] = ShaderUniformSemantic::UserDefined;
+        //shader.resourceSemantics[MaterialShaderMap::BindingLocation::pushConstant(0).value] = ShaderUniformSemantic::ModelViewProjectionMatrix;
+        //shader.resourceSemantics[MaterialShaderMap::BindingLocation::pushConstant(64).value] = ShaderUniformSemantic::DirectionalLightDirection;
+        //shader.resourceSemantics[MaterialShaderMap::BindingLocation::pushConstant(80).value] = ShaderUniformSemantic::DirectionalLightDiffuseColor;
 
-        shader.inputs[0] = VertexAttributeSemantic::Position;
-        shader.inputs[1] = VertexAttributeSemantic::Normal;
-        shader.inputs[2] = VertexAttributeSemantic::TextureCoordinates;
-        shader.functions = { vertexShader, fragmentShader };
+        shader.inputAttributeSemantics[0] = VertexAttributeSemantic::Position;
+        shader.inputAttributeSemantics[1] = VertexAttributeSemantic::Normal;
+        shader.inputAttributeSemantics[2] = VertexAttributeSemantic::TextureCoordinates;
+        shader.functions = { vertexShader.value(), fragmentShader.value() };
 
         // load gltf
         auto modelPath = this->appResourcesRoot / "glTF/Duck/glTF-Binary/Duck.glb";

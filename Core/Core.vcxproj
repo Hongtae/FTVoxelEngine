@@ -215,6 +215,7 @@
     <ClInclude Include="Framework\Image.h" />
     <ClInclude Include="Framework\Logger.h" />
     <ClInclude Include="Framework\Material.h" />
+    <ClInclude Include="Framework\MaterialSemantics.h" />
     <ClInclude Include="Framework\Matrix2.h" />
     <ClInclude Include="Framework\Matrix3.h" />
     <ClInclude Include="Framework\Matrix4.h" />

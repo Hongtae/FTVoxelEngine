@@ -40,11 +40,52 @@ namespace FV
 
         PrimitiveType primitiveType;
 
+        VertexDescriptor vertexDescriptor() const;
+
+        enum class BufferUsagePolicy
+        {
+            UseExternalBufferManually = 0,
+            SingleBuffer,
+            SingleBufferPerSet,
+            SingleBufferPerResource,
+        };
+
+        bool initResources(GraphicsDevice*, BufferUsagePolicy);
+        bool buildPipelineState(GraphicsDevice*);
+        void updateShadingProperties(const SceneState*);
+
+        bool draw(RenderCommandEncoder*, const SceneState&, const Matrix4&) const;
+
+    private:
+        struct ResourceBinding
+        {
+            ShaderResource resource;    // from spir-v
+            ShaderBinding binding;      // from descriptor-set layout
+        };
+        struct ResourceBindingSet
+        {
+            uint32_t index; // binding-set
+            std::shared_ptr<ShaderBindingSet> bindingSet;
+            std::vector<ResourceBinding> resources;
+        };
+        struct PushConstantData
+        {
+            ShaderPushConstantLayout layout;
+            std::vector<uint8_t> data;
+        };
+
         std::shared_ptr<RenderPipelineState> pipelineState;
         std::optional<PipelineReflection> pipelineReflection;
 
-        VertexDescriptor vertexDescriptor(const MaterialShaderMap&) const;
-        bool draw(RenderCommandEncoder*, const SceneState&, const Matrix4&) const;
+        std::vector<ResourceBindingSet> resourceBindings;
+        std::vector<PushConstantData> pushConstants;
+
+        struct BufferResource
+        {
+            std::string name;
+            std::vector<ShaderBindingSet::BufferInfo> buffers;
+        };
+        std::unordered_map<ShaderBindingLocation, BufferResource> bufferResources;
     };
 
     struct FVCORE_API Mesh

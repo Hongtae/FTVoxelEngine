@@ -19,6 +19,5 @@ struct Model
     int defaultSceneIndex;
 };
 
-std::shared_ptr<Model> loadModel(std::filesystem::path path, const FV::MaterialShaderMap& shader, FV::CommandQueue* queue);
-std::shared_ptr<FV::ShaderFunction> loadShader(std::filesystem::path path, FV::GraphicsDevice* device);
-
+std::shared_ptr<Model> loadModel(std::filesystem::path path, FV::MaterialShaderMap shader, FV::CommandQueue* queue);
+std::optional<FV::MaterialShaderMap::Function> loadShader(std::filesystem::path path, FV::GraphicsDevice* device);

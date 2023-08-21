@@ -436,46 +436,12 @@ void loadMeshes(LoaderContext& context)
             }
 
             // setup pso..
-            auto& material = submesh.material;
-            if (auto vs = material->shader.function(ShaderStage::Vertex); vs)
+            if (submesh.buildPipelineState(context.queue->device().get()) == false)
             {
-                auto& stageInputs = vs->stageInputAttributes();
-                auto vertexDescriptor = submesh.vertexDescriptor(submesh.material->shader);
-                if (vertexDescriptor.attributes.empty() == false &&
-                    vertexDescriptor.layouts.empty() == false)
-                {
-                    RenderPipelineDescriptor pipelineDescriptor = {};
-                    pipelineDescriptor.vertexFunction = vs;
-                    pipelineDescriptor.fragmentFunction = material->shader.function(ShaderStage::Fragment);
-                    pipelineDescriptor.vertexDescriptor = vertexDescriptor;
-                    pipelineDescriptor.colorAttachments = {
-                        { 0, PixelFormat::RGBA8Unorm, material->blendState }
-                    };
-                    pipelineDescriptor.depthStencilAttachmentPixelFormat = PixelFormat::Depth32Float;
-                    pipelineDescriptor.primitiveTopology = submesh.primitiveType;
-                  
-                    PipelineReflection reflection = {};
-                    auto pso = context.queue->device()->makeRenderPipeline(pipelineDescriptor, &reflection);
-                    if (pso)
-                    {
-                        submesh.pipelineState = pso;
-                        submesh.pipelineReflection = reflection;
-                    }
-                    else
-                    {
-                        Log::error(std::format(
-                            "Failed to make pipeline state object for submesh[{:d}], {}",
-                            mesh.submeshes.size(), mesh.name));
-                    }
-                }
-                else
-                {
-                    Log::error(std::format(
-                        "Failed to make pipeline descriptor for submesh[{:d}], {}",
-                        mesh.submeshes.size(), mesh.name));
-                }
+                Log::error(std::format(
+                    "Failed to make pipeline descriptor for submesh[{:d}], {}",
+                    mesh.submeshes.size(), mesh.name));
             }
-
             mesh.submeshes.push_back(submesh);
         }
         cbuffer->commit();
@@ -579,9 +545,9 @@ Model::Scene loadScene(const tinygltf::Scene& scene, LoaderContext& context)
     return output;
 }
 
-std::shared_ptr<Model> loadModel(std::filesystem::path path, const MaterialShaderMap& shader, CommandQueue* queue)
+std::shared_ptr<Model> loadModel(std::filesystem::path path, MaterialShaderMap shader, CommandQueue* queue)
 {
-    LoaderContext context = { .queue = queue, .shader = shader };
+    LoaderContext context = { .queue = queue, .shader = shader};
     tinygltf::TinyGLTF loader;
     std::string err, warn;
     bool result = loader.LoadBinaryFromFile(&context.model, &err, &warn, path.generic_string());
@@ -614,7 +580,7 @@ std::shared_ptr<Model> loadModel(std::filesystem::path path, const MaterialShade
     return nullptr;
 }
 
-std::shared_ptr<ShaderFunction> loadShader(std::filesystem::path path, GraphicsDevice* device)
+std::optional<MaterialShaderMap::Function> loadShader(std::filesystem::path path, GraphicsDevice* device)
 {
     if (Shader shader(path); shader.validate())
     {
@@ -623,8 +589,9 @@ std::shared_ptr<ShaderFunction> loadShader(std::filesystem::path path, GraphicsD
         if (auto module = device->makeShaderModule(shader); module)
         {
             auto names = module->functionNames();
-            return module->makeFunction(names.front());
+            auto fn = module->makeFunction(names.front());
+            return MaterialShaderMap::Function { fn, shader.descriptors() };
         }
     }
-    return nullptr;
+    return {};
 }

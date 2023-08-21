@@ -2,7 +2,9 @@
 #include "../include.h"
 #include <vector>
 #include <variant>
+#include <optional>
 #include <unordered_map>
+#include <functional>
 #include "RenderPass.h"
 #include "RenderPipeline.h"
 #include "Vector2.h"
@@ -15,57 +17,12 @@
 #include "Texture.h"
 #include "Sampler.h"
 #include "GPUBuffer.h"
+#include "ShaderBindingSet.h"
+#include "MaterialSemantics.h"
+
 
 namespace FV
 {
-    enum class MaterialSemantic
-    {
-        Undefined,
-        UserDefined,
-        BaseColor,
-        BaseColorTexture,
-        Metallic,
-        Roughness,
-        MetallicRoughnessTexture,
-        NormalScaleFactor,
-        NormalTexture,
-        OcclusionScale,
-        OcclusionTexture,
-        EmissiveFactor,
-        EmissiveTexture,
-    };
-
-    enum class ShaderUniformSemantic
-    {
-        UserDefined,
-        ModelMatrix,
-        ViewMatrix,
-        ProjectionMatrix,
-        ModelViewProjectionMatrix,
-        InverseModelViewProjectionMatrix,
-        SkeletalNodeTransformArray,
-        DirectionalLightIndex,
-        DirectionalLightDirection,
-        DirectionalLightDiffuseColor,
-        SpotLightIndex,
-        SpotLightPosition,
-        SpotLightAttenuation,
-        SpotLightColor,
-    };
-
-    enum class VertexAttributeSemantic
-    {
-        UserDefined,
-        Position,
-        Normal,
-        Color,
-        TextureCoordinates,
-        Tangent,
-        Bitangent,
-        BlendIndices,
-        BlendWeights,
-    };
-
     struct MaterialProperty
     {
         MaterialSemantic semantic;
@@ -148,33 +105,47 @@ namespace FV
 
     struct MaterialShaderMap
     {
-        union BindingLocation {
-            struct
-            {
-                uint16_t set;
-                uint16_t binding;
-                uint32_t offset;
-            };
-            uint64_t value;
+        using BindingLocation = ShaderBindingLocation;
 
-            static BindingLocation pushConstant(uint32_t offset)
-            {
-                return { 0xffff, 0xffff, offset };
-            }
+        struct Function
+        {
+            std::shared_ptr<ShaderFunction> function;
+            std::vector<ShaderDescriptor> descriptors;
         };
+        std::vector<Function> functions;
 
         using Semantic = std::variant<std::monostate, MaterialSemantic, ShaderUniformSemantic>;
-        std::unordered_map<uint64_t, Semantic> bindings;
-        std::unordered_map<uint32_t, VertexAttributeSemantic> inputs;
-        std::vector<std::shared_ptr<ShaderFunction>> functions;
+        std::unordered_map<BindingLocation, Semantic> resourceSemantics;
+        std::unordered_map<uint32_t, VertexAttributeSemantic> inputAttributeSemantics;
 
         std::shared_ptr<ShaderFunction> function(ShaderStage stage) const
         {
             for (auto& fn : functions)
             {
-                if (fn->stage() == stage)   return fn;
+                if (fn.function && fn.function->stage() == stage)
+                    return fn.function;
             }
             return nullptr;
+        }
+
+        std::optional<ShaderDescriptor> descriptor(BindingLocation location,
+                                                   uint32_t stages) const
+        {
+            for (auto& fn : functions)
+            {
+                if (fn.function == nullptr)
+                    continue;
+                if (uint32_t(fn.function->stage()) & stages)
+                {
+                    for (auto& descriptor : fn.descriptors)
+                    {
+                        if (descriptor.set == location.set &&
+                            descriptor.binding == location.binding)
+                            return descriptor;
+                    }
+                }
+            }
+            return {};
         }
     };
 
@@ -183,6 +154,7 @@ namespace FV
         using Semantic = MaterialSemantic;
         using Property = MaterialProperty;
         using ShaderMap = MaterialShaderMap;
+        using BindingLocation = ShaderBindingLocation;
 
         void setProperty(const Property& prop)
         {
@@ -193,14 +165,14 @@ namespace FV
         {
             properties[semantic] = Property(semantic, std::forward<Args>(args)...);
         }
-        void setProperty(const std::string& name, const Property& prop)
+        void setProperty(const BindingLocation& loc, const Property& prop)
         {
-            userDefinedProperties[name] = prop;
+            userDefinedProperties[loc] = prop;
         }
         template <typename... Args>
-        constexpr void setProperty(const std::string& name, Args&&... args)
+        constexpr void setProperty(const BindingLocation& loc, Args&&... args)
         {
-            userDefinedProperties[name] = Property(Semantic::UserDefined, std::forward<Args>(args)...);
+            userDefinedProperties[loc] = Property(Semantic::UserDefined, std::forward<Args>(args)...);
         }
 
         std::string name;
@@ -210,9 +182,8 @@ namespace FV
         Winding frontFace = Winding::Clockwise;
 
         std::unordered_map<Semantic, Property> properties;
-        std::unordered_map<std::string, Property> userDefinedProperties;
+        std::unordered_map<BindingLocation, Property> userDefinedProperties;
 
         ShaderMap shader;
     };
-
 }
