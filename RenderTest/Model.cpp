@@ -295,19 +295,30 @@ void loadMeshes(LoaderContext& context)
                 auto& glTFBufferView = model.bufferViews[glTFAccessor.bufferView];
                 auto& glTFBuffer = model.buffers[glTFBufferView.buffer];
 
-                auto iter = vertexBuffers.emplace(glTFAccessor.bufferView, Submesh::VertexBuffer
+                uint32_t vertexStride = glTFAccessor.ByteStride(glTFBufferView);
+                uint32_t bufferOffset = glTFBufferView.byteOffset;
+                uint32_t attribOffset = 0;
+                if (glTFAccessor.byteOffset < vertexStride) // interleaved
                 {
-                    .byteOffset = uint32_t(glTFBufferView.byteOffset),
+                    attribOffset = glTFAccessor.byteOffset;
+                }
+                else
+                {
+                    bufferOffset += glTFAccessor.byteOffset;
+                }
+
+                Submesh::VertexBuffer buffer = 
+                {
+                    .byteOffset = bufferOffset,
                     .byteLength = uint32_t(glTFBufferView.byteLength),
-                    .byteStride = uint32_t(glTFAccessor.ByteStride(glTFBufferView)),
+                    .byteStride = vertexStride,
                     .vertexCount = uint32_t(glTFAccessor.count),
                     .buffer = context.buffers.at(glTFBufferView.buffer)
-                });
-                Submesh::VertexBuffer& buffer = iter.first->second;
+                };
 
                 Submesh::VertexAttribute attribute = {};
                 attribute.name = attributeName;
-                attribute.offset = uint32_t(glTFAccessor.byteOffset);
+                attribute.offset = attribOffset;
                 attribute.semantic = VertexAttributeSemantic::UserDefined;
                 attribute.format = VertexFormat::Invalid;
                 switch (glTFAccessor.type) {
@@ -338,23 +349,8 @@ void loadMeshes(LoaderContext& context)
                                              attributeName));
                 }
                 buffer.attributes.push_back(attribute);
-            }
-            std::vector<int> bufferIndexVector;
-            std::transform(vertexBuffers.begin(), vertexBuffers.end(),
-                           std::back_inserter(bufferIndexVector),
-                           [](auto& it) {return it.first; });
-            std::sort(bufferIndexVector.begin(), bufferIndexVector.end());
-            std::transform(bufferIndexVector.begin(), bufferIndexVector.end(),
-                           std::back_inserter(submesh.vertexBuffers),
-                           [&](int index)->Submesh::VertexBuffer&
-                           {
-                               return vertexBuffers.find(index)->second;
-                           });
-            // sort attribute by offset
-            for (auto& vb : submesh.vertexBuffers)
-            {
-                std::sort(vb.attributes.begin(), vb.attributes.end(),
-                          [](auto& a, auto& b) { return a.offset < b.offset; });
+
+                submesh.vertexBuffers.push_back(buffer);
             }
 
             switch (glTFPrimitive.mode)

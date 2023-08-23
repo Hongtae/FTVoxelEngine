@@ -8,19 +8,7 @@
 #include "AudioSource.h"
 #include "AudioDevice.h"
 #include "Logger.h"
-
-namespace {
-    template <typename T>
-    constexpr T radianToDegree(T r)
-    {
-        return r * T(180.0 / std::numbers::pi);
-    }
-    template <typename T>
-    constexpr T degreeToRadian(T d)
-    {
-        return d * T(std::numbers::pi / 180.0);
-    }
-}
+#include "Quaternion.h"
 
 using namespace FV;
 
@@ -280,9 +268,9 @@ void AudioSource::setTimePosition(double t)
         if (t > buffInfo.timestamp)
         {
             t -= buffInfo.timestamp;
-            ALint bytesOffset = std::clamp<ALint>((buffInfo.bytesSecond * t), 0, (ALint)buffInfo.bytes);
+            ALint bytesOffset = std::clamp(ALint(buffInfo.bytesSecond * t), 0, ALint(buffInfo.bytes));
 
-            alSourcef(sourceID, AL_BYTE_OFFSET, bytesOffset);
+            alSourcei(sourceID, AL_BYTE_OFFSET, bytesOffset);
 
             // check error.
             if (ALenum err = alGetError(); err != AL_NO_ERROR)
@@ -331,8 +319,8 @@ void AudioSource::setTimeOffset(double t)
         FVASSERT_DEBUG(buffInfo.bytes != 0);
         FVASSERT_DEBUG(buffInfo.bytesSecond != 0);
 
-        ALint bytesOffset = std::clamp<ALint>(t * buffInfo.bytesSecond, 0, (ALint)buffInfo.bytes);
-        alSourcef(sourceID, AL_BYTE_OFFSET, bytesOffset);
+        ALint bytesOffset = std::clamp<ALint>(ALint(t * buffInfo.bytesSecond), 0, ALint(buffInfo.bytes));
+        alSourcei(sourceID, AL_BYTE_OFFSET, bytesOffset);
 
         if (ALenum err = alGetError(); err != AL_NO_ERROR)
         {

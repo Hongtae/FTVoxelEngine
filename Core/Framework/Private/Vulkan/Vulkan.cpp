@@ -73,6 +73,10 @@ VkBool32 VKAPI_PTR debugUtilsMessengerCallback(
                         pCallbackData->messageIdNumber,
                         pCallbackData->pMessage));
     }
+    if (level == Level::Error)
+    {
+        FVERROR_ABORT("FATAL ERROR");
+    }
     return VK_FALSE;
 }
 

@@ -50,12 +50,7 @@ namespace FV
         std::string name;
         std::optional<Mesh> mesh;
 
-        //Quaternion rotation = Quaternion::identity;
         Vector3 scale = Vector3(1, 1, 1);
-        //Vector3 translation = Vector3::zero;
-
-        //std::optional<Matrix4> matrix;
-
         Transform transform = Transform::identity;
 
         std::vector<SceneNode> children;

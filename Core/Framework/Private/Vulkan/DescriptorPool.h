@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <iterator>
 #include "../../Hash.h"
 
 #if FVCORE_ENABLE_VULKAN
@@ -8,7 +9,7 @@
 
 namespace FV::Vulkan
 {
-    constexpr auto descriptorTypes = {
+    constexpr VkDescriptorType descriptorTypes[] = {
         VK_DESCRIPTOR_TYPE_SAMPLER,
         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
@@ -20,9 +21,9 @@ namespace FV::Vulkan
         VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
         VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
         VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
-        VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK_EXT
+        VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK
     };
-    //static_assert(std::is_sorted(std::cbegin(descriptorTypes), std::cend(descriptorTypes)));
+    static_assert(std::is_sorted(std::begin(descriptorTypes), std::end(descriptorTypes)));
     constexpr size_t numDescriptorTypes = std::size(descriptorTypes);
 
     inline auto indexOfDescriptorType(VkDescriptorType t)

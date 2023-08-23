@@ -84,7 +84,7 @@ VertexDescriptor Submesh::vertexDescriptor() const
             VertexAttributeDescriptor descriptor =
             {
                 .format = attr.format,
-                .offset = buffer.byteOffset + attr.offset,
+                .offset = attr.offset,
                 .bufferIndex = bufferIndex,
                 .location = input.location
             };
@@ -391,10 +391,10 @@ bool Submesh::buildPipelineState(GraphicsDevice* device)
                 type = ShaderResource::TypeTexture;
                 break;
             case ShaderDescriptorType::TextureSampler:
-                type = ShaderResource::TypeSampler;
+                type = ShaderResource::TypeTextureSampler;
                 break;
             case ShaderDescriptorType::Sampler:
-                type = ShaderResource::TypeTextureSampler;
+                type = ShaderResource::TypeSampler;
                 break;
             }
             if (type.has_value() && type.value() == res.type)
@@ -424,8 +424,9 @@ bool Submesh::buildPipelineState(GraphicsDevice* device)
             }
             else
             {
-                Log::error(std::format("Invalid shader resource type (name:{})",
-                                       res.name));
+                Log::error(std::format(
+                    "Unable to find shader resource information (set:{}, binding:{}, name:\"{}\")",
+                    res.set, res.binding, res.name));
                 if (strict) return false;
             }
         }
@@ -480,12 +481,138 @@ void Submesh::updateShadingProperties(const SceneState* sceneState)
         return;
 
     auto bindTextureResources = [this](const ShaderResource& res,
-                                       ShaderBindingSet& bindingSet)->uint32_t {
+                                       ShaderBindingSet* bindingSet)->uint32_t
+    {
+        auto location = ShaderBindingLocation{ res.set, res.binding, 0 };
+        MaterialShaderMap::Semantic semantic = MaterialSemantic::UserDefined;
+        if (auto it = material->shader.resourceSemantics.find(location);
+            it != material->shader.resourceSemantics.end())
+            semantic = it->second;
+        
+        MaterialProperty::TextureArray textures;
+
+        if (ShaderUniformSemantic* ss = std::get_if<ShaderUniformSemantic>(&semantic); ss)
+        {
+            Log::error("No texture semantics for shader-uniform!");
+        }
+        if (textures.empty())
+        {
+            MaterialSemantic ms = MaterialSemantic::UserDefined;
+            if (auto p = std::get_if<MaterialSemantic>(&semantic); p)
+                ms = *p;
+
+            if (ms != MaterialSemantic::UserDefined)
+            {
+                if (auto it = material->properties.find(ms); it != material->properties.end())
+                {
+                    std::visit(
+                        [&](auto&& arg)
+                        {
+                            using T = std::decay_t<decltype(arg)>;
+                            if constexpr (std::is_same_v<T, MaterialProperty::TextureArray>)
+                                textures = arg;
+                            else if constexpr (std::is_same_v<T, MaterialProperty::CombinedTextureSamplerArray>)
+                                std::transform(arg.begin(), arg.end(), std::back_inserter(textures),
+                                               [](auto& combinedImage) {
+                                                   return combinedImage.texture;
+                                               });
+                        }, it->second.value);
+                }
+            }
+        }
+        if (textures.empty())
+        {
+            if (auto it = material->userDefinedProperties.find(location);
+                it != material->userDefinedProperties.end())
+            {
+                std::visit(
+                    [&](auto&& arg)
+                    {
+                        using T = std::decay_t<decltype(arg)>;
+                        if constexpr (std::is_same_v<T, MaterialProperty::TextureArray>)
+                            textures = arg;
+                        else if constexpr (std::is_same_v<T, MaterialProperty::CombinedTextureSamplerArray>)
+                            std::transform(arg.begin(), arg.end(), std::back_inserter(textures),
+                                           [](auto& combinedImage) {
+                                               return combinedImage.texture;
+                                           });
+                    }, it->second.value);
+            }
+        }
+        if (textures.empty() == false)
+        {
+            size_t n = std::max(size_t(res.count), textures.size());
+            bindingSet->setTextureArray(res.binding, n, textures.data());
+            return n;
+        }        
         return 0;
     };
 
     auto bindSamplerResources = [this](const ShaderResource& res,
-                                       ShaderBindingSet& bindingSet)->uint32_t {
+                                       ShaderBindingSet* bindingSet)->uint32_t
+    {
+        auto location = ShaderBindingLocation{ res.set, res.binding, 0 };
+        MaterialShaderMap::Semantic semantic = MaterialSemantic::UserDefined;
+        if (auto it = material->shader.resourceSemantics.find(location);
+            it != material->shader.resourceSemantics.end())
+            semantic = it->second;
+
+        MaterialProperty::SamplerArray samplers;
+
+        if (ShaderUniformSemantic* ss = std::get_if<ShaderUniformSemantic>(&semantic); ss)
+        {
+            Log::error("No sampler semantics for shader-uniform!");
+        }
+        if (samplers.empty())
+        {
+            MaterialSemantic ms = MaterialSemantic::UserDefined;
+            if (auto p = std::get_if<MaterialSemantic>(&semantic); p)
+                ms = *p;
+
+            if (ms != MaterialSemantic::UserDefined)
+            {
+                if (auto it = material->properties.find(ms); it != material->properties.end())
+                {
+                    std::visit(
+                        [&](auto&& arg)
+                        {
+                            using T = std::decay_t<decltype(arg)>;
+                            if constexpr (std::is_same_v<T, MaterialProperty::SamplerArray>)
+                                samplers = arg;
+                            else if constexpr (std::is_same_v<T, MaterialProperty::CombinedTextureSamplerArray>)
+                                std::transform(arg.begin(), arg.end(), std::back_inserter(samplers),
+                                               [](auto& combinedImage) {
+                                                   return combinedImage.sampler;
+                                               });
+                        }, it->second.value);
+                }
+            }
+        }
+        if (samplers.empty())
+        {
+            if (auto it = material->userDefinedProperties.find(location);
+                it != material->userDefinedProperties.end())
+            {
+                std::visit(
+                    [&](auto&& arg)
+                    {
+                        using T = std::decay_t<decltype(arg)>;
+                        if constexpr (std::is_same_v<T, MaterialProperty::SamplerArray>)
+                            samplers = arg;
+                        else if constexpr (std::is_same_v<T, MaterialProperty::CombinedTextureSamplerArray>)
+                            std::transform(arg.begin(), arg.end(), std::back_inserter(samplers),
+                                           [](auto& combinedImage) {
+                                               return combinedImage.sampler;
+                                           });
+                    }, it->second.value);
+            }
+        }
+        if (samplers.empty() == false)
+        {
+            size_t n = std::max(size_t(res.count), samplers.size());
+            bindingSet->setSamplerStateArray(res.binding, n, samplers.data());
+            return n;
+        }
         return 0;
     };
     auto copyMaterialProperty = [this](MaterialSemantic semantic,
@@ -493,8 +620,12 @@ void Submesh::updateShadingProperties(const SceneState* sceneState)
                                        uint32_t itemOffset,
                                        uint8_t* buffer, size_t length)->size_t
     {
-        struct PropertyData { const void* data; size_t elementSize, count; };
-        PropertyData data = { nullptr, 0, 0 };
+        struct PropertyData
+        {
+            const void* data;
+            size_t elementSize;
+            size_t count;
+        } data = { nullptr, 0, 0 };
 
         auto getPropertyData = [](const MaterialProperty& prop)-> PropertyData
         {
@@ -504,35 +635,33 @@ void Submesh::updateShadingProperties(const SceneState* sceneState)
                     using T = std::decay_t<decltype(arg)>;
                     if constexpr (std::is_same_v<T, MaterialProperty::Buffer>)
                         return { arg.data(), sizeof(T::value_type), arg.size() };
-                    else if constexpr (std::is_same_v<T, MaterialProperty::Int8Vector>)
+                    else if constexpr (std::is_same_v<T, MaterialProperty::Int8Array>)
                         return { arg.data(), sizeof(T::value_type), arg.size() };
-                    else if constexpr (std::is_same_v<T, MaterialProperty::UInt8Vector>)
+                    else if constexpr (std::is_same_v<T, MaterialProperty::UInt8Array>)
                         return { arg.data(), sizeof(T::value_type), arg.size() };
-                    else if constexpr (std::is_same_v<T, MaterialProperty::Int16Vector>)
+                    else if constexpr (std::is_same_v<T, MaterialProperty::Int16Array>)
                         return { arg.data(), sizeof(T::value_type), arg.size() };
-                    else if constexpr (std::is_same_v<T, MaterialProperty::UInt16Vector>)
+                    else if constexpr (std::is_same_v<T, MaterialProperty::UInt16Array>)
                         return { arg.data(), sizeof(T::value_type), arg.size() };
-                    else if constexpr (std::is_same_v<T, MaterialProperty::Int32Vector>)
+                    else if constexpr (std::is_same_v<T, MaterialProperty::Int32Array>)
                         return { arg.data(), sizeof(T::value_type), arg.size() };
-                    else if constexpr (std::is_same_v<T, MaterialProperty::UInt32Vector>)
+                    else if constexpr (std::is_same_v<T, MaterialProperty::UInt32Array>)
                         return { arg.data(), sizeof(T::value_type), arg.size() };
-                    else if constexpr (std::is_same_v<T, MaterialProperty::Int64Vector>)
+                    else if constexpr (std::is_same_v<T, MaterialProperty::Int64Array>)
                         return { arg.data(), sizeof(T::value_type), arg.size() };
-                    else if constexpr (std::is_same_v<T, MaterialProperty::UInt64Vector>)
+                    else if constexpr (std::is_same_v<T, MaterialProperty::UInt64Array>)
                         return { arg.data(), sizeof(T::value_type), arg.size() };
-                    else if constexpr (std::is_same_v<T, MaterialProperty::HalfVector>)
+                    else if constexpr (std::is_same_v<T, MaterialProperty::HalfArray>)
                         return { arg.data(), sizeof(T::value_type), arg.size() };
-                    else if constexpr (std::is_same_v<T, MaterialProperty::FloatVector>)
+                    else if constexpr (std::is_same_v<T, MaterialProperty::FloatArray>)
                         return { arg.data(), sizeof(T::value_type), arg.size() };
-                    else if constexpr (std::is_same_v<T, MaterialProperty::DoubleVector>)
+                    else if constexpr (std::is_same_v<T, MaterialProperty::DoubleArray>)
                         return { arg.data(), sizeof(T::value_type), arg.size() };
                     return { nullptr, 0, 0 };
-                },
-                prop.value);
+                }, prop.value);
         };
 
-        if (semantic != MaterialSemantic::Undefined && 
-            semantic != MaterialSemantic::UserDefined)
+        if (semantic != MaterialSemantic::UserDefined)
         {
             if (auto it = material->properties.find(semantic);
                 it != material->properties.end())
@@ -597,7 +726,7 @@ void Submesh::updateShadingProperties(const SceneState* sceneState)
 
             // find semantic
             auto location = ShaderBindingLocation{ set, binding, memberOffset };
-            MaterialShaderMap::Semantic semantic = MaterialSemantic::Undefined;
+            MaterialShaderMap::Semantic semantic = MaterialSemantic::UserDefined;
             if (auto it = material->shader.resourceSemantics.find(location);
                 it != material->shader.resourceSemantics.end())
                 semantic = it->second;
@@ -613,7 +742,7 @@ void Submesh::updateShadingProperties(const SceneState* sceneState)
             }
             if (copied == 0)
             {
-                MaterialSemantic ms = MaterialSemantic::Undefined;
+                MaterialSemantic ms = MaterialSemantic::UserDefined;
                 if (auto p = std::get_if<MaterialSemantic>(&semantic); p)
                     ms = *p;
                 auto offset = member.count * member.stride * structArrayIndex;
@@ -647,7 +776,7 @@ void Submesh::updateShadingProperties(const SceneState* sceneState)
                                   uint8_t* buffer, size_t bufferLength) -> size_t
     {
         auto location = ShaderBindingLocation{ set, binding, offset };
-        MaterialShaderMap::Semantic semantic = MaterialSemantic::Undefined;
+        MaterialShaderMap::Semantic semantic = MaterialSemantic::UserDefined;
         if (auto it = material->shader.resourceSemantics.find(location);
             it != material->shader.resourceSemantics.end())
             semantic = it->second;
@@ -659,7 +788,7 @@ void Submesh::updateShadingProperties(const SceneState* sceneState)
         }
         if (copied == 0)
         {
-            MaterialSemantic ms = MaterialSemantic::Undefined;
+            MaterialSemantic ms = MaterialSemantic::UserDefined;
             if (auto p = std::get_if<MaterialSemantic>(&semantic); p)
                 ms = *p;
             auto offset = arrayIndex * stride;
@@ -765,20 +894,20 @@ void Submesh::updateShadingProperties(const SceneState* sceneState)
             }
             else if (res.type == ShaderResource::TypeTexture)
             {
-                auto numBounds = bindTextureResources(res, *(rbs.bindingSet));
+                auto numBounds = bindTextureResources(res, rbs.bindingSet.get());
                 if (numBounds > 0)
                     bound = true;
             }
             else if (res.type == ShaderResource::TypeSampler)
             {
-                auto numBounds = bindSamplerResources(res, *(rbs.bindingSet));
+                auto numBounds = bindSamplerResources(res, rbs.bindingSet.get());
                 if (numBounds > 0)
                     bound = true;
             }
             else if (res.type == ShaderResource::TypeTextureSampler)
             {
-                auto numTextureBounds = bindTextureResources(res, *(rbs.bindingSet));
-                auto numSamplerBounds = bindSamplerResources(res, *(rbs.bindingSet));
+                auto numTextureBounds = bindTextureResources(res, rbs.bindingSet.get());
+                auto numSamplerBounds = bindSamplerResources(res, rbs.bindingSet.get());
                 if (numTextureBounds > 0 && numSamplerBounds > 0)
                     bound = true;
             }

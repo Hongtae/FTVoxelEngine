@@ -1,10 +1,22 @@
 #pragma once
 #include "../include.h"
+#include <numbers>
 #include "Vector4.h"
 
 #pragma pack(push, 4)
 namespace FV
 {
+    template <typename T>
+    inline constexpr T radianToDegree(T r)
+    {
+        return r * T(180.0 / std::numbers::pi);
+    }
+    template <typename T>
+    inline constexpr T degreeToRadian(T d)
+    {
+        return d * T(std::numbers::pi / 180.0);
+    }
+
     struct Vector3;
     struct Matrix3;
     struct FVCORE_API Quaternion

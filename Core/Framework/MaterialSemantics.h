@@ -7,7 +7,6 @@ namespace FV
 {
     enum class MaterialSemantic
     {
-        Undefined,
         UserDefined,
         BaseColor,
         BaseColorTexture,
@@ -58,6 +57,10 @@ namespace FV
         uint32_t binding;
         uint32_t offset;
 
+        bool isPushConstant() const
+        {
+            return set == uint32_t(-1) && binding == uint32_t(-1);
+        }
         static auto pushConstant(uint32_t offset) -> ShaderBindingLocation
         {
             return { uint32_t(-1), uint32_t(-1), offset };

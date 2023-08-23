@@ -1200,20 +1200,15 @@ std::shared_ptr<FV::RenderPipelineState> GraphicsDevice::makeRenderPipeline(cons
 	VkRenderPass renderPass = VK_NULL_HANDLE;
 	VkPipeline pipeline = VK_NULL_HANDLE;
 
-    std::shared_ptr<RenderPipelineState> pipelineState = nullptr;
-
     _ScopeExit _scope_exit = {
         [&] // cleanup resources if function failure.
         {
-            if (!pipelineState)
-            {
-                if (pipelineLayout != VK_NULL_HANDLE)
-                    vkDestroyPipelineLayout(device, pipelineLayout, allocationCallbacks());
-                if (renderPass != VK_NULL_HANDLE)
-                    vkDestroyRenderPass(device, renderPass, allocationCallbacks());
-                if (pipeline != VK_NULL_HANDLE)
-                    vkDestroyPipeline(device, pipeline, allocationCallbacks());
-            }
+            if (pipelineLayout != VK_NULL_HANDLE)
+                vkDestroyPipelineLayout(device, pipelineLayout, allocationCallbacks());
+            if (renderPass != VK_NULL_HANDLE)
+                vkDestroyRenderPass(device, renderPass, allocationCallbacks());
+            if (pipeline != VK_NULL_HANDLE)
+                vkDestroyPipeline(device, pipeline, allocationCallbacks());
         }
     };
 
@@ -1685,7 +1680,12 @@ std::shared_ptr<FV::RenderPipelineState> GraphicsDevice::makeRenderPipeline(cons
 		reflection->pushConstantLayouts.shrink_to_fit();
 	}
 
-	pipelineState = std::make_shared<RenderPipelineState>(shared_from_this(), pipeline, pipelineLayout, renderPass);
+	auto pipelineState = std::make_shared<RenderPipelineState>(shared_from_this(), pipeline, pipelineLayout, renderPass);
+
+    pipelineLayout = VK_NULL_HANDLE;
+    renderPass = VK_NULL_HANDLE;
+    pipeline = VK_NULL_HANDLE;
+
     return pipelineState;
 }
 
@@ -1695,18 +1695,14 @@ std::shared_ptr<FV::ComputePipelineState> GraphicsDevice::makeComputePipeline(co
 
     VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
     VkPipeline pipeline = VK_NULL_HANDLE;
-    std::shared_ptr<ComputePipelineState> pipelineState = nullptr;
 
     _ScopeExit _scope_exit = { 
         [&] // cleanup resources if function failure.
         {
-            if (!pipelineState)
-            {
-                if (pipelineLayout != VK_NULL_HANDLE)
-                    vkDestroyPipelineLayout(device, pipelineLayout, allocationCallbacks());
-                if (pipeline != VK_NULL_HANDLE)
-                    vkDestroyPipeline(device, pipeline, allocationCallbacks());
-            }
+            if (pipelineLayout != VK_NULL_HANDLE)
+                vkDestroyPipelineLayout(device, pipelineLayout, allocationCallbacks());
+            if (pipeline != VK_NULL_HANDLE)
+                vkDestroyPipeline(device, pipeline, allocationCallbacks());
         }
     };
 
@@ -1759,7 +1755,11 @@ std::shared_ptr<FV::ComputePipelineState> GraphicsDevice::makeComputePipeline(co
         reflection->resources.shrink_to_fit();
     }
 
-    pipelineState = std::make_shared<ComputePipelineState>(shared_from_this(), pipeline, pipelineLayout);
+    auto pipelineState = std::make_shared<ComputePipelineState>(shared_from_this(), pipeline, pipelineLayout);
+
+    pipelineLayout = VK_NULL_HANDLE;
+    pipeline = VK_NULL_HANDLE;
+
     return pipelineState;
 }
 

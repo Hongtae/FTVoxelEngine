@@ -28,38 +28,40 @@ namespace FV
         MaterialSemantic semantic;
 
         using Buffer = std::vector<char8_t>; // ShaderDataType::Struct
-        using Int8Vector = std::vector<int8_t>;
-        using UInt8Vector = std::vector<uint8_t>;
-        using Int16Vector = std::vector<int16_t>;
-        using UInt16Vector = std::vector<uint16_t>;
-        using Int32Vector = std::vector<int32_t>;
-        using UInt32Vector = std::vector<uint32_t>;
-        using Int64Vector = std::vector<int32_t>;
-        using UInt64Vector = std::vector<uint32_t>;
-        using HalfVector = std::vector<Float16>;
-        using FloatVector = std::vector<float>;
-        using DoubleVector = std::vector<double>;
+        using Int8Array = std::vector<int8_t>;
+        using UInt8Array = std::vector<uint8_t>;
+        using Int16Array = std::vector<int16_t>;
+        using UInt16Array = std::vector<uint16_t>;
+        using Int32Array = std::vector<int32_t>;
+        using UInt32Array = std::vector<uint32_t>;
+        using Int64Array = std::vector<int32_t>;
+        using UInt64Array = std::vector<uint32_t>;
+        using HalfArray = std::vector<Float16>;
+        using FloatArray = std::vector<float>;
+        using DoubleArray = std::vector<double>;
 
         struct CombinedTextureSampler
         {
             std::shared_ptr<Texture> texture;
             std::shared_ptr<SamplerState> sampler;
         };
-
-        std::variant<
-            std::monostate,
-            std::shared_ptr<Texture>,
-            std::shared_ptr<SamplerState>,
-            CombinedTextureSampler,
+        using TextureArray = std::vector<std::shared_ptr<Texture>>;
+        using SamplerArray = std::vector<std::shared_ptr<SamplerState>>;
+        using CombinedTextureSamplerArray = std::vector<CombinedTextureSampler>;
+        
+        std::variant<std::monostate,
             Buffer,
-            Int8Vector,
-            UInt8Vector,
-            Int16Vector,
-            UInt16Vector,
-            Int32Vector,
-            UInt32Vector,
-            HalfVector,
-            FloatVector> value;
+            Int8Array,
+            UInt8Array,
+            Int16Array,
+            UInt16Array,
+            Int32Array,
+            UInt32Array,
+            HalfArray,
+            FloatArray,
+            TextureArray,
+            SamplerArray,
+            CombinedTextureSamplerArray> value;
 
         template <typename T, size_t Length>
         constexpr MaterialProperty(MaterialSemantic s, const T(&v)[Length])
@@ -70,15 +72,18 @@ namespace FV
         template <typename InputIt>
         constexpr MaterialProperty(MaterialSemantic s, InputIt first, InputIt last)
             : semantic(s), value(first, last) {}
+        template <typename T>
+        constexpr MaterialProperty(MaterialSemantic s, const std::vector<T>& vector)
+            : semantic(s), value(vector) {}
 
         MaterialProperty(MaterialSemantic s, const void* data, size_t len)
             : MaterialProperty(s, (const char8_t*)data, len) {}
         MaterialProperty(MaterialSemantic s, std::shared_ptr<Texture> texture)
-            : semantic(s), value(texture) {}
+            : MaterialProperty(s, &texture, 1) {}
         MaterialProperty(MaterialSemantic s, std::shared_ptr<SamplerState> sampler)
-            : semantic(s), value(sampler) {}
+            : MaterialProperty(s, &sampler, 1) {}
         MaterialProperty(MaterialSemantic s, const CombinedTextureSampler& textureSampler)
-            : semantic(s), value(textureSampler) {}
+            : MaterialProperty(s, &textureSampler, 1) {}
 
         MaterialProperty(MaterialSemantic s, float v)
             : MaterialProperty(s, &v, 1) {}
@@ -100,7 +105,7 @@ namespace FV
             : MaterialProperty(s, v.val) {}
 
         MaterialProperty()
-            : semantic(MaterialSemantic::Undefined), value(std::monostate{}) {}
+            : semantic(MaterialSemantic::UserDefined), value(std::monostate{}) {}
     };
 
     struct MaterialShaderMap

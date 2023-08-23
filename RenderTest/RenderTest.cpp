@@ -87,14 +87,21 @@ public:
 
         // setup shader binding
         MaterialShaderMap shader = {};
-        shader.resourceSemantics[MaterialShaderMap::BindingLocation::pushConstant(0).value] = ShaderUniformSemantic::UserDefined;
-        //shader.resourceSemantics[MaterialShaderMap::BindingLocation::pushConstant(0).value] = ShaderUniformSemantic::ModelViewProjectionMatrix;
-        //shader.resourceSemantics[MaterialShaderMap::BindingLocation::pushConstant(64).value] = ShaderUniformSemantic::DirectionalLightDirection;
-        //shader.resourceSemantics[MaterialShaderMap::BindingLocation::pushConstant(80).value] = ShaderUniformSemantic::DirectionalLightDiffuseColor;
+        shader.resourceSemantics = {
+            { ShaderBindingLocation{ 0, 1, 0}, MaterialSemantic::BaseColorTexture },
+            { ShaderBindingLocation::pushConstant(0), ShaderUniformSemantic::ModelViewProjectionMatrix}
+        };
+        //shader.resourceSemantics[MaterialShaderMap::BindingLocation::pushConstant(0)] = ShaderUniformSemantic::ModelViewProjectionMatrix;
+        //shader.resourceSemantics[MaterialShaderMap::BindingLocation::pushConstant(0)] = ShaderUniformSemantic::ModelViewProjectionMatrix;
+        //shader.resourceSemantics[MaterialShaderMap::BindingLocation::pushConstant(64)] = ShaderUniformSemantic::DirectionalLightDirection;
+        //shader.resourceSemantics[MaterialShaderMap::BindingLocation::pushConstant(80)] = ShaderUniformSemantic::DirectionalLightDiffuseColor;
+        
 
-        shader.inputAttributeSemantics[0] = VertexAttributeSemantic::Position;
-        shader.inputAttributeSemantics[1] = VertexAttributeSemantic::Normal;
-        shader.inputAttributeSemantics[2] = VertexAttributeSemantic::TextureCoordinates;
+        shader.inputAttributeSemantics = {
+            { 0, VertexAttributeSemantic::Position },
+            { 1, VertexAttributeSemantic::Normal },
+            { 2, VertexAttributeSemantic::TextureCoordinates },
+        };
         shader.functions = { vertexShader.value(), fragmentShader.value() };
 
         // load gltf
@@ -103,6 +110,32 @@ public:
         if (model == nullptr)
             throw std::runtime_error("failed to load glTF");
 
+        SceneState sceneState = {
+            ViewFrustum
+            {
+                ViewTransform(Vector3(0, 0, 500),  Vector3(0, 0, -1), Vector3(0,1,0)),
+                ProjectionTransform::perspective(degreeToRadian(90.0f), 1.0, 1.0, 10000.0)
+            }
+        };
+
+        struct UpdateNode
+        {
+            SceneNode& node;
+            void operator()(const SceneState* sceneState)
+            {
+                if (node.mesh.has_value())
+                {
+                    for (auto& mesh : node.mesh.value().submeshes)
+                        mesh.updateShadingProperties(sceneState);
+                }
+                for (auto& child : node.children)
+                    UpdateNode{ child }(sceneState);
+            }
+        };
+        for (auto& scene : model->scenes)
+            for (auto& node : scene.nodes)
+                UpdateNode{ node }(&sceneState);
+        
         constexpr auto frameInterval = 1.0 / 60.0;
         auto timestamp = std::chrono::high_resolution_clock::now();
 
