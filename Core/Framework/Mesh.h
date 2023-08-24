@@ -86,6 +86,14 @@ namespace FV
             std::vector<ShaderBindingSet::BufferInfo> buffers;
         };
         std::unordered_map<ShaderBindingLocation, BufferResource> bufferResources;
+
+        uint32_t bindMaterialTextures(MaterialSemantic semantic, const ShaderResource& resource, ShaderBindingSet* bindingSet) const;
+        uint32_t bindMaterialSamplers(MaterialSemantic semantic, const ShaderResource& resource, ShaderBindingSet* bindingSet) const;
+        uint32_t bindMaterialProperty(MaterialSemantic semantic, ShaderBindingLocation location, const std::string& name, uint32_t itemOffset, uint8_t* buffer, size_t length) const;
+
+        uint32_t bindShaderUniformTextures(ShaderUniformSemantic semantic, const std::string& name, const SceneState& sceneState, ShaderBindingSet* bindingSet) const;
+        uint32_t bindShaderUniformSamplers(ShaderUniformSemantic semantic, const std::string& name, const SceneState& sceneState, ShaderBindingSet* bindingSet) const;
+        uint32_t bindShaderUniformBuffer(ShaderUniformSemantic semantic, const std::string& name, const SceneState&, uint8_t* buffer, size_t length) const;
     };
 
     struct FVCORE_API Mesh
