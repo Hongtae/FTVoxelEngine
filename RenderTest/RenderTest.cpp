@@ -89,7 +89,7 @@ public:
         MaterialShaderMap shader = {};
         shader.resourceSemantics = {
             { ShaderBindingLocation{ 0, 1, 0}, MaterialSemantic::BaseColorTexture },
-            { ShaderBindingLocation::pushConstant(0), ShaderUniformSemantic::ModelViewProjectionMatrix}
+            { ShaderBindingLocation::pushConstant(0), ShaderUniformSemantic::ModelViewProjectionMatrix},
         };
         //shader.resourceSemantics[MaterialShaderMap::BindingLocation::pushConstant(0)] = ShaderUniformSemantic::ModelViewProjectionMatrix;
         //shader.resourceSemantics[MaterialShaderMap::BindingLocation::pushConstant(0)] = ShaderUniformSemantic::ModelViewProjectionMatrix;
@@ -111,30 +111,59 @@ public:
             throw std::runtime_error("failed to load glTF");
 
         SceneState sceneState = {
-            ViewFrustum
+            .view = ViewFrustum
             {
                 ViewTransform(Vector3(0, 0, 500),  Vector3(0, 0, -1), Vector3(0,1,0)),
                 ProjectionTransform::perspective(degreeToRadian(90.0f), 1.0, 1.0, 10000.0)
-            }
+            },
         };
 
-        struct UpdateNode
+        struct ForEachNode
         {
             SceneNode& node;
-            void operator()(const SceneState* sceneState)
+            void operator()(std::function<void (SceneNode&)> fn)
             {
-                if (node.mesh.has_value())
-                {
-                    for (auto& mesh : node.mesh.value().submeshes)
-                        mesh.updateShadingProperties(sceneState);
-                }
+                fn(node);
+
                 for (auto& child : node.children)
-                    UpdateNode{ child }(sceneState);
+                    ForEachNode{ child }(fn);
             }
         };
+        std::vector<Material*> materials;
+
         for (auto& scene : model->scenes)
             for (auto& node : scene.nodes)
-                UpdateNode{ node }(&sceneState);
+                ForEachNode{ node }(
+                    [&](auto& node)
+                    {
+                        if (node.mesh.has_value())
+                        {
+                            for (auto& mesh : node.mesh.value().submeshes)
+                                if (mesh.material)
+                                    materials.push_back(mesh.material.get());
+                        }
+                    });
+
+        for (auto& material : materials)
+        {
+            material->setProperty(ShaderBindingLocation::pushConstant(64),
+                                  Vector3(1, 1, 1));
+            material->setProperty(ShaderBindingLocation::pushConstant(80),
+                                  Vector3(1, 1, 1));
+        }
+
+        for (auto& scene : model->scenes)
+            for (auto& node : scene.nodes)
+                ForEachNode{ node }(
+                    [&](auto& node)
+                    {
+                        if (node.mesh.has_value())
+                        {
+                            for (auto& mesh : node.mesh.value().submeshes)
+                                mesh.updateShadingProperties(&sceneState);
+                        }
+                    });
+
         
         constexpr auto frameInterval = 1.0 / 60.0;
         auto timestamp = std::chrono::high_resolution_clock::now();

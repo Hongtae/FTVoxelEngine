@@ -511,37 +511,7 @@ void Submesh::updateShadingProperties(const SceneState* sceneState)
 
             size_t copied = 0;
 
-            if (member.members.empty())
-            {
-                // find semantic
-                auto material = mesh->material.get();
-                auto location = ShaderBindingLocation{ set, binding, memberOffset };
-                MaterialShaderMap::Semantic semantic = MaterialSemantic::UserDefined;
-                if (auto it = material->shader.resourceSemantics.find(location);
-                    it != material->shader.resourceSemantics.end())
-                    semantic = it->second;
-
-                if (ShaderUniformSemantic* ss = std::get_if<ShaderUniformSemantic>(&semantic); ss)
-                {
-                    if (sceneState)
-                        copied = mesh->bindShaderUniformBuffer(*ss, path, *sceneState, dest, destLen);
-                }
-                if (copied == 0)
-                {
-                    MaterialSemantic ms = MaterialSemantic::UserDefined;
-                    if (auto p = std::get_if<MaterialSemantic>(&semantic); p)
-                        ms = *p;
-                    auto offset = member.count * member.stride * structArrayIndex;
-                    copied = mesh->bindMaterialProperty(ms, location, path, offset, dest, destLen);
-                }
-                if (copied == 0)
-                {
-                    Log::warning(std::format(
-                        "Unable to bind shader uniform struct ({}), arrayIndex:{}, name:\"{}\"",
-                        location, structArrayIndex, path));
-                }
-            }
-            else
+            if (member.dataType == ShaderDataType::Struct)
             {
                 for (const ShaderResourceStructMember& m : member.members)
                 {
@@ -559,10 +529,47 @@ void Submesh::updateShadingProperties(const SceneState* sceneState)
                     copied = member.offset + s;
                 }
             }
+            else
+            {
+                // find semantic
+                auto material = mesh->material.get();
+                auto location = ShaderBindingLocation{ set, binding, memberOffset };
+                MaterialShaderMap::Semantic semantic = MaterialSemantic::UserDefined;
+                if (auto it = material->shader.resourceSemantics.find(location);
+                    it != material->shader.resourceSemantics.end())
+                    semantic = it->second;
+
+                if (ShaderUniformSemantic* ss = std::get_if<ShaderUniformSemantic>(&semantic); ss)
+                {
+                    if (sceneState)
+                        copied = mesh->bindShaderUniformBuffer(*ss,
+                                                               member.dataType,
+                                                               path,
+                                                               *sceneState,
+                                                               dest, destLen);
+                }
+                if (copied == 0)
+                {
+                    MaterialSemantic ms = MaterialSemantic::UserDefined;
+                    if (auto p = std::get_if<MaterialSemantic>(&semantic); p)
+                        ms = *p;
+                    auto offset = member.count * member.stride * structArrayIndex;
+                    copied = mesh->bindMaterialProperty(ms, location, 
+                                                        member.dataType,
+                                                        path, offset,
+                                                        dest, destLen);
+                }
+                if (copied == 0)
+                {
+                    Log::warning(std::format(
+                        "Unable to bind shader uniform struct ({}), arrayIndex:{}, name:\"{}\"",
+                        location, structArrayIndex, path));
+                }
+            }
             return copied;
         }
     };
-    auto copyStructProperty = [&](uint32_t set, uint32_t binding,
+    auto copyStructProperty = [&](ShaderDataType type, uint32_t set, uint32_t binding,
                                   uint32_t offset, uint32_t size,
                                   uint32_t stride, uint32_t arrayIndex,
                                   const std::vector<ShaderResourceStructMember>& members,
@@ -571,34 +578,7 @@ void Submesh::updateShadingProperties(const SceneState* sceneState)
     {
         auto location = ShaderBindingLocation{ set, binding, offset };
         size_t copied = 0;
-        if (members.empty())
-        {
-            MaterialShaderMap::Semantic semantic = MaterialSemantic::UserDefined;
-            if (auto it = material->shader.resourceSemantics.find(location);
-                it != material->shader.resourceSemantics.end())
-                semantic = it->second;
-
-            if (ShaderUniformSemantic* ss = std::get_if<ShaderUniformSemantic>(&semantic); ss)
-            {
-                if (sceneState)
-                    copied = bindShaderUniformBuffer(*ss, name, *sceneState, buffer, bufferLength);
-            }
-            if (copied == 0)
-            {
-                MaterialSemantic ms = MaterialSemantic::UserDefined;
-                if (auto p = std::get_if<MaterialSemantic>(&semantic); p)
-                    ms = *p;
-                auto offset = arrayIndex * stride;
-                copied = bindMaterialProperty(ms, location, name, offset, buffer, bufferLength);
-            }
-            if (copied == 0)
-            {
-                Log::warning(std::format(
-                    "Unable to bind shader uniform struct ({}), arrayIndex:{}, name:\"{}\"",
-                    location, arrayIndex, name));
-            }
-        }
-        else
+        if (type == ShaderDataType::Struct)
         {
             for (const ShaderResourceStructMember& member : members)
             {
@@ -630,6 +610,35 @@ void Submesh::updateShadingProperties(const SceneState* sceneState)
                 }
             }
         }
+        else
+        {
+            MaterialShaderMap::Semantic semantic = MaterialSemantic::UserDefined;
+            if (auto it = material->shader.resourceSemantics.find(location);
+                it != material->shader.resourceSemantics.end())
+                semantic = it->second;
+
+            if (ShaderUniformSemantic* ss = std::get_if<ShaderUniformSemantic>(&semantic); ss)
+            {
+                if (sceneState)
+                    copied = bindShaderUniformBuffer(*ss, type, name, *sceneState, buffer, bufferLength);
+            }
+            if (copied == 0)
+            {
+                MaterialSemantic ms = MaterialSemantic::UserDefined;
+                if (auto p = std::get_if<MaterialSemantic>(&semantic); p)
+                    ms = *p;
+                auto offset = arrayIndex * stride;
+                copied = bindMaterialProperty(ms, location, type,
+                                              name, offset, buffer, bufferLength);
+            }
+            if (copied == 0)
+            {
+                Log::warning(std::format(
+                    "Unable to bind shader uniform struct ({}), arrayIndex:{}, name:\"{}\"",
+                    location, arrayIndex, name));
+            }
+        }
+
         return copied;
     };
 
@@ -640,7 +649,7 @@ void Submesh::updateShadingProperties(const SceneState* sceneState)
             const ShaderResource& res = rb.resource;
             if (res.type == ShaderResource::TypeBuffer)
             {
-                const ShaderResourceBuffer& structInfo = res.typeInfo.buffer;
+                const ShaderResourceBuffer& typeInfo = res.typeInfo.buffer;
                 auto loc = ShaderBindingLocation{ res.set, res.binding, 0 };
                 if (auto it = bufferResources.find(loc);
                     it != bufferResources.end())
@@ -664,8 +673,8 @@ void Submesh::updateShadingProperties(const SceneState* sceneState)
                                 auto bufferLength = bufferInfo.length;
 
                                 size_t copied = copyStructProperty(
-                                    res.set, res.binding,
-                                    0, structInfo.size,
+                                    typeInfo.dataType, res.set, res.binding,
+                                    0, typeInfo.size,
                                     res.stride, index,
                                     res.members, res.name,
                                     buffer, bufferLength);
@@ -776,7 +785,8 @@ void Submesh::updateShadingProperties(const SceneState* sceneState)
         size_t bufferLength = pc.data.size();
 
         auto location = ShaderBindingLocation::pushConstant(pc.layout.offset);
-        copyStructProperty(location.set, location.binding,
+        copyStructProperty(ShaderDataType::Struct,
+                           location.set, location.binding,
                            location.offset, pc.layout.size,
                            pc.layout.size, 0, // stride, arrayIndex
                            pc.layout.members, pc.layout.name,
@@ -890,6 +900,7 @@ uint32_t Submesh::bindMaterialSamplers(MaterialSemantic semantic, const ShaderRe
 
 uint32_t Submesh::bindMaterialProperty(MaterialSemantic semantic,
                                        ShaderBindingLocation location,
+                                       ShaderDataType dataType,
                                        const std::string& name,
                                        uint32_t itemOffset,
                                        uint8_t* buffer, size_t length) const
@@ -970,9 +981,9 @@ uint32_t Submesh::bindMaterialProperty(MaterialSemantic semantic,
 }
 
 uint32_t Submesh::bindShaderUniformTextures(ShaderUniformSemantic semantic,
-                                          const std::string& name,
-                                          const SceneState& sceneState,
-                                          ShaderBindingSet* bindingSet) const
+                                            const std::string& name,
+                                            const SceneState& sceneState,
+                                            ShaderBindingSet* bindingSet) const
 {
     Log::warning(std::format(
         "No textures for ShaderUniformSemantic:{} name:\"{}\"",
@@ -981,9 +992,9 @@ uint32_t Submesh::bindShaderUniformTextures(ShaderUniformSemantic semantic,
 }
 
 uint32_t Submesh::bindShaderUniformSamplers(ShaderUniformSemantic semantic,
-                                          const std::string& name,
-                                          const SceneState& sceneState,
-                                          ShaderBindingSet* bindingSet) const
+                                            const std::string& name,
+                                            const SceneState& sceneState,
+                                            ShaderBindingSet* bindingSet) const
 {
     Log::warning(std::format(
         "No samplers for ShaderUniformSemantic:{} name:\"{}\"",
@@ -992,18 +1003,30 @@ uint32_t Submesh::bindShaderUniformSamplers(ShaderUniformSemantic semantic,
 }
 
 uint32_t Submesh::bindShaderUniformBuffer(ShaderUniformSemantic semantic,
-                                        const std::string& name,
-                                        const SceneState& sceneState,
-                                        uint8_t* buffer, size_t length) const
+                                          ShaderDataType dataType,
+                                          const std::string& name,
+                                          const SceneState& sceneState,
+                                          uint8_t* buffer, size_t length) const
 {
     switch (semantic)
     {
     case ShaderUniformSemantic::ModelViewProjectionMatrix:
-        if (length >= sizeof(Matrix4))
+        if (dataType == ShaderDataType::Float4x4)
         {
-            auto matrix = sceneState.view.matrix();
-            memcpy(buffer, matrix.val, sizeof(Matrix4));
-            return sizeof(Matrix4);
+            Matrix4 matrix = sceneState.view.matrix();
+            memcpy(buffer, matrix.val, sizeof(matrix));
+            return sizeof(matrix);
+        }
+        else if (dataType == ShaderDataType::Float3x3)
+        {
+            auto m = sceneState.view.matrix();
+            Matrix3 matrix = {
+                m._11, m._12, m._13,
+                m._21, m._22, m._23,
+                m._31, m._32, m._33
+            };
+            memcpy(buffer, matrix.val, sizeof(matrix));
+            return sizeof(matrix);
         }
         break;
     default:
