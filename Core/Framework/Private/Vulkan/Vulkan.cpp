@@ -352,19 +352,20 @@ std::shared_ptr<VulkanInstance> VulkanInstance::makeInstance(
     if (enableValidation)
     {
         validationFeatures.enabledValidationFeatureCount =
-            std::size(enabledFeatures);
+            (uint32_t)std::size(enabledFeatures);
         validationFeatures.pEnabledValidationFeatures = enabledFeatures;
         instanceCreateInfo.pNext = &validationFeatures;
     }
 
     if (enabledLayers.empty() == false)
     {
-        instanceCreateInfo.enabledLayerCount = enabledLayers.size();
+        instanceCreateInfo.enabledLayerCount = (uint32_t)enabledLayers.size();
         instanceCreateInfo.ppEnabledLayerNames = enabledLayers.data();
     }
     if (enabledExtensions.empty() == false)
     {
-        instanceCreateInfo.enabledExtensionCount = enabledExtensions.size();
+        instanceCreateInfo.enabledExtensionCount =
+            (uint32_t)enabledExtensions.size();
         instanceCreateInfo.ppEnabledExtensionNames = enabledExtensions.data();
     }
 
@@ -524,11 +525,11 @@ std::shared_ptr<FV::GraphicsDevice> VulkanInstance::makeDevice(
     std::vector<std::string> requiredExtensions,
     std::vector<std::string> optionalExtensions)
 {
-    if (auto iter = std::find_if(physicalDevices.begin(), physicalDevices.end(),
-                                 [&](const auto& device)
-                                 {
-                                     return device.registryID().compare(identifier) == 0;
-                                 }); iter != physicalDevices.end())
+    if (auto iter = std::find_if(
+        physicalDevices.begin(), physicalDevices.end(), [&](const auto& device)
+        {
+            return device.registryID().compare(identifier) == 0;
+        }); iter != physicalDevices.end())
     {
         const auto& device = *iter;
         try
