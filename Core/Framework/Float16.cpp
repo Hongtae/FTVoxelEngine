@@ -189,3 +189,34 @@ int Float16::compare(const Float16& rhs) const
 
 	return v1 - v2;
 }
+
+std::partial_ordering Float16::operator <=> (const Float16& rhs) const
+{
+	if (isNumeric() && rhs.isNumeric())
+	{
+		if (isPositiveInfinity())
+		{
+			if (rhs.isPositiveInfinity())
+				return std::partial_ordering::equivalent;
+			return std::partial_ordering::greater;
+		}
+		if (isNegativeInfinity())
+		{
+			if (rhs.isNegativeInfinity())
+				return std::partial_ordering::equivalent;
+			return std::partial_ordering::less;
+		}
+		if (rhs.isNegativeInfinity())
+			return std::partial_ordering::greater;
+		if (rhs.isPositiveInfinity())
+			return std::partial_ordering::less;
+
+		auto n = compare(rhs);
+		if (n > 0)
+			return std::partial_ordering::greater;
+		else if (n < 0)
+			return std::partial_ordering::less;
+		return std::partial_ordering::equivalent;
+	}
+	return std::partial_ordering::unordered;
+}

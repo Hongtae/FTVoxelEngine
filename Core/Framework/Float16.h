@@ -1,5 +1,6 @@
 #pragma once
 #include "../include.h"
+#include <compare>
 
 #pragma pack(push, 2)
 namespace FV
@@ -47,6 +48,7 @@ namespace FV
 		static const Float16 posInfinity;	///< +Inf (0x7c00)
 		static const Float16 negInfinity;	///< -Inf (0xfc00)
 
+		std::partial_ordering operator <=> (const Float16&) const;
 	private:
 		uint16_t binary16;	// packed 16bit float
 	};
