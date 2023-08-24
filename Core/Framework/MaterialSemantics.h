@@ -97,4 +97,17 @@ namespace std
             return a.set == b.set && a.binding == b.binding && a.offset == b.offset;
         }
     };
+
+    template <> struct formatter<FV::ShaderBindingLocation> : formatter<string>
+    {
+        auto format(const FV::ShaderBindingLocation& arg, format_context& ctx)
+        {
+            std::string str;
+            if (arg.isPushConstant())
+                str = std::format("pushConstant, offset:{}", arg.offset);
+            else
+                str = std::format("set:{}, binding:{}, offset:{}", arg.set, arg.binding, arg.offset);
+            return formatter<string>::format(str, ctx);
+        }
+    };
 }
