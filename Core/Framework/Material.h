@@ -181,7 +181,15 @@ namespace FV
         }
 
         std::string name;
-        BlendState blendState = BlendState::defaultOpaque;
+        struct RenderPassAttachment
+        {
+            PixelFormat format;
+            BlendState blendState;
+        };
+        std::vector<RenderPassAttachment> attachments = {
+            { PixelFormat::RGBA8Unorm, BlendState::defaultAlpha }
+        };
+        PixelFormat depthFormat = PixelFormat::Depth24Unorm_stencil8;
         TriangleFillMode triangleFillMode = TriangleFillMode::Fill;
         CullMode cullMode = CullMode::None;
         Winding frontFace = Winding::Clockwise;

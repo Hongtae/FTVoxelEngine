@@ -3,6 +3,7 @@
 #include <tuple>
 #include <functional>
 #include <algorithm>
+#include <numeric>
 #include "Mesh.h"
 #include "Scene.h"
 #include "Logger.h"
@@ -324,7 +325,7 @@ bool Submesh::initResources(GraphicsDevice* device, BufferUsagePolicy policy)
     return true;
 }
 
-bool Submesh::buildPipelineState(GraphicsDevice* device)
+bool Submesh::buildPipelineState(GraphicsDevice* device, PipelineReflection* rep)
 {
     if (material == nullptr)
     {
@@ -353,11 +354,22 @@ bool Submesh::buildPipelineState(GraphicsDevice* device)
     pipelineDescriptor.vertexFunction = vertexFunction;
     pipelineDescriptor.fragmentFunction = fragmentFunction;
     pipelineDescriptor.vertexDescriptor = vertexDescriptor;
-    pipelineDescriptor.colorAttachments = {
-        { 0, PixelFormat::RGBA8Unorm, material->blendState }
-    };
-    pipelineDescriptor.depthStencilAttachmentPixelFormat = PixelFormat::Depth32Float;
+    pipelineDescriptor.colorAttachments = [&] {
+        std::vector<RenderPipelineColorAttachmentDescriptor> attachments;
+        for (uint32_t index = 0; index < material->attachments.size(); ++index)
+        {
+            auto& att = material->attachments.at(index);
+            if (att.format != PixelFormat::Invalid)
+            {
+                attachments.push_back({ index, att.format, att.blendState });
+            }
+        }
+        return attachments;
+    }();
+    pipelineDescriptor.depthStencilAttachmentPixelFormat = material->depthFormat;
     pipelineDescriptor.primitiveTopology = this->primitiveType;
+    pipelineDescriptor.triangleFillMode = material->triangleFillMode;
+    pipelineDescriptor.rasterizationEnabled = true;
 
     PipelineReflection reflection = {};
     auto pso = device->makeRenderPipeline(pipelineDescriptor, &reflection);
@@ -467,6 +479,9 @@ bool Submesh::buildPipelineState(GraphicsDevice* device)
         PushConstantData pcd = { layout };
         pushConstants.push_back(pcd);
     }
+
+    if (rep)
+        *rep = reflection;
 
     this->pipelineState = pso;
     this->pipelineReflection = reflection;
@@ -1008,26 +1023,39 @@ uint32_t Submesh::bindShaderUniformBuffer(ShaderUniformSemantic semantic,
                                           const SceneState& sceneState,
                                           uint8_t* buffer, size_t length) const
 {
-    switch (semantic)
+    auto bindMatrix4 = [&](const Matrix4& matrix)->size_t
     {
-    case ShaderUniformSemantic::ModelViewProjectionMatrix:
         if (dataType == ShaderDataType::Float4x4)
         {
-            Matrix4 matrix = sceneState.view.matrix();
             memcpy(buffer, matrix.val, sizeof(matrix));
             return sizeof(matrix);
         }
         else if (dataType == ShaderDataType::Float3x3)
         {
-            auto m = sceneState.view.matrix();
-            Matrix3 matrix = {
-                m._11, m._12, m._13,
-                m._21, m._22, m._23,
-                m._31, m._32, m._33
+            Matrix3 mat = {
+                matrix._11, matrix._12, matrix._13,
+                matrix._21, matrix._22, matrix._23,
+                matrix._31, matrix._32, matrix._33
             };
             memcpy(buffer, matrix.val, sizeof(matrix));
             return sizeof(matrix);
         }
+        return 0;
+    };
+
+    switch (semantic)
+    {
+    case ShaderUniformSemantic::ModelMatrix:
+        return bindMatrix4(sceneState.model);
+        break;
+    case ShaderUniformSemantic::ViewMatrix:
+        return bindMatrix4(sceneState.view.view.matrix4());
+        break;
+    case ShaderUniformSemantic::ProjectionMatrix:
+        return bindMatrix4(sceneState.view.projection.matrix);
+        break;
+    case ShaderUniformSemantic::ModelViewProjectionMatrix:
+        return bindMatrix4(sceneState.view.matrix());
         break;
     default:
         Log::error("Not implemented yet!");
@@ -1036,16 +1064,82 @@ uint32_t Submesh::bindShaderUniformBuffer(ShaderUniformSemantic semantic,
     return 0;
 }
 
-bool Submesh::draw(RenderCommandEncoder* encoder, const SceneState& state, const Matrix4& tm) const
+bool Submesh::encodeRenderCommand(RenderCommandEncoder* encoder,
+                                  uint32_t numInstances,
+                                  uint32_t baseInstance) const
 {
+    if (pipelineState && vertexBuffers.empty() == false && material)
+    {
+        encoder->setRenderPipelineState(pipelineState);
+        encoder->setFrontFacing(material->frontFace);
+        encoder->setCullMode(CullMode::None);
+
+        for (auto& rb : resourceBindings)
+        {
+            encoder->setResources(rb.index, rb.bindingSet);
+        }
+        for (auto& pc : pushConstants)
+        {
+            uint32_t size = pc.layout.offset + pc.layout.size;
+            if (size > pc.data.size())
+                size = uint32_t(pc.data.size());
+
+            if (size > pc.layout.offset)
+                encoder->pushConstant(pc.layout.stages,
+                                      pc.layout.offset,
+                                      size - pc.layout.offset,
+                                      &pc.data.data()[pc.layout.offset]);
+        }
+        for (uint32_t index = 0; index < vertexBuffers.size(); ++index)
+        {
+            auto& buffer = vertexBuffers.at(index);
+            encoder->setVertexBuffer(buffer.buffer, buffer.byteOffset, index);
+        }
+        auto vertexCount = std::reduce(vertexBuffers.begin(),
+                                       vertexBuffers.end(),
+                                       vertexBuffers.front().vertexCount,
+                                       [](auto pr, auto& b)
+                                       {
+                                           return std::min(pr, b.vertexCount);
+                                       });
+        if (vertexCount > 0)
+        {
+            if (indexBuffer)
+            {
+                encoder->drawIndexed(indexCount, indexType, indexBuffer,
+                                     indexBufferByteOffset,
+                                     numInstances,
+                                     indexBufferBaseVertexIndex,
+                                     baseInstance);
+            }
+            else
+            {
+                if (vertexCount > vertexStart)
+                    encoder->draw(vertexStart, vertexCount - vertexStart, numInstances, baseInstance);
+            }
+        }
+        return true;
+    }
     return false;
 }
 
-void Mesh::draw(RenderCommandEncoder* encoder, const SceneState& state, const Matrix4& tm) const
+void Mesh::updateShadingProperties(const SceneState* sceneState)
 {
     for (auto& mesh : submeshes)
     {
-        mesh.draw(encoder, state, tm);
+        mesh.updateShadingProperties(sceneState);
     }
 }
 
+uint32_t Mesh::encodeRenderCommand(RenderCommandEncoder* encoder,
+                               uint32_t numInstances,
+                               uint32_t baseInstance) const
+{
+    uint32_t encoded = 0;
+    for (auto& mesh : submeshes)
+    {
+        if (mesh.encodeRenderCommand(encoder, numInstances, baseInstance))
+            encoded++;
+    }
+    return encoded;
+}

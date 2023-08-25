@@ -54,14 +54,21 @@ VkBool32 VKAPI_PTR debugUtilsMessengerCallback(
         type += "PERFORMANCE-";
     }
 
+    const char* messageID = "";
+    if (pCallbackData->pMessageIdName)
+        messageID = pCallbackData->pMessageIdName;
+    const char* message = "";
+    if (pCallbackData->pMessage)
+        message = pCallbackData->pMessage;
+
     if (auto logger = vulkanDebugLogger.lock())
     {
         logger->log(
             level,
             std::format("[{}]({:d}){}",
-                        pCallbackData->pMessageIdName,
+                        messageID,
                         pCallbackData->messageIdNumber,
-                        pCallbackData->pMessage));
+                        message));
     }
     else
     {
@@ -69,9 +76,9 @@ VkBool32 VKAPI_PTR debugUtilsMessengerCallback(
             level,
             std::format("[Vulkan {}{}] [{}]({:d}){}",
                         type, prefix,
-                        pCallbackData->pMessageIdName,
+                        messageID,
                         pCallbackData->messageIdNumber,
-                        pCallbackData->pMessage));
+                        message));
     }
     if (level == Level::Error)
     {

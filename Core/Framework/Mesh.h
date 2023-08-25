@@ -35,8 +35,11 @@ namespace FV
         std::vector<VertexBuffer> vertexBuffers;
 
         std::shared_ptr<GPUBuffer> indexBuffer;
-        uint32_t indexOffset;
-        size_t indexCount;
+        uint32_t indexBufferByteOffset;
+        uint32_t indexBufferBaseVertexIndex;
+        uint32_t vertexStart;
+        uint32_t indexCount;
+        IndexType indexType;
 
         PrimitiveType primitiveType;
 
@@ -51,10 +54,10 @@ namespace FV
         };
 
         bool initResources(GraphicsDevice*, BufferUsagePolicy);
-        bool buildPipelineState(GraphicsDevice*);
+        bool buildPipelineState(GraphicsDevice*, PipelineReflection* = nullptr);
         void updateShadingProperties(const SceneState*);
 
-        bool draw(RenderCommandEncoder*, const SceneState&, const Matrix4&) const;
+        bool encodeRenderCommand(RenderCommandEncoder* encoder, uint32_t numInstances, uint32_t baseInstance) const;
 
     private:
         struct ResourceBinding
@@ -101,6 +104,7 @@ namespace FV
         std::string name;
         std::vector<Submesh> submeshes; // primitives
 
-        void draw(RenderCommandEncoder*, const SceneState&, const Matrix4&) const;
+        void updateShadingProperties(const SceneState*);
+        uint32_t encodeRenderCommand(RenderCommandEncoder* encoder, uint32_t numInstances, uint32_t baseInstance) const;
     };
 }

@@ -18,6 +18,7 @@ namespace FV
     struct SceneState
     {
         ViewFrustum view;
+        Matrix4 model;
     };
 
     struct AABB
@@ -44,7 +45,6 @@ namespace FV
         }
     };
 
-    struct Mesh;
     struct FVCORE_API SceneNode
     {
         std::string name;

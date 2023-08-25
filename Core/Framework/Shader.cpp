@@ -562,12 +562,13 @@ bool Shader::compile()
         for (const spirv_cross::Resource& resource : resources.push_constant_buffers)
         {
             spirv_cross::SmallVector<spirv_cross::BufferRange> ranges = compiler.get_active_buffer_ranges(resource.id);
-            FVASSERT_THROW(ranges.size());
+            if (ranges.empty())
+                continue;
 
             size_t pushConstantOffset = ranges[0].offset;
             size_t pushConstantSize = 0;
 
-            for (spirv_cross::BufferRange& range : ranges)
+            for (const spirv_cross::BufferRange& range : ranges)
             {
                 pushConstantOffset = std::min(range.offset, pushConstantOffset);
                 pushConstantSize = std::max(range.offset + range.range, pushConstantSize);
@@ -592,14 +593,14 @@ bool Shader::compile()
 
         // get module entry points
         spirv_cross::SmallVector<spirv_cross::EntryPoint> entryPoints = compiler.get_entry_points_and_stages();
-        for (spirv_cross::EntryPoint& ep : entryPoints)
+        for (const spirv_cross::EntryPoint& ep : entryPoints)
         {
             this->_functions.push_back(ep.name);
         }
 
         // specialization constants
         spirv_cross::SmallVector<spirv_cross::SpecializationConstant> spConstants = compiler.get_specialization_constants();
-        for (spirv_cross::SpecializationConstant& sc : spConstants)
+        for (const spirv_cross::SpecializationConstant& sc : spConstants)
         {
             auto spvID = sc.id;
             auto constantID = sc.constant_id;

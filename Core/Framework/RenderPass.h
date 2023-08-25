@@ -26,6 +26,8 @@ namespace FV
         LoadAction loadAction = LoadActionDontCare;
         StoreAction storeAction = StoreActionDontCare;
     };
+    using RenderPassLoadAction = RenderPassAttachmentDescriptor::LoadAction;
+    using RenderPassStoreAction = RenderPassAttachmentDescriptor::StoreAction;
 
     struct RenderPassColorAttachmentDescriptor : public RenderPassAttachmentDescriptor
     {

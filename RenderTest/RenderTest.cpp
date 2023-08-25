@@ -12,6 +12,7 @@
 
 #include "../Utils/tinygltf/tiny_gltf.h"
 #include "Model.h"
+#include "ShaderReflection.h"
 
 using namespace FV;
 
@@ -68,13 +69,15 @@ public:
         if (swapchain == nullptr)
             throw std::runtime_error("swapchain creation failed");
 
+        auto device = queue->device().get();
+
         // load shader
         auto vsPath = this->appResourcesRoot / "shaders/sample.vert.spv";
         auto fsPath = this->appResourcesRoot / "shaders/sample.frag.spv";
-        auto vertexShader = loadShader(vsPath, queue->device().get());
+        auto vertexShader = loadShader(vsPath, device);
         if (vertexShader.has_value() == false)
             throw std::runtime_error("failed to load shader");
-        auto fragmentShader = loadShader(fsPath, queue->device().get());
+        auto fragmentShader = loadShader(fsPath, device);
         if (fragmentShader.has_value() == false)
             throw std::runtime_error("failed to load shader");
 
@@ -89,13 +92,13 @@ public:
         MaterialShaderMap shader = {};
         shader.resourceSemantics = {
             { ShaderBindingLocation{ 0, 1, 0}, MaterialSemantic::BaseColorTexture },
-            { ShaderBindingLocation::pushConstant(0), ShaderUniformSemantic::ModelViewProjectionMatrix},
+            //{ ShaderBindingLocation::pushConstant(0), ShaderUniformSemantic::ModelViewProjectionMatrix },
+            { ShaderBindingLocation::pushConstant(0), ShaderUniformSemantic::ProjectionMatrix },
+            { ShaderBindingLocation::pushConstant(64), ShaderUniformSemantic::ModelMatrix },
+            { ShaderBindingLocation::pushConstant(128), ShaderUniformSemantic::ViewMatrix },
+            //{ ShaderBindingLocation::pushConstant(64), MaterialSemantic::UserDefined },
+            //{ ShaderBindingLocation::pushConstant(80), MaterialSemantic::UserDefined },
         };
-        //shader.resourceSemantics[MaterialShaderMap::BindingLocation::pushConstant(0)] = ShaderUniformSemantic::ModelViewProjectionMatrix;
-        //shader.resourceSemantics[MaterialShaderMap::BindingLocation::pushConstant(0)] = ShaderUniformSemantic::ModelViewProjectionMatrix;
-        //shader.resourceSemantics[MaterialShaderMap::BindingLocation::pushConstant(64)] = ShaderUniformSemantic::DirectionalLightDirection;
-        //shader.resourceSemantics[MaterialShaderMap::BindingLocation::pushConstant(80)] = ShaderUniformSemantic::DirectionalLightDiffuseColor;
-        
 
         shader.inputAttributeSemantics = {
             { 0, VertexAttributeSemantic::Position },
@@ -113,9 +116,16 @@ public:
         SceneState sceneState = {
             .view = ViewFrustum
             {
-                ViewTransform(Vector3(0, 0, 500),  Vector3(0, 0, -1), Vector3(0,1,0)),
-                ProjectionTransform::perspective(degreeToRadian(90.0f), 1.0, 1.0, 10000.0)
+                ViewTransform(Vector3(0, 10, 100),
+                              Vector3(0, 10, -1),
+                              Vector3(0, 1, 0)),
+                ProjectionTransform::perspective(
+                    degreeToRadian(90.0f), // fov
+                    1.0,     // aspect ratio
+                    0.1,     // near
+                    1000.0)  // far
             },
+            .model = Matrix4::identity
         };
 
         struct ForEachNode
@@ -129,6 +139,8 @@ public:
                     ForEachNode{ child }(fn);
             }
         };
+
+        std::vector<Mesh*> meshes;
         std::vector<Material*> materials;
 
         for (auto& scene : model->scenes)
@@ -138,43 +150,95 @@ public:
                     {
                         if (node.mesh.has_value())
                         {
-                            for (auto& mesh : node.mesh.value().submeshes)
-                                if (mesh.material)
-                                    materials.push_back(mesh.material.get());
+                            Mesh& mesh = node.mesh.value();
+                            meshes.push_back(&mesh);
+                            for (auto& submesh : mesh.submeshes)
+                                if (submesh.material)
+                                    materials.push_back(submesh.material.get());
                         }
                     });
 
+        PixelFormat depthFormat = PixelFormat::Depth32Float;
+        std::shared_ptr<Texture> depthTexture = nullptr;
+
+        // set user-defined property values
         for (auto& material : materials)
         {
-            material->setProperty(ShaderBindingLocation::pushConstant(64),
-                                  Vector3(1, 1, 1));
-            material->setProperty(ShaderBindingLocation::pushConstant(80),
-                                  Vector3(1, 1, 1));
+            material->attachments.front().format = swapchain->pixelFormat();
+            material->depthFormat = depthFormat;
+            //material->setProperty(ShaderBindingLocation::pushConstant(64),
+            //                      Vector3(1, 1, 1));
+            //material->setProperty(ShaderBindingLocation::pushConstant(80),
+            //                      Vector3(1, 1, 1));
         }
 
-        for (auto& scene : model->scenes)
-            for (auto& node : scene.nodes)
-                ForEachNode{ node }(
-                    [&](auto& node)
-                    {
-                        if (node.mesh.has_value())
-                        {
-                            for (auto& mesh : node.mesh.value().submeshes)
-                                mesh.updateShadingProperties(&sceneState);
-                        }
-                    });
+        for (auto& mesh : meshes)
+        {
+            for (int index = 0; index < mesh->submeshes.size(); ++index)
+            {
+                auto& submesh = mesh->submeshes.at(index);
+                PipelineReflection reflection = {};
+                if (submesh.buildPipelineState(device, &reflection))
+                {
+                    printPipelineReflection(reflection, Log::Level::Debug);
+                    submesh.initResources(device, Submesh::BufferUsagePolicy::SingleBuffer);
+                }
+                else
+                {
+                    Log::error(std::format(
+                        "Failed to make pipeline descriptor for mesh:{}, submesh[{:d}]",
+                        mesh->name, index));
+                }
+            }
+            mesh->updateShadingProperties(&sceneState);
+        }
 
-        
+        auto depthStencilState = device->makeDepthStencilState(
+            {
+                CompareFunctionAlways,
+                StencilDescriptor{},
+                StencilDescriptor{},
+                true
+            });
+
         constexpr auto frameInterval = 1.0 / 60.0;
         auto timestamp = std::chrono::high_resolution_clock::now();
 
         while (stop.stop_requested() == false)
         {
             auto rp = swapchain->currentRenderPassDescriptor();
-            rp.colorAttachments.front().clearColor = Color::nonLinearMint;
+
+            auto& frontAttachment = rp.colorAttachments.front();
+            frontAttachment.clearColor = Color::nonLinearMint;
+
+            uint32_t width = frontAttachment.renderTarget->width();
+            uint32_t height = frontAttachment.renderTarget->height();
+
+            if (depthTexture == nullptr ||
+                depthTexture->width() != width ||
+                depthTexture->height() != height)
+            {
+                depthTexture = device->makeTransientRenderTarget(TextureType2D, depthFormat, width, height, 1);
+            }
+            rp.depthStencilAttachment.renderTarget = depthTexture;
+            rp.depthStencilAttachment.loadAction = RenderPassLoadAction::LoadActionClear;
+            rp.depthStencilAttachment.storeAction = RenderPassStoreAction::StoreActionDontCare;
 
             auto buffer = queue->makeCommandBuffer();
             auto encoder = buffer->makeRenderCommandEncoder(rp);
+            encoder->setDepthStencilState(nullptr);
+
+            auto& scene = model->scenes.at(model->defaultSceneIndex);
+            for (auto& node : scene.nodes)
+                ForEachNode{ node }(
+                    [&](auto& node)
+                    {
+                        if (node.mesh.has_value())
+                        {
+                            node.mesh.value().encodeRenderCommand(encoder.get(), 1, 0);
+                        }
+                    });
+
             encoder->endEncoding();
             buffer->commit();
             
@@ -202,5 +266,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_ LPWSTR    lpCmdLine,
                      _In_ int       nCmdShow)
 {
+    //auto h = LoadLibraryA("C:\\Program Files\\RenderDoc\\RenderDoc.dll");
     return RenderTestApp().run();
 }

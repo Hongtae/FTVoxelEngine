@@ -20,9 +20,62 @@ struct LoaderContext
     std::vector<SamplerDescriptor> samplerDescriptors;
 };
 
+std::shared_ptr<GPUBuffer> makeBuffer(CommandBuffer* cbuffer, size_t length, const void* data,
+                                      GPUBuffer::StorageMode storageMode = GPUBuffer::StorageModePrivate,
+                                      CPUCacheMode cpuCacheMode = CPUCacheModeDefault)
+{
+    FVASSERT(length > 0);
+
+    FVASSERT(cbuffer);
+    auto device = cbuffer->device();
+
+    std::shared_ptr<GPUBuffer> buffer;
+    if (storageMode == GPUBuffer::StorageModeShared)
+    {
+        buffer = device->makeBuffer(length, storageMode, cpuCacheMode);
+        FVASSERT(buffer);
+        if (auto p = buffer->contents(); p)
+        {
+            memcpy(p, data, length);
+            buffer->flush();
+        }
+        else
+        {
+            Log::error("GPUBuffer map failed.");
+            FVERROR_ABORT("GPUBuffer map failed.");
+            return nullptr;
+        }
+    }
+    else
+    {
+        auto stgBuffer = device->makeBuffer(length,
+                                            GPUBuffer::StorageModeShared,
+                                            CPUCacheModeWriteCombined);
+        FVASSERT(stgBuffer);
+        if (auto p = stgBuffer->contents(); p)
+        {
+            memcpy(p, data, length);
+            stgBuffer->flush();
+        }
+        else
+        {
+            Log::error("GPUBuffer map failed.");
+            FVERROR_ABORT("GPUBuffer map failed.");
+            return nullptr;
+        }
+
+        buffer = device->makeBuffer(length, storageMode, cpuCacheMode);
+        FVASSERT(buffer);
+        auto encoder = cbuffer->makeCopyCommandEncoder();
+        FVASSERT(encoder);
+        encoder->copy(buffer, 0, stgBuffer, 0, length);
+        encoder->endEncoding();
+    }
+    return buffer;
+}
+
 void loadBuffers(LoaderContext& context)
 {
-    auto device = context.queue->device();
     auto cbuffer = context.queue->makeCommandBuffer();
     FVASSERT(cbuffer);
 
@@ -34,30 +87,10 @@ void loadBuffers(LoaderContext& context)
         auto& glTFBuffer = model.buffers.at(index);
 
         auto& data = glTFBuffer.data;
-        auto stgBuffer = device->makeBuffer(data.size(),
-                                            GPUBuffer::StorageModeShared,
-                                            CPUCacheModeWriteCombined);
-        FVASSERT(stgBuffer);
-        if (auto p = stgBuffer->contents(); p)
-        {
-            memcpy(p, data.data(), data.size());
-            stgBuffer->flush();
-        }
-        else
-        {
-            Log::error("GPUBuffer map failed.");
-            continue;
-        }
 
-        auto buffer = device->makeBuffer(data.size(),
-                                         GPUBuffer::StorageModePrivate,
-                                         CPUCacheModeDefault);
+        auto buffer = makeBuffer(cbuffer.get(), data.size(), data.data());
+        FVASSERT(buffer);
         context.buffers.at(index) = buffer;
-
-        auto encoder = cbuffer->makeCopyCommandEncoder();
-        FVASSERT(encoder);
-        encoder->copy(buffer, 0, stgBuffer, 0, data.size());
-        encoder->endEncoding();
     }
     FVASSERT(context.buffers.size() == model.buffers.size());
     cbuffer->commit();
@@ -209,11 +242,11 @@ void loadMaterials(LoaderContext& context)
 
         if (_stricmp(glTFMaterial.alphaMode.c_str(), "BLEND") == 0)
         {
-            material->blendState = BlendState::defaultAlpha;
+            material->attachments.front().blendState = BlendState::defaultAlpha;
         }
         else
         {
-            material->blendState = BlendState::defaultOpaque;
+            material->attachments.front().blendState = BlendState::defaultOpaque;
         }
 
         if (glTFMaterial.doubleSided)
@@ -380,43 +413,37 @@ void loadMeshes(LoaderContext& context)
                 auto& glTFBufferView = model.bufferViews[glTFAccessor.bufferView];
                 auto& glTFBuffer = model.buffers[glTFBufferView.buffer];
 
-                submesh.indexOffset = uint32_t(glTFBufferView.byteOffset + glTFAccessor.byteOffset);
+                submesh.indexBufferByteOffset = uint32_t(glTFBufferView.byteOffset + glTFAccessor.byteOffset);
                 submesh.indexCount = glTFAccessor.count;
                 submesh.indexBuffer = context.buffers[glTFBufferView.buffer];
+                submesh.indexBufferBaseVertexIndex = 0;
 
-                uint32_t indexSize = 0;
                 switch (glTFAccessor.componentType) {
                 case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: // convert to uint16
-                    indexSize = 1;
+                    do 
                     {
                         FVASSERT(glTFAccessor.count > 0);
                         size_t size = glTFAccessor.count * 2;
-                        auto stgBuffer = device->makeBuffer(size, GPUBuffer::StorageModeShared, CPUCacheModeWriteCombined);
-                        FVASSERT(stgBuffer);
 
-                        const uint8_t* src = glTFBuffer.data.data() + submesh.indexOffset;
-                        uint16_t* dst = reinterpret_cast<uint16_t*>(stgBuffer->contents());
-                        FVASSERT(src);
-                        FVASSERT(dst);
+                        std::vector<uint16_t> indexData;
+                        indexData.reserve(glTFAccessor.count);
+                        std::transform(glTFBuffer.data.begin(),
+                                       glTFBuffer.data.end(),
+                                       std::back_inserter(indexData),
+                                       [](auto n)->uint16_t {return n; });
 
-                        for (size_t i = 0; i < glTFAccessor.count; ++i)
-                        {
-                            dst[i] = src[i];
-                        }
-                        auto buffer = device->makeBuffer(size, GPUBuffer::StorageModePrivate, CPUCacheModeDefault);
-
-                        auto encoder = cbuffer->makeCopyCommandEncoder();
-                        FVASSERT(encoder);
-                        encoder->copy(buffer, 0, stgBuffer, 0, size);
-                        encoder->endEncoding();
+                        auto buffer = makeBuffer(cbuffer.get(), indexData.size() * 2,
+                                                 indexData.data());
+                        FVASSERT(buffer);
                         submesh.indexBuffer = buffer;
-                    }
+                        submesh.indexType = IndexType::UInt16;
+                    } while (0);
                     break;
                 case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-                    indexSize = 2;
+                    submesh.indexType = IndexType::UInt16;
                     break;
                 case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-                    indexSize = 4;
+                    submesh.indexType = IndexType::UInt32;
                     break;
                 }
             }
@@ -431,13 +458,6 @@ void loadMeshes(LoaderContext& context)
                 submesh.material->shader = context.shader;
             }
 
-            // setup pso..
-            if (submesh.buildPipelineState(context.queue->device().get()) == false)
-            {
-                Log::error(std::format(
-                    "Failed to make pipeline descriptor for submesh[{:d}], {}",
-                    mesh.submeshes.size(), mesh.name));
-            }
             mesh.submeshes.push_back(submesh);
         }
         cbuffer->commit();
