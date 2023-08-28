@@ -168,7 +168,7 @@ bool Image::canEncode(ImageFormat imageFormat) const
         && this->pixelFormat != ImagePixelFormat::Invalid;
 }
 
-bool Image::encode(ImageFormat imageFormat, std::function<void(void*, size_t)> fn) const
+bool Image::encode(ImageFormat imageFormat, std::function<void(const void*, size_t)> fn) const
 {
     uint32_t byteCount = bytesPerPixel() * width * height;
     FVASSERT_DEBUG(byteCount == data.size());
@@ -179,6 +179,7 @@ bool Image::encode(ImageFormat imageFormat, std::function<void(void*, size_t)> f
     bool result = false;
     if (context.error == DKImageEncodeError_Success)
     {
+        fn(context.encodedData, context.encodedDataLength);
         result = true;
     }
     DKImageReleaseEncodeContext(&context);

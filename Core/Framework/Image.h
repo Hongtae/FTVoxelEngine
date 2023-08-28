@@ -61,7 +61,7 @@ namespace FV
         uint32_t bytesPerPixel() const;
 
         bool canEncode(ImageFormat format) const;
-        bool encode(ImageFormat format, std::function<void(void*, size_t)>) const;
+        bool encode(ImageFormat format, std::function<void(const void*, size_t)>) const;
 
         std::shared_ptr<Image> resample(ImagePixelFormat) const;
         std::shared_ptr<Image> resample(uint32_t width, uint32_t height, ImagePixelFormat format, ImageInterpolation interpolation) const;
