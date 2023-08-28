@@ -524,15 +524,9 @@ void RenderCommandEncoder::setCullMode(CullMode mode)
         VkCullModeFlags flags = {};
         switch (mode)
         {
-        case CullMode::None:
-            flags = VK_CULL_MODE_NONE;
-            break;
-        case CullMode::Front:
-            flags = VK_CULL_MODE_FRONT_BIT;
-            break;
-        case CullMode::Back:
-            flags = VK_CULL_MODE_BACK_BIT;
-            break;
+        case CullMode::None:    flags = VK_CULL_MODE_NONE;      break;
+        case CullMode::Front:   flags = VK_CULL_MODE_FRONT_BIT; break;
+        case CullMode::Back:    flags = VK_CULL_MODE_BACK_BIT;  break;
         }
         vkCmdSetCullMode(commandBuffer, flags);
     };

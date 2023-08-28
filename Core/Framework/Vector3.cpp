@@ -47,7 +47,7 @@ Vector3 Vector3::applying(const Quaternion& q) const
 Vector3 Vector3::normalized() const
 {
 	auto sq = magnitudeSquared();
-	if (sq != 0.0f) return (*this) * sqrt(sq);
+	if (sq != 0.0f) return (*this) / sqrt(sq);
 	return *this;
 }
 

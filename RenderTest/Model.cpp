@@ -68,7 +68,7 @@ std::shared_ptr<GPUBuffer> makeBuffer(CommandBuffer* cbuffer, size_t length, con
         FVASSERT(buffer);
         auto encoder = cbuffer->makeCopyCommandEncoder();
         FVASSERT(encoder);
-        encoder->copy(buffer, 0, stgBuffer, 0, length);
+        encoder->copy(stgBuffer, 0, buffer, 0, length);
         encoder->endEncoding();
     }
     return buffer;
@@ -368,6 +368,10 @@ void loadMeshes(LoaderContext& context)
                     Log::error(std::format("Unhandled vertex attribute type: {}",
                                            glTFAccessor.type));
                 }
+
+                // Note: 
+                // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#meshes
+
                 if (_stricmp(attributeName.c_str(), "POSITION") == 0)
                     attribute.semantic = VertexAttributeSemantic::Position;
                 else if (_stricmp(attributeName.c_str(), "NORMAL") == 0)
@@ -376,6 +380,8 @@ void loadMeshes(LoaderContext& context)
                     attribute.semantic = VertexAttributeSemantic::Tangent;
                 else if (_stricmp(attributeName.c_str(), "TEXCOORD_0") == 0)
                     attribute.semantic = VertexAttributeSemantic::TextureCoordinates;
+                else if (_stricmp(attributeName.c_str(), "COLOR_0") == 0)
+                    attribute.semantic = VertexAttributeSemantic::Color;
                 else
                 {
                     Log::warning(std::format("Unhandled vertex buffer attribute: {}",
@@ -407,7 +413,7 @@ void loadMeshes(LoaderContext& context)
                 throw std::runtime_error("Unknown primitive type");
             }
 
-            if (glTFPrimitive.indices > 0)
+            if (glTFPrimitive.indices >= 0)
             {
                 auto& glTFAccessor = model.accessors[glTFPrimitive.indices];
                 auto& glTFBufferView = model.bufferViews[glTFAccessor.bufferView];

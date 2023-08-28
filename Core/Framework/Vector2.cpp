@@ -21,7 +21,7 @@ Vector2 Vector2::applying(const AffineTransform2& t) const
 Vector2 Vector2::normalized() const
 {
 	auto sq = magnitudeSquared();
-	if (sq != 0.0f) return (*this) * sqrt(sq);
+	if (sq != 0.0f) return (*this) / sqrt(sq);
 	return *this;
 }
 

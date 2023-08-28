@@ -1,17 +1,20 @@
 #pragma once
 #include "../include.h"
 #include <numbers>
+#include <type_traits>
 #include "Vector4.h"
 
 #pragma pack(push, 4)
 namespace FV
 {
-    template <typename T>
+    template <typename T,
+              typename = std::enable_if_t<std::is_floating_point_v<T>>>
     inline constexpr T radianToDegree(T r)
     {
         return r * T(180.0 / std::numbers::pi);
     }
-    template <typename T>
+    template <typename T,
+              typename = std::enable_if_t<std::is_floating_point_v<T>>>
     inline constexpr T degreeToRadian(T d)
     {
         return d * T(std::numbers::pi / 180.0);

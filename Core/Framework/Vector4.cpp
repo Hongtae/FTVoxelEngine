@@ -32,7 +32,7 @@ Vector4 Vector4::applying(const Matrix4& m) const
 Vector4 Vector4::normalized() const
 {
 	auto sq = magnitudeSquared();
-	if (sq != 0.0f) return (*this) * sqrt(sq);
+	if (sq != 0.0f) return (*this) / sqrt(sq);
 	return *this;
 }
 

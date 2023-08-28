@@ -223,15 +223,26 @@ GraphicsDevice::GraphicsDevice(std::shared_ptr<VulkanInstance> ins,
 
 GraphicsDevice::~GraphicsDevice()
 {
-    for (int i = 0; i < NumDescriptorPoolChainBuckets; ++i)
-    {
-        FVASSERT_DEBUG(descriptorPoolChainMaps[i].poolChainMap.empty());
-    }
-
-    vkDeviceWaitIdle(device);
     fenceCompletionThread.request_stop();
     fenceCompletionCond.notify_all();
     fenceCompletionThread.join();
+
+    for (int i = 0; i < NumDescriptorPoolChainBuckets; ++i)
+    {
+        auto& chainMap = descriptorPoolChainMaps[i].poolChainMap;
+        for (auto& cmap : chainMap)
+        {
+            DescriptorPoolChain* chain = cmap.second;
+            for (auto& pool : chain->descriptorPools)
+            {
+                FVASSERT_DEBUG(pool->numAllocatedSets == 0);
+            }
+            delete chain;
+        }
+        chainMap.clear();
+    }
+
+    vkDeviceWaitIdle(device);
 
     FVASSERT_DEBUG(pendingFenceCallbacks.empty());
     for (VkFence fence : reusableFences)

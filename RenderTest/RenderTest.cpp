@@ -92,12 +92,10 @@ public:
         MaterialShaderMap shader = {};
         shader.resourceSemantics = {
             { ShaderBindingLocation{ 0, 1, 0}, MaterialSemantic::BaseColorTexture },
-            //{ ShaderBindingLocation::pushConstant(0), ShaderUniformSemantic::ModelViewProjectionMatrix },
-            { ShaderBindingLocation::pushConstant(0), ShaderUniformSemantic::ProjectionMatrix },
-            { ShaderBindingLocation::pushConstant(64), ShaderUniformSemantic::ModelMatrix },
-            { ShaderBindingLocation::pushConstant(128), ShaderUniformSemantic::ViewMatrix },
+            { ShaderBindingLocation::pushConstant(0), ShaderUniformSemantic::ModelViewProjectionMatrix },
             //{ ShaderBindingLocation::pushConstant(64), MaterialSemantic::UserDefined },
             //{ ShaderBindingLocation::pushConstant(80), MaterialSemantic::UserDefined },
+            //{ ShaderBindingLocation::pushConstant(96), MaterialSemantic::UserDefined },
         };
 
         shader.inputAttributeSemantics = {
@@ -113,16 +111,20 @@ public:
         if (model == nullptr)
             throw std::runtime_error("failed to load glTF");
 
+        const Vector3 camPosition = Vector3(0, 120, 200);
+        const Vector3 camTarget = Vector3(0, 100, 0);
+        const float fov = degreeToRadian(80.0f);
+
         SceneState sceneState = {
             .view = ViewFrustum
             {
-                ViewTransform(Vector3(0, 10, 100),
-                              Vector3(0, 10, -1),
+                ViewTransform(camPosition,
+                              camTarget - camPosition,
                               Vector3(0, 1, 0)),
                 ProjectionTransform::perspective(
-                    degreeToRadian(90.0f), // fov
+                    fov,     // fov
                     1.0,     // aspect ratio
-                    0.1,     // near
+                    1.0,     // near
                     1000.0)  // far
             },
             .model = Matrix4::identity
@@ -166,10 +168,9 @@ public:
         {
             material->attachments.front().format = swapchain->pixelFormat();
             material->depthFormat = depthFormat;
-            //material->setProperty(ShaderBindingLocation::pushConstant(64),
-            //                      Vector3(1, 1, 1));
-            //material->setProperty(ShaderBindingLocation::pushConstant(80),
-            //                      Vector3(1, 1, 1));
+            material->setProperty(ShaderBindingLocation::pushConstant(64), Vector3(1, -1, 1));
+            material->setProperty(ShaderBindingLocation::pushConstant(80), Vector3(1, 1, 1));
+            material->setProperty(ShaderBindingLocation::pushConstant(96), Vector3(0.3, 0.3, 0.3));
         }
 
         for (auto& mesh : meshes)
@@ -195,7 +196,7 @@ public:
 
         auto depthStencilState = device->makeDepthStencilState(
             {
-                CompareFunctionAlways,
+                CompareFunctionLessEqual,
                 StencilDescriptor{},
                 StencilDescriptor{},
                 true
@@ -203,6 +204,8 @@ public:
 
         constexpr auto frameInterval = 1.0 / 60.0;
         auto timestamp = std::chrono::high_resolution_clock::now();
+        double delta = 0.0;
+        Transform modelTransform = Transform();
 
         while (stop.stop_requested() == false)
         {
@@ -226,7 +229,16 @@ public:
 
             auto buffer = queue->makeCommandBuffer();
             auto encoder = buffer->makeRenderCommandEncoder(rp);
-            encoder->setDepthStencilState(nullptr);
+            encoder->setDepthStencilState(depthStencilState);
+
+            modelTransform.rotate(Quaternion(Vector3(0, 1, 0), std::numbers::pi * delta * 0.4));
+            sceneState.model = modelTransform.matrix4();
+
+            sceneState.view.projection = ProjectionTransform::perspective(
+                fov, // fov
+                float(width) / float(height),     // aspect ratio
+                1.0,      // near
+                1000.0);  // far
 
             auto& scene = model->scenes.at(model->defaultSceneIndex);
             for (auto& node : scene.nodes)
@@ -235,6 +247,7 @@ public:
                     {
                         if (node.mesh.has_value())
                         {
+                            node.mesh.value().updateShadingProperties(&sceneState);
                             node.mesh.value().encodeRenderCommand(encoder.get(), 1, 0);
                         }
                     });
@@ -245,10 +258,11 @@ public:
             swapchain->present();
 
             auto t = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double> delta = t - timestamp;
+            std::chrono::duration<double> d = t - timestamp;
             timestamp = t;
+            delta = d.count();
 
-            auto interval = std::max(frameInterval - delta.count(), 0.0);
+            auto interval = std::max(frameInterval - delta, 0.0);
             if (interval > 0.0)
             {
                 std::this_thread::sleep_for(std::chrono::duration<double>(interval));

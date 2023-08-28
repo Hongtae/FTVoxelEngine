@@ -6,9 +6,10 @@ layout (location = 2) in vec2 inTexCoord;
 
 layout (push_constant) uniform Constants 
 {
-	mat4 projection;
-	mat4 model;
-	mat4 view;
+	mat4 transform;
+	vec3 lightDir;
+	vec3 lightColor;
+	vec3 ambientColor;
 } pc;
 
 layout (location = 0) out vec3 outNormal;
@@ -22,9 +23,8 @@ out gl_PerVertex
 
 void main() 
 {
-	mat4 transform = pc.projection * pc.view * pc.model;
-	gl_Position = transform * vec4(inPos, 1.0);
-	outNormal = normalize(inNormal * mat3(transform));
+	gl_Position = pc.transform * vec4(inPos, 1.0);
+	outNormal = normalize(inNormal * mat3(pc.transform));
 	outColor = vec3(1, 1, 1);
 	outTexCoord = inTexCoord;
 }

@@ -188,12 +188,12 @@ bool Submesh::initResources(GraphicsDevice* device, BufferUsagePolicy policy)
             numBuffersGenerated++;
             totalBytesAllocated += bufferLength;
 
-            for (auto it = resourceMap.begin(); it != resourceMap.end(); ++it)
+            for (auto& it : resourceMap)
             {
-                BufferResource rb = it->second;
+                BufferResource rb = it.second;
                 for (auto& b : rb.buffers)
                     b.buffer = buffer;
-                this->bufferResources.insert_or_assign(it->first, rb);
+                this->bufferResources.insert_or_assign(it.first, rb);
             }
         }
     }
@@ -246,18 +246,18 @@ bool Submesh::initResources(GraphicsDevice* device, BufferUsagePolicy policy)
                 numBuffersGenerated++;
                 totalBytesAllocated += bufferLength;
 
-                for (auto it = resourceMap.begin(); it != resourceMap.end(); ++it)
+                for (auto& it : resourceMap)
                 {
-                    auto& rb = it->second;
+                    auto& rb = it.second;
                     for (auto& b : rb.buffers)
                         if (b.buffer == nullptr)
                             b.buffer = buffer;
                 }
             }
         }
-        for (auto it = resourceMap.begin(); it != resourceMap.end(); ++it)
+        for (auto& it : resourceMap)
         {
-            this->bufferResources.insert_or_assign(it->first, it->second);
+            this->bufferResources.insert_or_assign(it.first, it.second);
         }
     }
     else if (policy == BufferUsagePolicy::SingleBufferPerResource)
@@ -1023,7 +1023,7 @@ uint32_t Submesh::bindShaderUniformBuffer(ShaderUniformSemantic semantic,
                                           const SceneState& sceneState,
                                           uint8_t* buffer, size_t length) const
 {
-    auto bindMatrix4 = [&](const Matrix4& matrix)->size_t
+    auto bindMatrix4 = [&](const Matrix4& matrix)->uint32_t
     {
         if (dataType == ShaderDataType::Float4x4)
         {
@@ -1055,7 +1055,7 @@ uint32_t Submesh::bindShaderUniformBuffer(ShaderUniformSemantic semantic,
         return bindMatrix4(sceneState.view.projection.matrix);
         break;
     case ShaderUniformSemantic::ModelViewProjectionMatrix:
-        return bindMatrix4(sceneState.view.matrix());
+        return bindMatrix4(sceneState.model.concatenating(sceneState.view.matrix()));
         break;
     default:
         Log::error("Not implemented yet!");
