@@ -16,4 +16,9 @@ Sampler::~Sampler()
     vkDestroySampler(gdevice->device, sampler, gdevice->allocationCallbacks());
 }
 
+std::shared_ptr<FV::GraphicsDevice> Sampler::device() const
+{
+    return gdevice;
+}
+
 #endif //#if FVCORE_ENABLE_VULKAN

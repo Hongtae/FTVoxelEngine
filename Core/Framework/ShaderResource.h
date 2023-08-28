@@ -115,7 +115,8 @@ namespace FV
             : width(w), rows(r), columns(c) {}
 
         constexpr ShaderDataTypeSize(ShaderDataType type = ShaderDataType::None)
-            : ShaderDataTypeSize([type]() constexpr -> ShaderDataTypeSize
+            : ShaderDataTypeSize(
+                [type]() constexpr -> ShaderDataTypeSize
                 {
                     switch (type)
                     {
@@ -217,7 +218,9 @@ namespace FV
                         break;
                     }
                     return { 0, 0, 0 };
-                }()) {}
+                }())
+        {
+        }
     };
 
     enum class ShaderStage

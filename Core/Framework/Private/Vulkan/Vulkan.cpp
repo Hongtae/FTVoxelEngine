@@ -54,14 +54,21 @@ VkBool32 VKAPI_PTR debugUtilsMessengerCallback(
         type += "PERFORMANCE-";
     }
 
+    const char* messageID = "";
+    if (pCallbackData->pMessageIdName)
+        messageID = pCallbackData->pMessageIdName;
+    const char* message = "";
+    if (pCallbackData->pMessage)
+        message = pCallbackData->pMessage;
+
     if (auto logger = vulkanDebugLogger.lock())
     {
         logger->log(
             level,
             std::format("[{}]({:d}){}",
-                        pCallbackData->pMessageIdName,
+                        messageID,
                         pCallbackData->messageIdNumber,
-                        pCallbackData->pMessage));
+                        message));
     }
     else
     {
@@ -69,9 +76,13 @@ VkBool32 VKAPI_PTR debugUtilsMessengerCallback(
             level,
             std::format("[Vulkan {}{}] [{}]({:d}){}",
                         type, prefix,
-                        pCallbackData->pMessageIdName,
+                        messageID,
                         pCallbackData->messageIdNumber,
-                        pCallbackData->pMessage));
+                        message));
+    }
+    if (level == Level::Error)
+    {
+        FVERROR_ABORT("FATAL ERROR");
     }
     return VK_FALSE;
 }
@@ -348,19 +359,20 @@ std::shared_ptr<VulkanInstance> VulkanInstance::makeInstance(
     if (enableValidation)
     {
         validationFeatures.enabledValidationFeatureCount =
-            std::size(enabledFeatures);
+            (uint32_t)std::size(enabledFeatures);
         validationFeatures.pEnabledValidationFeatures = enabledFeatures;
         instanceCreateInfo.pNext = &validationFeatures;
     }
 
     if (enabledLayers.empty() == false)
     {
-        instanceCreateInfo.enabledLayerCount = enabledLayers.size();
+        instanceCreateInfo.enabledLayerCount = (uint32_t)enabledLayers.size();
         instanceCreateInfo.ppEnabledLayerNames = enabledLayers.data();
     }
     if (enabledExtensions.empty() == false)
     {
-        instanceCreateInfo.enabledExtensionCount = enabledExtensions.size();
+        instanceCreateInfo.enabledExtensionCount =
+            (uint32_t)enabledExtensions.size();
         instanceCreateInfo.ppEnabledExtensionNames = enabledExtensions.data();
     }
 
@@ -520,11 +532,11 @@ std::shared_ptr<FV::GraphicsDevice> VulkanInstance::makeDevice(
     std::vector<std::string> requiredExtensions,
     std::vector<std::string> optionalExtensions)
 {
-    if (auto iter = std::find_if(physicalDevices.begin(), physicalDevices.end(),
-                                 [&](const auto& device)
-                                 {
-                                     return device.registryID().compare(identifier) == 0;
-                                 }); iter != physicalDevices.end())
+    if (auto iter = std::find_if(
+        physicalDevices.begin(), physicalDevices.end(), [&](const auto& device)
+        {
+            return device.registryID().compare(identifier) == 0;
+        }); iter != physicalDevices.end())
     {
         const auto& device = *iter;
         try

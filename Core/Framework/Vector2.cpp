@@ -15,13 +15,13 @@ Vector2 Vector2::applying(const Matrix2& m) const
 
 Vector2 Vector2::applying(const AffineTransform2& t) const
 {
-	return applying(t.linear) + t.translation;
+	return applying(t.matrix2) + t.translation;
 }
 
 Vector2 Vector2::normalized() const
 {
 	auto sq = magnitudeSquared();
-	if (sq != 0.0f) return (*this) * sqrt(sq);
+	if (sq != 0.0f) return (*this) / sqrt(sq);
 	return *this;
 }
 

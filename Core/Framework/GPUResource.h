@@ -5,8 +5,8 @@ namespace FV
 {
     enum CPUCacheMode
     {
-        CPUCacheModeReadWrite = 0,
-        CPUCacheModeWriteOnly,
+        CPUCacheModeDefault = 0,
+        CPUCacheModeWriteCombined,
     };
 
     class GPUEvent

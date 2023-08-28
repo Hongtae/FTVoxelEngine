@@ -35,4 +35,9 @@ BufferView::~BufferView()
     }
 }
 
+std::shared_ptr<FV::GraphicsDevice> BufferView::device() const
+{
+    return gdevice;
+}
+
 #endif //#if FVCORE_ENABLE_VULKAN

@@ -29,7 +29,7 @@ namespace FV::Vulkan
         const DescriptorPoolID poolID;
 
         size_t descriptorPoolCount() const { return descriptorPools.size(); }
-    private:
+    
         std::shared_ptr<DescriptorPool> addNewPool(VkDescriptorPoolCreateFlags flags = 0);
         
         std::vector<std::shared_ptr<DescriptorPool>> descriptorPools;

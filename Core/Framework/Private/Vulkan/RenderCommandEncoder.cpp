@@ -501,9 +501,11 @@ void RenderCommandEncoder::setDepthClipMode(DepthClipMode mode)
         case DepthClipMode::Clip:
             vkCmdSetDepthClampEnableEXT(commandBuffer, VK_FALSE);
             vkCmdSetDepthClipEnableEXT(commandBuffer, VK_TRUE);
+            break;
         case DepthClipMode::Clamp:
             vkCmdSetDepthClipEnableEXT(commandBuffer, VK_FALSE);
             vkCmdSetDepthClampEnableEXT(commandBuffer, VK_TRUE);
+            break;
         }
     };
     encoder->commands.push_back(command);
@@ -522,9 +524,9 @@ void RenderCommandEncoder::setCullMode(CullMode mode)
         VkCullModeFlags flags = {};
         switch (mode)
         {
-        case CullMode::None:     flags = VK_CULL_MODE_NONE;
-        case CullMode::Front:    flags = VK_CULL_MODE_FRONT_BIT;
-        case CullMode::Back:     flags = VK_CULL_MODE_BACK_BIT;
+        case CullMode::None:    flags = VK_CULL_MODE_NONE;      break;
+        case CullMode::Front:   flags = VK_CULL_MODE_FRONT_BIT; break;
+        case CullMode::Back:    flags = VK_CULL_MODE_BACK_BIT;  break;
         }
         vkCmdSetCullMode(commandBuffer, flags);
     };
@@ -538,8 +540,12 @@ void RenderCommandEncoder::setFrontFacing(Winding winding)
         VkFrontFace frontFace = {};
         switch (winding)
         {
-        case Winding::Clockwise:        frontFace = VK_FRONT_FACE_CLOCKWISE;
-        case Winding::CounterClockwise: frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+        case Winding::Clockwise:
+            frontFace = VK_FRONT_FACE_CLOCKWISE;
+            break;
+        case Winding::CounterClockwise:
+            frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+            break;
         }
         vkCmdSetFrontFace(commandBuffer, frontFace);
     };
@@ -654,8 +660,8 @@ void RenderCommandEncoder::drawIndexed(uint32_t indexCount, IndexType indexType,
         VkIndexType type = {};
         switch (indexType)
         {
-        case IndexType::UInt16: type = VK_INDEX_TYPE_UINT16;
-        case IndexType::UInt32: type = VK_INDEX_TYPE_UINT32;
+        case IndexType::UInt16: type = VK_INDEX_TYPE_UINT16; break;
+        case IndexType::UInt32: type = VK_INDEX_TYPE_UINT32; break;
         }
 
         EncoderCommand command = [=](VkCommandBuffer commandBuffer, EncodingState& state) mutable

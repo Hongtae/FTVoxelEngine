@@ -37,6 +37,7 @@ GraphicsDevice::GraphicsDevice(std::shared_ptr<VulkanInstance> ins,
     , physicalDevice(pd)
     , device(VK_NULL_HANDLE)
     , pipelineCache(VK_NULL_HANDLE)
+    , numberOfFences(0)
     , extensionProc{}
 {
     std::vector<float> queuePriority = std::vector<float>(physicalDevice.maxQueues, 0.0f);
@@ -222,15 +223,26 @@ GraphicsDevice::GraphicsDevice(std::shared_ptr<VulkanInstance> ins,
 
 GraphicsDevice::~GraphicsDevice()
 {
-    for (int i = 0; i < NumDescriptorPoolChainBuckets; ++i)
-    {
-        FVASSERT_DEBUG(descriptorPoolChainMaps[i].poolChainMap.empty());
-    }
-
-    vkDeviceWaitIdle(device);
     fenceCompletionThread.request_stop();
     fenceCompletionCond.notify_all();
     fenceCompletionThread.join();
+
+    for (int i = 0; i < NumDescriptorPoolChainBuckets; ++i)
+    {
+        auto& chainMap = descriptorPoolChainMaps[i].poolChainMap;
+        for (auto& cmap : chainMap)
+        {
+            DescriptorPoolChain* chain = cmap.second;
+            for (auto& pool : chain->descriptorPools)
+            {
+                FVASSERT_DEBUG(pool->numAllocatedSets == 0);
+            }
+            delete chain;
+        }
+        chainMap.clear();
+    }
+
+    vkDeviceWaitIdle(device);
 
     FVASSERT_DEBUG(pendingFenceCallbacks.empty());
     for (VkFence fence : reusableFences)
@@ -338,7 +350,7 @@ std::shared_ptr<FV::ShaderModule> GraphicsDevice::makeShaderModule(const FV::Sha
     VkShaderModuleCreateInfo shaderModuleCreateInfo = {
         VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO
     };
-    shaderModuleCreateInfo.codeSize = spvData.size();
+    shaderModuleCreateInfo.codeSize = spvData.size() * sizeof(uint32_t);
     shaderModuleCreateInfo.pCode = spvData.data();
     VkResult err = vkCreateShaderModule(this->device, &shaderModuleCreateInfo, this->allocationCallbacks(), &shaderModule);
     if (err != VK_SUCCESS)
@@ -1045,40 +1057,40 @@ std::shared_ptr<FV::SamplerState> GraphicsDevice::makeSamplerState(const Sampler
 {
     VkSamplerCreateInfo createInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
 
-    auto filter = [](SamplerDescriptor::MinMagFilter f)->VkFilter
+    auto filter = [](SamplerMinMagFilter f)->VkFilter
     {
         switch (f)
         {
-        case SamplerDescriptor::MinMagFilterNearest:
+        case SamplerMinMagFilter::Nearest:
             return VK_FILTER_NEAREST;
-        case SamplerDescriptor::MinMagFilterLinear:
+        case SamplerMinMagFilter::Linear:
             return VK_FILTER_LINEAR;
         }
         return VK_FILTER_LINEAR;
     };
-    auto mipmapMode = [](SamplerDescriptor::MipFilter f)->VkSamplerMipmapMode
+    auto mipmapMode = [](SamplerMipFilter f)->VkSamplerMipmapMode
     {
         switch (f)
         {
-        case SamplerDescriptor::MipFilterNotMipmapped:
-        case SamplerDescriptor::MipFilterNearest:
+        case SamplerMipFilter::NotMipmapped:
+        case SamplerMipFilter::Nearest:
             return VK_SAMPLER_MIPMAP_MODE_NEAREST;
-        case SamplerDescriptor::MipFilterLinear:
+        case SamplerMipFilter::Linear:
             return VK_SAMPLER_MIPMAP_MODE_LINEAR;
         }
         return VK_SAMPLER_MIPMAP_MODE_LINEAR;
     };
-    auto addressMode = [](SamplerDescriptor::AddressMode m)->VkSamplerAddressMode
+    auto addressMode = [](SamplerAddressMode m)->VkSamplerAddressMode
     {
         switch (m)
         {
-        case SamplerDescriptor::AddressModeClampToEdge:
+        case SamplerAddressMode::ClampToEdge:
             return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        case SamplerDescriptor::AddressModeRepeat:
+        case SamplerAddressMode::Repeat:
             return VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        case SamplerDescriptor::AddressModeMirrorRepeat:
+        case SamplerAddressMode::MirrorRepeat:
             return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
-        case SamplerDescriptor::AddressModeClampToZero:
+        case SamplerAddressMode::ClampToZero:
             return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
         }
         return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -1111,8 +1123,8 @@ std::shared_ptr<FV::SamplerState> GraphicsDevice::makeSamplerState(const Sampler
     createInfo.maxAnisotropy = desc.maxAnisotropy;
     createInfo.compareOp = compareOp(desc.compareFunction);
     createInfo.compareEnable = createInfo.compareOp != VK_COMPARE_OP_NEVER;
-    createInfo.minLod = desc.minLod;
-    createInfo.maxLod = desc.maxLod;
+    createInfo.minLod = desc.lodMinClamp;
+    createInfo.maxLod = desc.lodMaxClamp;
 
     createInfo.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
 
@@ -1199,20 +1211,15 @@ std::shared_ptr<FV::RenderPipelineState> GraphicsDevice::makeRenderPipeline(cons
 	VkRenderPass renderPass = VK_NULL_HANDLE;
 	VkPipeline pipeline = VK_NULL_HANDLE;
 
-    std::shared_ptr<RenderPipelineState> pipelineState = nullptr;
-
     _ScopeExit _scope_exit = {
         [&] // cleanup resources if function failure.
         {
-            if (!pipelineState)
-            {
-                if (pipelineLayout != VK_NULL_HANDLE)
-                    vkDestroyPipelineLayout(device, pipelineLayout, allocationCallbacks());
-                if (renderPass != VK_NULL_HANDLE)
-                    vkDestroyRenderPass(device, renderPass, allocationCallbacks());
-                if (pipeline != VK_NULL_HANDLE)
-                    vkDestroyPipeline(device, pipeline, allocationCallbacks());
-            }
+            if (pipelineLayout != VK_NULL_HANDLE)
+                vkDestroyPipelineLayout(device, pipelineLayout, allocationCallbacks());
+            if (renderPass != VK_NULL_HANDLE)
+                vkDestroyRenderPass(device, renderPass, allocationCallbacks());
+            if (pipeline != VK_NULL_HANDLE)
+                vkDestroyPipeline(device, pipeline, allocationCallbacks());
         }
     };
 
@@ -1684,7 +1691,12 @@ std::shared_ptr<FV::RenderPipelineState> GraphicsDevice::makeRenderPipeline(cons
 		reflection->pushConstantLayouts.shrink_to_fit();
 	}
 
-	pipelineState = std::make_shared<RenderPipelineState>(shared_from_this(), pipeline, pipelineLayout, renderPass);
+	auto pipelineState = std::make_shared<RenderPipelineState>(shared_from_this(), pipeline, pipelineLayout, renderPass);
+
+    pipelineLayout = VK_NULL_HANDLE;
+    renderPass = VK_NULL_HANDLE;
+    pipeline = VK_NULL_HANDLE;
+
     return pipelineState;
 }
 
@@ -1694,18 +1706,14 @@ std::shared_ptr<FV::ComputePipelineState> GraphicsDevice::makeComputePipeline(co
 
     VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
     VkPipeline pipeline = VK_NULL_HANDLE;
-    std::shared_ptr<ComputePipelineState> pipelineState = nullptr;
 
     _ScopeExit _scope_exit = { 
         [&] // cleanup resources if function failure.
         {
-            if (!pipelineState)
-            {
-                if (pipelineLayout != VK_NULL_HANDLE)
-                    vkDestroyPipelineLayout(device, pipelineLayout, allocationCallbacks());
-                if (pipeline != VK_NULL_HANDLE)
-                    vkDestroyPipeline(device, pipeline, allocationCallbacks());
-            }
+            if (pipelineLayout != VK_NULL_HANDLE)
+                vkDestroyPipelineLayout(device, pipelineLayout, allocationCallbacks());
+            if (pipeline != VK_NULL_HANDLE)
+                vkDestroyPipeline(device, pipeline, allocationCallbacks());
         }
     };
 
@@ -1758,7 +1766,11 @@ std::shared_ptr<FV::ComputePipelineState> GraphicsDevice::makeComputePipeline(co
         reflection->resources.shrink_to_fit();
     }
 
-    pipelineState = std::make_shared<ComputePipelineState>(shared_from_this(), pipeline, pipelineLayout);
+    auto pipelineState = std::make_shared<ComputePipelineState>(shared_from_this(), pipeline, pipelineLayout);
+
+    pipelineLayout = VK_NULL_HANDLE;
+    pipeline = VK_NULL_HANDLE;
+
     return pipelineState;
 }
 

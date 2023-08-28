@@ -3,6 +3,7 @@
 #include <vector>
 #include <format>
 #include <fstream>
+#include <iterator>
 #include <limits>
 #include <algorithm>
 #include "../Libs/dkwrapper/DKImage.h"
@@ -12,19 +13,13 @@
 
 namespace
 {
-    std::vector<uint8_t> ifstreamVector(const char* path)
+    std::vector<uint8_t> ifstreamVector(const std::filesystem::path& path)
     {
-        std::ifstream fs(path, std::ifstream::binary);
+        std::ifstream fs(path, std::ifstream::binary | std::ifstream::in);
         if (fs.good())
         {
-            std::filebuf* pbuf = fs.rdbuf();
-            std::size_t size = pbuf->pubseekoff(0, fs.end, fs.in);
-            pbuf->pubseekpos(0, fs.in);
-
-            std::vector<uint8_t> data(size);
-            pbuf->sgetn((char*)data.data(), size);
-
-            return data;
+            return std::vector<uint8_t>((std::istreambuf_iterator<char>(fs)),
+                                        std::istreambuf_iterator<char>());
         }
         return {};
     }
@@ -120,7 +115,7 @@ Image::Image(const std::vector<uint8_t>& encodedData)
 {
 }
 
-Image::Image(const char* path)
+Image::Image(const std::filesystem::path& path)
     : Image(ifstreamVector(path))
 {
 }
@@ -453,8 +448,11 @@ std::shared_ptr<Image> Image::resample(uint32_t width, uint32_t height, ImagePix
     return image;
 }
 
-std::shared_ptr<Texture> Image::makeTexture(std::shared_ptr<CommandQueue> queue) const
+std::shared_ptr<Texture> Image::makeTexture(CommandQueue* queue) const
 {
+    if (queue == nullptr)
+        return nullptr;
+
     PixelFormat textureFormat = PixelFormat::Invalid;
     ImagePixelFormat imageFormat = this->pixelFormat;
 
@@ -530,7 +528,7 @@ std::shared_ptr<Texture> Image::makeTexture(std::shared_ptr<CommandQueue> queue)
             width,
             height,
             1, 1, 1, 1,
-            TextureUsageCopyDestination & TextureUsageSampled
+            TextureUsageCopyDestination | TextureUsageSampled
         });
     if (texture == nullptr)
         return nullptr;
@@ -538,7 +536,7 @@ std::shared_ptr<Texture> Image::makeTexture(std::shared_ptr<CommandQueue> queue)
     // create buffer for staging
     auto stgBuffer = device->makeBuffer(data.size(),
                                         GPUBuffer::StorageModeShared,
-                                        CPUCacheModeWriteOnly);
+                                        CPUCacheModeWriteCombined);
     if (stgBuffer == nullptr)
     {
         Log::error("Failed to make buffer object.");

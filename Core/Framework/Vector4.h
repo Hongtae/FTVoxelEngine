@@ -21,6 +21,7 @@ namespace FV
         static Vector4 minimum(const Vector4&, const Vector4&);
 
         Vector4 applying(const Matrix4&) const;
+        Vector4& apply(const Matrix4& m) { *this = applying(m); return *this; }
 
         Vector4 normalized() const;
         Vector4& normalize() { *this = normalized(); return *this; }

@@ -1,10 +1,25 @@
 #pragma once
 #include "../include.h"
+#include <numbers>
+#include <type_traits>
 #include "Vector4.h"
 
 #pragma pack(push, 4)
 namespace FV
 {
+    template <typename T,
+              typename = std::enable_if_t<std::is_floating_point_v<T>>>
+    inline constexpr T radianToDegree(T r)
+    {
+        return r * T(180.0 / std::numbers::pi);
+    }
+    template <typename T,
+              typename = std::enable_if_t<std::is_floating_point_v<T>>>
+    inline constexpr T degreeToRadian(T d)
+    {
+        return d * T(std::numbers::pi / 180.0);
+    }
+
     struct Vector3;
     struct Matrix3;
     struct FVCORE_API Quaternion
@@ -49,7 +64,7 @@ namespace FV
         Quaternion operator * (const Quaternion& v) const	{ return concatenating(v); }
         Quaternion operator / (const Quaternion& v) const	{ return { x / v.x, y / v.y, z / v.z, w / v.w }; }
         Quaternion operator * (float f) const				{ return { x * f, y * f, z * f, w * f }; }
-        Quaternion operator / (float f) const				{ return (*this) * (1.0 / f); }
+        Quaternion operator / (float f) const				{ return (*this) * (1.0f / f); }
         Quaternion operator - () const						{ return { -x, -y, -z, -w }; }
 
         Quaternion& operator += (const Quaternion& v) { *this = (*this) + v; return *this; }

@@ -4,78 +4,79 @@
 
 namespace FV
 {
-	enum class VertexFormat
-	{
-		Invalid = 0,
+    enum class VertexFormat
+    {
+        Invalid = 0,
 
-		UChar2,
-		UChar3,
-		UChar4,
+        UChar2,
+        UChar3,
+        UChar4,
 
-		Char2,
-		Char3,
-		Char4,
+        Char2,
+        Char3,
+        Char4,
 
-		UChar2Normalized,
-		UChar3Normalized,
-		UChar4Normalized,
+        UChar2Normalized,
+        UChar3Normalized,
+        UChar4Normalized,
 
-		Char2Normalized,
-		Char3Normalized,
-		Char4Normalized,
+        Char2Normalized,
+        Char3Normalized,
+        Char4Normalized,
 
-		UShort2,
-		UShort3,
-		UShort4,
+        UShort2,
+        UShort3,
+        UShort4,
 
-		Short2,
-		Short3,
-		Short4,
+        Short2,
+        Short3,
+        Short4,
 
-		UShort2Normalized,
-		UShort3Normalized,
-		UShort4Normalized,
+        UShort2Normalized,
+        UShort3Normalized,
+        UShort4Normalized,
 
-		Short2Normalized,
-		Short3Normalized,
-		Short4Normalized,
+        Short2Normalized,
+        Short3Normalized,
+        Short4Normalized,
 
-		Half2,
-		Half3,
-		Half4,
+        Half2,
+        Half3,
+        Half4,
 
-		Float,
-		Float2,
-		Float3,
-		Float4,
+        Float,
+        Float2,
+        Float3,
+        Float4,
 
-		Int,
-		Int2,
-		Int3,
-		Int4,
+        Int,
+        Int2,
+        Int3,
+        Int4,
 
-		UInt,
-		UInt2,
-		UInt3,
-		UInt4,
+        UInt,
+        UInt2,
+        UInt3,
+        UInt4,
 
-		Int1010102Normalized,
-		UInt1010102Normalized,
-	};
+        Int1010102Normalized,
+        UInt1010102Normalized,
+    };
 
-	struct VertexFormatInfo
-	{
-		uint32_t typeSize;
-		uint32_t components;
-		bool normalized;
+    struct VertexFormatInfo
+    {
+        uint32_t typeSize;
+        uint32_t components;
+        bool normalized;
 
-		size_t bytes() const noexcept { return typeSize * components; }
+        size_t bytes() const noexcept { return typeSize * components; }
 
-		constexpr VertexFormatInfo(uint32_t s, uint32_t c = 1, bool n = false)
-			: typeSize(s), components(c), normalized(n) {}
+        constexpr VertexFormatInfo(uint32_t s, uint32_t c = 1, bool n = false)
+            : typeSize(s), components(c), normalized(n) {}
 
         constexpr VertexFormatInfo(VertexFormat format)
-            : VertexFormatInfo([format]() constexpr -> VertexFormatInfo
+            : VertexFormatInfo(
+                [format]() constexpr -> VertexFormatInfo
                 {
                     switch (format)
                     {
@@ -138,7 +139,9 @@ namespace FV
                         break;
                     }
                     return { 0, 0 };
-                }()) {}
+                }())
+        {
+        }
     };
 
 	enum class VertexStepRate

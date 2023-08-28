@@ -2,6 +2,7 @@
 #include "../include.h"
 #include <vector>
 #include <cstdint>
+#include <filesystem>
 #include "ShaderResource.h"
 
 namespace FV
@@ -38,6 +39,7 @@ namespace FV
     {
     public:
         Shader();
+        Shader(const std::filesystem::path& path);
         Shader(const std::vector<uint32_t>&);
         Shader(const uint32_t* ir, size_t words);
         ~Shader();

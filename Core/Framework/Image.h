@@ -3,7 +3,7 @@
 #include <vector>
 #include <functional>
 #include <string>
-
+#include <filesystem>
 #include "Texture.h"
 #include "CommandQueue.h"
 
@@ -45,13 +45,13 @@ namespace FV
         Quadratic,
     };
 
-	class FVCORE_API Image : public std::enable_shared_from_this<Image>
-	{
+    class FVCORE_API Image : public std::enable_shared_from_this<Image>
+    {
     public:
         Image(uint32_t width, uint32_t height, ImagePixelFormat, const void* data);
         Image(const void* encoded, size_t);
         Image(const std::vector<uint8_t>& encodedData);
-        Image(const char* path);
+        Image(const std::filesystem::path& path);
         ~Image();
 
         const uint32_t width;
@@ -66,11 +66,11 @@ namespace FV
         std::shared_ptr<Image> resample(ImagePixelFormat) const;
         std::shared_ptr<Image> resample(uint32_t width, uint32_t height, ImagePixelFormat format, ImageInterpolation interpolation) const;
 
-        std::shared_ptr<Texture> makeTexture(std::shared_ptr<CommandQueue>) const;
+        std::shared_ptr<Texture> makeTexture(CommandQueue*) const;
     private:
         std::vector<uint8_t> data;
 
         struct _DecodeContext;
         Image(_DecodeContext);
-	};
+    };
 }

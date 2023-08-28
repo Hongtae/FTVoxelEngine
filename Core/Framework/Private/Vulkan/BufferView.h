@@ -30,6 +30,8 @@ namespace FV::Vulkan
             return buffer->length();
         }
 
+        std::shared_ptr<FV::GraphicsDevice> device() const override;
+
         VkBufferView bufferView;
         std::shared_ptr<Buffer> buffer;
         std::shared_ptr<GraphicsDevice> gdevice;

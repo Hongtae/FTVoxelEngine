@@ -6,9 +6,18 @@ const AffineTransform3 AffineTransform3::identity = {
     Matrix3::identity, Vector3::zero 
 };
 
+Matrix4 AffineTransform3::matrix4() const
+{
+    return Matrix4(
+        matrix3._11, matrix3._12, matrix3._13, 0.0f,
+        matrix3._21, matrix3._22, matrix3._23, 0.0f,
+        matrix3._31, matrix3._32, matrix3._33, 0.0f,
+        translation.x, translation.y, translation.z, 1.0f);
+}
+
 AffineTransform3 AffineTransform3::translated(const Vector3& offset) const
 {
-    return AffineTransform3(linear, translation + offset);
+    return AffineTransform3(matrix3, translation + offset);
 }
 
 AffineTransform3& AffineTransform3::translate(const Vector3& offset)
@@ -19,7 +28,7 @@ AffineTransform3& AffineTransform3::translate(const Vector3& offset)
 
 AffineTransform3 AffineTransform3::inverted() const
 {
-    Matrix3 matrix = linear.inverted();
+    Matrix3 matrix = matrix3.inverted();
     Vector3 origin = (-translation).applying(matrix);
     return AffineTransform3(matrix, origin);
 }
@@ -32,7 +41,7 @@ AffineTransform3& AffineTransform3::invert()
 
 AffineTransform3 AffineTransform3::concatenating(const AffineTransform3& rhs) const
 {
-    return AffineTransform3(linear.concatenating(rhs.linear),
+    return AffineTransform3(matrix3.concatenating(rhs.matrix3),
                             translation + rhs.translation);
 }
 
@@ -44,5 +53,5 @@ AffineTransform3& AffineTransform3::concatenate(const AffineTransform3& rhs)
 
 bool AffineTransform3::operator==(const AffineTransform3& rhs) const
 {
-    return linear == rhs.linear && translation == rhs.translation;
+    return matrix3 == rhs.matrix3 && translation == rhs.translation;
 }
