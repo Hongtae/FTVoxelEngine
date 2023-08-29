@@ -26,7 +26,6 @@ namespace FV
         struct VertexBuffer
         {
             uint32_t byteOffset;
-            uint32_t byteLength;
             uint32_t byteStride;
             uint32_t vertexCount;
             std::shared_ptr<GPUBuffer> buffer;

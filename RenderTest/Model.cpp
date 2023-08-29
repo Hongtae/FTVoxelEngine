@@ -343,7 +343,6 @@ void loadMeshes(LoaderContext& context)
                 Submesh::VertexBuffer buffer = 
                 {
                     .byteOffset = bufferOffset,
-                    .byteLength = uint32_t(glTFBufferView.byteLength),
                     .byteStride = vertexStride,
                     .vertexCount = uint32_t(glTFAccessor.count),
                     .buffer = context.buffers.at(glTFBufferView.buffer)
