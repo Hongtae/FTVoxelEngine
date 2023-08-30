@@ -13,6 +13,12 @@
 #include "Transform.h"
 #include "RenderCommandEncoder.h"
 
+#ifndef NOMINMAX
+#pragma push_macro("min")
+#pragma push_macro("max")
+#undef min
+#undef max
+#endif
 namespace FV
 {
     struct SceneState
@@ -67,3 +73,7 @@ namespace FV
         std::vector<SceneNode> nodes;
     };
 }
+#ifndef NOMINMAX
+#pragma pop_macro("min")
+#pragma pop_macro("max")
+#endif

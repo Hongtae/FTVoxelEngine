@@ -21,7 +21,7 @@ CommandBuffer::~CommandBuffer()
 
     if (submitCommandBuffers.empty() == false)
     {
-        vkFreeCommandBuffers(gdevice->device, cpool, submitCommandBuffers.size(), submitCommandBuffers.data());
+        vkFreeCommandBuffers(gdevice->device, cpool, (uint32_t)submitCommandBuffers.size(), submitCommandBuffers.data());
     }
 	vkDestroyCommandPool(gdevice->device, cpool, gdevice->allocationCallbacks());
 }
@@ -65,7 +65,7 @@ bool CommandBuffer::commit()
     auto cleanup = [this, device](bool result)
     {
         if (submitCommandBuffers.empty() == false)
-            vkFreeCommandBuffers(device, cpool, submitCommandBuffers.size(), submitCommandBuffers.data());
+            vkFreeCommandBuffers(device, cpool, (uint32_t)submitCommandBuffers.size(), submitCommandBuffers.data());
 
         submitInfos.clear();
         submitCommandBuffers.clear();
@@ -174,14 +174,14 @@ bool CommandBuffer::commit()
 
             if (submitCommandBuffers.size() > commandBuffersOffset)
             {
-                uint32_t count = submitCommandBuffers.size() - commandBuffersOffset;
+                uint32_t count = uint32_t(submitCommandBuffers.size() - commandBuffersOffset);
                 VkCommandBuffer* commandBuffers = submitCommandBuffers.data();
                 submitInfo.commandBufferCount = count;
                 submitInfo.pCommandBuffers = &commandBuffers[commandBuffersOffset];
             }
             if (submitWaitSemaphores.size() > waitSemaphoresOffset)
             {
-                uint32_t count = submitWaitSemaphores.size() - waitSemaphoresOffset;
+                uint32_t count = uint32_t(submitWaitSemaphores.size() - waitSemaphoresOffset);
                 VkSemaphore* semaphores = submitWaitSemaphores.data();
                 VkPipelineStageFlags* stages = submitWaitStageMasks.data();
                 const uint64_t* timelineValues = submitWaitTimelineSemaphoreValues.data();
@@ -195,7 +195,7 @@ bool CommandBuffer::commit()
             }
             if (submitSignalSemaphores.size() > signalSemaphoresOffset)
             {
-                uint32_t count = submitSignalSemaphores.size() - signalSemaphoresOffset;
+                uint32_t count = uint32_t(submitSignalSemaphores.size() - signalSemaphoresOffset);
                 VkSemaphore* semaphores = submitSignalSemaphores.data();
                 const uint64_t* timelineValue = submitSignalTimelineSemaphoreValues.data();
 
@@ -220,8 +220,9 @@ bool CommandBuffer::commit()
 
         auto cb = this->shared_from_this();
         FVASSERT_DEBUG(cb);
-        bool result = cqueue->submit(submitInfos.data(), submitInfos.size(),
-                                     [cb]()
+        bool result = cqueue->submit(submitInfos.data(),
+                                     (uint32_t)submitInfos.size(),
+                                     [cb]
                                      {
                                          for (auto& op : cb->completedHandlers)
                                              op();

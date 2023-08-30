@@ -165,7 +165,7 @@ Quaternion Quaternion::slerp(const Quaternion& q1, const Quaternion& q2, float t
 	if (cosHalfTheta >= 1.0f) { return q1; }    // q1 = q2 or q1 = -q2
 
 	float halfTheta = acos(cosHalfTheta);
-	float oneOverSinHalfTheta = 1.0 / sin(halfTheta);
+	float oneOverSinHalfTheta = 1.0f / sin(halfTheta);
 
 	float t2 = 1.0f - t;
 

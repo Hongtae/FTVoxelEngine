@@ -48,7 +48,7 @@ VkDescriptorSet DescriptorPool::allocateDescriptorSet(VkDescriptorSetLayout layo
     return descriptorSet;
 }
 
-void DescriptorPool::releaseDescriptorSets(VkDescriptorSet* sets, size_t n)
+void DescriptorPool::releaseDescriptorSets(VkDescriptorSet* sets, uint32_t n)
 {
     FVASSERT_DEBUG(numAllocatedSets > 0);
     numAllocatedSets -= n;

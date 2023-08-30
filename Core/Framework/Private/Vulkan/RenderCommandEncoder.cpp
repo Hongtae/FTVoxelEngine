@@ -194,7 +194,7 @@ bool RenderCommandEncoder::Encoder::encode(VkCommandBuffer commandBuffer)
 
     VkSubpassDescription subpassDescription = {};
     subpassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpassDescription.colorAttachmentCount = colorReferences.size();
+    subpassDescription.colorAttachmentCount = (uint32_t)colorReferences.size();
     subpassDescription.pColorAttachments = colorReferences.data();
     subpassDescription.pDepthStencilAttachment = &depthStencilReference;
     subpassDescription.inputAttachmentCount = 0;
@@ -205,7 +205,7 @@ bool RenderCommandEncoder::Encoder::encode(VkCommandBuffer commandBuffer)
 
 
     VkRenderPassCreateInfo  renderPassCreateInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
-    renderPassCreateInfo.attachmentCount = attachments.size();
+    renderPassCreateInfo.attachmentCount = (uint32_t)attachments.size();
     renderPassCreateInfo.pAttachments = attachments.data();
     renderPassCreateInfo.subpassCount = 1;
     renderPassCreateInfo.pSubpasses = &subpassDescription;
@@ -222,7 +222,7 @@ bool RenderCommandEncoder::Encoder::encode(VkCommandBuffer commandBuffer)
 
     VkFramebufferCreateInfo frameBufferCreateInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
     frameBufferCreateInfo.renderPass = this->renderPass;
-    frameBufferCreateInfo.attachmentCount = framebufferImageViews.size();
+    frameBufferCreateInfo.attachmentCount = (uint32_t)framebufferImageViews.size();
     frameBufferCreateInfo.pAttachments = framebufferImageViews.data();
     frameBufferCreateInfo.width = frameWidth;
     frameBufferCreateInfo.height = frameHeight;
@@ -262,7 +262,7 @@ bool RenderCommandEncoder::Encoder::encode(VkCommandBuffer commandBuffer)
     // begin render pass
     VkRenderPassBeginInfo renderPassBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
     renderPassBeginInfo.renderPass = this->renderPass;
-    renderPassBeginInfo.clearValueCount = attachmentClearValues.size();
+    renderPassBeginInfo.clearValueCount = (uint32_t)attachmentClearValues.size();
     renderPassBeginInfo.pClearValues = attachmentClearValues.data();
     renderPassBeginInfo.renderArea.offset.x = 0;
     renderPassBeginInfo.renderArea.offset.y = 0;
@@ -374,7 +374,7 @@ void RenderCommandEncoder::setViewport(const Viewport& v)
 
 void RenderCommandEncoder::setScissorRect(const ScissorRect& r)
 {
-    VkRect2D scissorRect = { {r.x, r.y},{r.width, r.height} };
+    VkRect2D scissorRect = {{r.x, r.y},{uint32_t(r.width), uint32_t(r.height)}};
     EncoderCommand command = [=](VkCommandBuffer cbuffer, EncodingState& state) mutable
     {
         vkCmdSetScissor(cbuffer, 0, 1, &scissorRect);
@@ -433,7 +433,7 @@ void RenderCommandEncoder::setVertexBuffers(std::shared_ptr<FV::GPUBuffer>* buff
 
         EncoderCommand command = [=](VkCommandBuffer commandBuffer, EncodingState& state) mutable
         {
-            vkCmdBindVertexBuffers(commandBuffer, index, count, bufferObjects.data(), bufferOffsets.data());
+            vkCmdBindVertexBuffers(commandBuffer, index, (uint32_t)count, bufferObjects.data(), bufferOffsets.data());
         };
         encoder->commands.push_back(command);
     }
@@ -447,7 +447,7 @@ void RenderCommandEncoder::setVertexBuffers(std::shared_ptr<FV::GPUBuffer>* buff
 
         EncoderCommand command = [=](VkCommandBuffer commandBuffer, EncodingState& state) mutable
         {
-            vkCmdBindVertexBuffers(commandBuffer, index, count, &buffer->buffer, &of);
+            vkCmdBindVertexBuffers(commandBuffer, index, (uint32_t)count, &buffer->buffer, &of);
         };
         encoder->commands.push_back(command);
         encoder->buffers.push_back(bufferView);

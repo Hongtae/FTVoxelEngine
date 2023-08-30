@@ -148,7 +148,7 @@ namespace FV::Vulkan
 
         VkDescriptorSet allocateDescriptorSet(VkDescriptorSetLayout);
 
-        void releaseDescriptorSets(VkDescriptorSet*, size_t);
+        void releaseDescriptorSets(VkDescriptorSet*, uint32_t);
 
     };
 }

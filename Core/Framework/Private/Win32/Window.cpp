@@ -161,11 +161,14 @@ Window::Window(const std::u8string& title, Style s, const WindowCallback& cb)
     this->scaleFactor = scaleFactor;
 
     float invScale = 1.0f / scaleFactor;
-    this->bounds = Rect(rc1.left,
-                        rc1.top,
+    this->bounds = Rect(float(rc1.left),
+                        float(rc1.top),
                         float(rc1.right - rc1.left) * invScale,
                         float(rc1.bottom - rc1.top) * invScale);
-    this->frame = Rect(rc2.left, rc2.top, rc2.right - rc2.left, rc2.bottom - rc2.top);
+    this->frame = Rect(float(rc2.left),
+                       float(rc2.top),
+                       float(rc2.right - rc2.left),
+                       float(rc2.bottom - rc2.top));
 
     ::SetWindowPos(hWnd, HWND_TOP, 0, 0, 0, 0,
                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
@@ -231,8 +234,8 @@ void Window::setResolution(Size size)
 {
     if (hWnd)
     {
-        int w = std::max(int(std::round(size.width)), 1);
-        int h = std::max(int(std::round(size.height)), 1);
+        LONG w = std::max(std::lround(size.width), 1L);
+        LONG h = std::max(std::lround(size.height), 1L);
 
         DWORD style = ((DWORD)GetWindowLong(hWnd, GWL_STYLE));
         DWORD styleEx = ((DWORD)GetWindowLong(hWnd, GWL_EXSTYLE));
@@ -241,7 +244,7 @@ void Window::setResolution(Size size)
         RECT rc = { 0, 0, w, h };
         if (::AdjustWindowRectEx(&rc, style, menu, styleEx))
         {
-            Size size = Size(w, h);
+            Size size = Size(float(w), float(h));
             this->bounds.size = size / scaleFactor;
 
             w = rc.right - rc.left;
@@ -256,9 +259,9 @@ void Window::setOrigin(Point origin)
 {
     if (hWnd)
     {
-        int x = std::round(origin.x);
-        int y = std::round(origin.y);
-        ::SetWindowPos(hWnd, HWND_TOP, x, y, 0, 0, 
+        auto x = std::lround(origin.x);
+        auto y = std::lround(origin.y);
+        ::SetWindowPos(hWnd, HWND_TOP, int(x), int(y), 0, 0, 
                        SWP_NOSIZE | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
     }
 }
@@ -374,12 +377,12 @@ void Window::setMousePosition(int deviceID, Point pos)
     if (hWnd && deviceID == mouseID)
     {
         POINT pt = {
-            LONG(std::round(pos.x)),
-            LONG(std::round(pos.y))
+            std::lround(pos.x),
+            std::lround(pos.y)
         };
         ::ClientToScreen(hWnd, &pt);
-        Point v = Point(pt.x, pt.y) * scaleFactor;
-        ::SetCursorPos(std::round(v.x), std::round(v.y));
+        Point v = Point(float(pt.x), float(pt.y)) * scaleFactor;
+        ::SetCursorPos((int)std::lround(v.x), (int)std::lround(v.y));
 
         this->mousePos = pos;
     }
@@ -392,7 +395,7 @@ FV::Point Window::mousePosition(int deviceID) const
         POINT pt;
         ::GetCursorPos(&pt);
         ::ScreenToClient(hWnd, &pt);
-        return Point(pt.x, pt.y) / scaleFactor;
+        return Point(float(pt.x), float(pt.y)) / scaleFactor;
     }
     return Point(-1, -1);
 }
@@ -438,7 +441,7 @@ void Window::resetMouse()
         POINT ptMouse;
         ::GetCursorPos(&ptMouse);
         ::ScreenToClient(hWnd, &ptMouse);
-        mousePos = Point(ptMouse.x, ptMouse.y) / scaleFactor;
+        mousePos = Point(float(ptMouse.x), float(ptMouse.y)) / scaleFactor;
     }
 }
 
@@ -642,18 +645,24 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                     ::GetWindowRect(hWnd, &rcWindow);
                     bool resized = false;
                     bool moved = false;
-                    if ((rcClient.right - rcClient.left) != (LONG)std::round(window->bounds.size.width) ||
-                        (rcClient.bottom - rcClient.top) != (LONG)std::round(window->bounds.size.height))
+                    if ((rcClient.right - rcClient.left) != std::lround(window->bounds.size.width) ||
+                        (rcClient.bottom - rcClient.top) != std::lround(window->bounds.size.height))
                         resized = true;
 
-                    if (rcWindow.left != (LONG)std::round(window->frame.origin.x) ||
-                        rcWindow.top != (LONG)std::round(window->frame.origin.y))
+                    if (rcWindow.left != std::lround(window->frame.origin.x) ||
+                        rcWindow.top != std::lround(window->frame.origin.y))
                         moved = true;
 
                     if (resized || moved)
                     {
-                        window->frame = Rect(rcWindow.left, rcWindow.top, rcWindow.right - rcWindow.left, rcWindow.bottom - rcWindow.top);
-                        window->bounds = Rect(rcClient.left, rcClient.top, rcClient.right - rcClient.left, rcClient.bottom - rcClient.top);
+                        window->frame =  Rect(float(rcWindow.left),
+                                              float(rcWindow.top),
+                                              float(rcWindow.right - rcWindow.left),
+                                              float(rcWindow.bottom - rcWindow.top));
+                        window->bounds = Rect(float(rcClient.left),
+                                              float(rcClient.top),
+                                              float(rcClient.right - rcClient.left),
+                                              float(rcClient.bottom - rcClient.top));
                         if (resized)
                             postWindowEvent(WindowEvent::WindowResized);
                         if (moved)
@@ -693,7 +702,9 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
                         RECT rc;
                         ::GetWindowRect(hWnd, &rc);
-                        window->frame = Rect(rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
+                        window->frame = Rect(float(rc.left), float(rc.top), 
+                                             float(rc.right - rc.left),
+                                             float(rc.bottom - rc.top));
                         postWindowEvent(WindowEvent::WindowResized);
                     }
                 }
@@ -703,7 +714,7 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 {
                     int x = (int)(short)LOWORD(lParam);   // horizontal position 
                     int y = (int)(short)HIWORD(lParam);   // vertical position 
-                    window->frame.origin = Point(x, y);
+                    window->frame.origin = Point(float(x), float(y));
                     postWindowEvent(WindowEvent::WindowMoved);
                 }
                 return 0;
@@ -714,7 +725,7 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                     int yDPI = HIWORD(wParam);
                     RECT* suggestedWindowRect = (RECT*)lParam;
 
-                    window->scaleFactor = double(xDPI) / 96.0;
+                    window->scaleFactor = float(xDPI) / 96.0f;
 
                     if (window->autoResize)
                     {
@@ -733,14 +744,14 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                         ::GetClientRect(hWnd, &clientRect);
                         ::GetWindowRect(hWnd, &windowRect);
 
-                        window->frame = Rect(windowRect.left,
-                                             windowRect.top,
-                                             windowRect.right - windowRect.left,
-                                             windowRect.bottom - windowRect.top);
+                        window->frame = Rect(float(windowRect.left),
+                                             float(windowRect.top),
+                                             float(windowRect.right - windowRect.left),
+                                             float(windowRect.bottom - windowRect.top));
 
-                        float invScale = 1.0 / window->scaleFactor;
-                        window->bounds = Rect(clientRect.left,
-                                              clientRect.top,
+                        float invScale = 1.0f / window->scaleFactor;
+                        window->bounds = Rect(float(clientRect.left),
+                                              float(clientRect.top),
                                               float(clientRect.right - clientRect.left) * invScale,
                                               float(clientRect.bottom - clientRect.top) * invScale);
 
@@ -759,8 +770,8 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                     Size s = { 1, 1 };
                     if (cb.contentMinSize)
                         s = cb.contentMinSize(window);
-                    LONG w = std::round(s.width);
-                    LONG h = std::round(s.height);
+                    LONG w = std::lround(s.width);
+                    LONG h = std::lround(s.height);
                     RECT rc = { 0, 0, std::max(w, 1L), std::max(h, 1L) };
 
                     if (::AdjustWindowRectEx(&rc, style, menu, styleEx))
@@ -772,8 +783,8 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                     if (cb.contentMaxSize)
                     {
                         Size s = cb.contentMaxSize(window);
-                        LONG w = std::round(s.width);
-                        LONG h = std::round(s.height);
+                        LONG w = std::lround(s.width);
+                        LONG h = std::lround(s.height);
                         RECT rc = { 0, 0, std::max(w, 1L), std::max(h, 1L) };
 
                         if (::AdjustWindowRectEx(&rc, style, menu, styleEx))
@@ -800,8 +811,8 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 {
                     POINTS pt = MAKEPOINTS(lParam);
                     float scaleFactor = window->scaleFactor;
-                    LONG oldPtX = LONG(std::round(window->mousePos.x * scaleFactor));
-                    LONG oldPtY = LONG(std::round(window->mousePos.y * scaleFactor));
+                    LONG oldPtX = std::lround(window->mousePos.x * scaleFactor);
+                    LONG oldPtY = std::lround(window->mousePos.y * scaleFactor);
                     if (pt.x != oldPtX || pt.y != oldPtY)
                     {
                         Point delta = (Point(pt.x, pt.y) - window->mousePos) / scaleFactor;
@@ -809,8 +820,8 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                         bool broadcast = true;
                         if (window->mouseLocked)
                         {
-                            LONG lockedX = LONG(std::round(window->lockedMousePos.x * scaleFactor));
-                            LONG lockedY = LONG(std::round(window->lockedMousePos.y * scaleFactor));
+                            LONG lockedX = std::lround(window->lockedMousePos.x * scaleFactor);
+                            LONG lockedY = std::lround(window->lockedMousePos.y * scaleFactor);
                             if (pt.x == lockedX && pt.y == lockedY)
                             {
                                 broadcast = false;

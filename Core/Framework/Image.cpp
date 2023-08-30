@@ -395,9 +395,9 @@ std::shared_ptr<Image> Image::resample(uint32_t width, uint32_t height, ImagePix
         auto y2 = y + scaleY * 0.5f;
 
         RawColorValue color = { 0, 0, 0, 0 };
-        for (int ny = (int)std::round(y1), ny2 = (int)std::round(y2); ny <= ny2; ++ny)
+        for (auto ny = std::lround(y1), ny2 = std::lround(y2); ny <= ny2; ++ny)
         {
-            for (int nx = (int)std::round(x1), nx2 = (int)std::round(x2); nx <= nx2; ++nx)
+            for (auto nx = std::lround(x1), nx2 = std::lround(x2); nx <= nx2; ++nx)
             {
                 auto xMin = std::max(float(nx) - 0.5f, x1);
                 auto xMax = std::min(float(nx) + 0.5f, x2);

@@ -194,7 +194,7 @@ bool AudioSource::enqueueBuffer(int sampleRate,
                         this->buffers.erase(it);
                 }
                 bufferID = finishedBuffers[0];
-                ALsizei numBuffers = finishedBuffers.size();
+                ALsizei numBuffers = (ALsizei)finishedBuffers.size();
                 if (numBuffers > 1)
                 {
                     ALuint* buff = finishedBuffers.data();

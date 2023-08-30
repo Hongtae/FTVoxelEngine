@@ -47,7 +47,7 @@ namespace FV::Vulkan
         std::string deviceName() const override { return physicalDevice.name(); }
 
         std::shared_ptr<DescriptorSet> makeDescriptorSet(VkDescriptorSetLayout, const DescriptorPoolID&);
-        void releaseDescriptorSets(DescriptorPool*, VkDescriptorSet*, size_t);
+        void releaseDescriptorSets(DescriptorPool*, VkDescriptorSet*, uint32_t);
 
         void addFenceCompletionHandler(VkFence, std::function<void()>);
         VkFence getFence();

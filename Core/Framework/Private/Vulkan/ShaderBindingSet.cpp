@@ -63,7 +63,7 @@ std::shared_ptr<DescriptorSet> ShaderBindingSet::makeDescriptorSet() const
     FVASSERT_DEBUG(descriptorWrites.empty() == false);
 
     vkUpdateDescriptorSets(gdevice->device,
-                           descriptorWrites.size(),
+                           (uint32_t)descriptorWrites.size(),
                            descriptorWrites.data(),
                            0,
                            nullptr);

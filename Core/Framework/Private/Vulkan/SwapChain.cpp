@@ -164,8 +164,8 @@ bool SwapChain::updateDevice()
 	VkDevice device = gdevice->device;
 
 	Size resolution = this->window->resolution();
-	uint32_t width = static_cast<uint32_t>(std::round(resolution.width));
-	uint32_t height = static_cast<uint32_t>(std::round(resolution.height));
+	uint32_t width = static_cast<uint32_t>(std::lround(resolution.width));
+	uint32_t height = static_cast<uint32_t>(std::lround(resolution.height));
 
 	VkResult err = VK_SUCCESS;
 	VkSwapchainKHR swapchainOld = this->swapchain;
@@ -515,7 +515,7 @@ bool SwapChain::present(FV::GPUEvent** waitEvents, size_t numEvents)
 
 	// Check if a wait semaphore has been specified to wait for before presenting the image
     presentInfo.pWaitSemaphores = waitSemaphores.data();
-    presentInfo.waitSemaphoreCount = waitSemaphores.size();
+    presentInfo.waitSemaphoreCount = (uint32_t)waitSemaphores.size();
 
     VkResult err = vkQueuePresentKHR(cqueue->queue, &presentInfo);
 	if (err != VK_SUCCESS)

@@ -101,13 +101,13 @@ GraphicsDevice::GraphicsDevice(std::shared_ptr<VulkanInstance> ins,
     VkDeviceCreateInfo deviceCreateInfo = {
         VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO
     };
-    deviceCreateInfo.queueCreateInfoCount = queueCreateInfos.size();
+    deviceCreateInfo.queueCreateInfoCount = (uint32_t)queueCreateInfos.size();
     deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
     deviceCreateInfo.pEnabledFeatures = &enabledFeatures;
 
     if (deviceExtensions.empty() == false)
     {
-        deviceCreateInfo.enabledExtensionCount = deviceExtensions.size();
+        deviceCreateInfo.enabledExtensionCount = (uint32_t)deviceExtensions.size();
         deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions.data();
     }
 
@@ -414,7 +414,7 @@ std::shared_ptr<FV::ShaderBindingSet> GraphicsDevice::makeShaderBindingSet(const
 
             layoutBindings.push_back(layoutBinding);
         }
-        layoutCreateInfo.bindingCount = layoutBindings.size();
+        layoutCreateInfo.bindingCount = (uint32_t)layoutBindings.size();
         layoutCreateInfo.pBindings = layoutBindings.data();
 
         VkDescriptorSetLayoutSupport layoutSupport = {
@@ -468,7 +468,7 @@ std::shared_ptr<DescriptorSet> GraphicsDevice::makeDescriptorSet(VkDescriptorSet
     return nullptr;
 }
 
-void GraphicsDevice::releaseDescriptorSets(DescriptorPool* pool, VkDescriptorSet* sets, size_t num)
+void GraphicsDevice::releaseDescriptorSets(DescriptorPool* pool, VkDescriptorSet* sets, uint32_t num)
 {
     FVASSERT_DEBUG(pool);
 
@@ -1120,7 +1120,7 @@ std::shared_ptr<FV::SamplerState> GraphicsDevice::makeSamplerState(const Sampler
     createInfo.mipLodBias = 0.0f;
     //createInfo.anisotropyEnable = desc.maxAnisotropy > 1 ? VK_TRUE : VK_FALSE;
     createInfo.anisotropyEnable = VK_TRUE;
-    createInfo.maxAnisotropy = desc.maxAnisotropy;
+    createInfo.maxAnisotropy = float(desc.maxAnisotropy);
     createInfo.compareOp = compareOp(desc.compareFunction);
     createInfo.compareEnable = createInfo.compareOp != VK_COMPARE_OP_NEVER;
     createInfo.minLod = desc.lodMinClamp;
@@ -1261,7 +1261,7 @@ std::shared_ptr<FV::RenderPipelineState> GraphicsDevice::makeRenderPipeline(cons
 			shaderStageCreateInfos.push_back(shaderStageCreateInfo);
 		}
 	}
-	pipelineCreateInfo.stageCount = shaderStageCreateInfos.size();
+	pipelineCreateInfo.stageCount = (uint32_t)shaderStageCreateInfos.size();
 	pipelineCreateInfo.pStages = shaderStageCreateInfos.data();
 
     pipelineLayout = makePipelineLayout(shaderFunctions, VK_SHADER_STAGE_ALL);
@@ -1304,9 +1304,9 @@ std::shared_ptr<FV::RenderPipelineState> GraphicsDevice::makeRenderPipeline(cons
 	VkPipelineVertexInputStateCreateInfo vertexInputState = {
         VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO
     };
-	vertexInputState.vertexBindingDescriptionCount = vertexBindingDescriptions.size();
+	vertexInputState.vertexBindingDescriptionCount = (uint32_t)vertexBindingDescriptions.size();
 	vertexInputState.pVertexBindingDescriptions = vertexBindingDescriptions.data();
-	vertexInputState.vertexAttributeDescriptionCount = vertexAttributeDescriptions.size();
+	vertexInputState.vertexAttributeDescriptionCount = (uint32_t)vertexAttributeDescriptions.size();
 	vertexInputState.pVertexAttributeDescriptions = vertexAttributeDescriptions.data();
 	pipelineCreateInfo.pVertexInputState = &vertexInputState;
 
@@ -1435,7 +1435,7 @@ std::shared_ptr<FV::RenderPipelineState> GraphicsDevice::makeRenderPipeline(cons
         VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO
     };
 	dynamicState.pDynamicStates = dynamicStateEnables;
-	dynamicState.dynamicStateCount = std::size(dynamicStateEnables);
+	dynamicState.dynamicStateCount = (uint32_t)std::size(dynamicStateEnables);
 	pipelineCreateInfo.pDynamicState = &dynamicState;
 
 	// render pass
@@ -1509,7 +1509,7 @@ std::shared_ptr<FV::RenderPipelineState> GraphicsDevice::makeRenderPipeline(cons
     subpassColorAttachmentRefs.insert(subpassColorAttachmentRefs.end(),
                                       colorAttachmentRefCount,
                                       { VK_ATTACHMENT_UNUSED, VK_IMAGE_LAYOUT_GENERAL });
-	for (size_t index = 0; index < desc.colorAttachments.size(); ++index)
+	for (uint32_t index = 0; index < desc.colorAttachments.size(); ++index)
 	{
 		const RenderPipelineColorAttachmentDescriptor& attachment = desc.colorAttachments.at(index);
 
@@ -1547,15 +1547,15 @@ std::shared_ptr<FV::RenderPipelineState> GraphicsDevice::makeRenderPipeline(cons
 		attachmentRef.attachment = index; // index of render-pass-attachment 
 		attachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	}
-	subpassDesc.colorAttachmentCount = subpassColorAttachmentRefs.size();
+	subpassDesc.colorAttachmentCount = (uint32_t)subpassColorAttachmentRefs.size();
 	subpassDesc.pColorAttachments = subpassColorAttachmentRefs.data();
 	subpassDesc.pResolveAttachments = subpassResolveAttachmentRefs.data();
-	subpassDesc.inputAttachmentCount = subpassInputAttachmentRefs.size();
+	subpassDesc.inputAttachmentCount = (uint32_t)subpassInputAttachmentRefs.size();
 	subpassDesc.pInputAttachments = subpassInputAttachmentRefs.data();
 	if (FV::isDepthFormat(desc.depthStencilAttachmentPixelFormat) ||
         FV::isStencilFormat(desc.depthStencilAttachmentPixelFormat))
 	{
-        subpassDepthStencilAttachment.attachment = attachmentDescriptions.size(); // attachment index
+        subpassDepthStencilAttachment.attachment = (uint32_t)attachmentDescriptions.size(); // attachment index
         subpassDepthStencilAttachment.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         // add depth-stencil attachment description
         VkAttachmentDescription attachmentDesc = {};
@@ -1569,7 +1569,7 @@ std::shared_ptr<FV::RenderPipelineState> GraphicsDevice::makeRenderPipeline(cons
 		subpassDesc.pDepthStencilAttachment = &subpassDepthStencilAttachment;
 	}
 
-	renderPassCreateInfo.attachmentCount = attachmentDescriptions.size();
+	renderPassCreateInfo.attachmentCount = (uint32_t)attachmentDescriptions.size();
 	renderPassCreateInfo.pAttachments = attachmentDescriptions.data();
 	renderPassCreateInfo.subpassCount = 1;
 	renderPassCreateInfo.pSubpasses = &subpassDesc;
@@ -1587,7 +1587,7 @@ std::shared_ptr<FV::RenderPipelineState> GraphicsDevice::makeRenderPipeline(cons
 	VkPipelineColorBlendStateCreateInfo colorBlendState = {
         VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO
     };
-	colorBlendState.attachmentCount = colorBlendAttachmentStates.size();
+	colorBlendState.attachmentCount = (uint32_t)colorBlendAttachmentStates.size();
 	colorBlendState.pAttachments = colorBlendAttachmentStates.data();
 	pipelineCreateInfo.pColorBlendState = &colorBlendState;
 
@@ -2028,7 +2028,7 @@ VkPipelineLayout GraphicsDevice::makePipelineLayout(std::initializer_list<std::s
         }
         // create descriptor set (setIndex) layout
         VkDescriptorSetLayoutCreateInfo setLayoutCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-        setLayoutCreateInfo.bindingCount = descriptorBindings.size();
+        setLayoutCreateInfo.bindingCount = (uint32_t)descriptorBindings.size();
         setLayoutCreateInfo.pBindings = descriptorBindings.data();
 
         VkDescriptorSetLayoutSupport layoutSupport = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_SUPPORT };
@@ -2047,9 +2047,9 @@ VkPipelineLayout GraphicsDevice::makePipelineLayout(std::initializer_list<std::s
         descriptorBindings.clear();
     }
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
-    pipelineLayoutCreateInfo.setLayoutCount = descriptorSetLayouts.size();
+    pipelineLayoutCreateInfo.setLayoutCount = (uint32_t)descriptorSetLayouts.size();
     pipelineLayoutCreateInfo.pSetLayouts = descriptorSetLayouts.data();
-    pipelineLayoutCreateInfo.pushConstantRangeCount = pushConstantRanges.size();
+    pipelineLayoutCreateInfo.pushConstantRangeCount = (uint32_t)pushConstantRanges.size();
     pipelineLayoutCreateInfo.pPushConstantRanges = pushConstantRanges.data();
 
     VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
@@ -2094,10 +2094,8 @@ void GraphicsDevice::fenceCompletionCallbackThreadProc(std::stop_token stopToken
 
             FVASSERT_DEBUG(fences.empty() == false);
             err = vkWaitForFences(device,
-                                  fences.size(),
-                                  fences.data(),
-                                  VK_FALSE,
-                                  0);
+                                  (uint32_t)fences.size(), fences.data(),
+                                  VK_FALSE, 0);
             fences.clear();
             if (err == VK_SUCCESS)
             {
@@ -2122,7 +2120,8 @@ void GraphicsDevice::fenceCompletionCallbackThreadProc(std::stop_token stopToken
                 // reset signaled fences
                 if (fences.empty() == false)
                 {
-                    err = vkResetFences(device, fences.size(), fences.data());
+                    err = vkResetFences(device,
+                                        (uint32_t)fences.size(), fences.data());
                     if (err != VK_SUCCESS)
                     {
                         Log::error(std::format("vkResetFences failed: {}",

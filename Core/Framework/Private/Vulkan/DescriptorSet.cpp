@@ -91,7 +91,7 @@ void DescriptorSet::updateImageViewLayouts(const ImageViewLayoutMap& imageLayout
         if (write.pImageInfo)
         {
             bool update = false;
-            for (int i = 0; i < write.descriptorCount; ++i)
+            for (uint32_t i = 0; i < write.descriptorCount; ++i)
             {
                 VkDescriptorImageInfo& imageInfo = (VkDescriptorImageInfo&)write.pImageInfo[i];
                 if (imageInfo.imageView != VK_NULL_HANDLE)
@@ -120,7 +120,7 @@ void DescriptorSet::updateImageViewLayouts(const ImageViewLayoutMap& imageLayout
     if (descriptorWrites.size() > 0)
     {
         vkUpdateDescriptorSets(gdevice->device,
-                               descriptorWrites.size(),
+                               (uint32_t)descriptorWrites.size(),
                                descriptorWrites.data(),
                                0,
                                nullptr);

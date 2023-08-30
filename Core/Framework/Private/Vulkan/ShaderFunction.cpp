@@ -27,7 +27,7 @@ ShaderFunction::ShaderFunction(std::shared_ptr<ShaderModule> m, const std::strin
 			VkSpecializationMapEntry* mapEntries = reinterpret_cast<VkSpecializationMapEntry*>(specializationData);
 			uint8_t* data = reinterpret_cast<uint8_t*>(&mapEntries[numValues]);
 
-			specializationInfo.mapEntryCount = numValues;
+			specializationInfo.mapEntryCount = (uint32_t)numValues;
 			specializationInfo.pMapEntries = mapEntries;
 			specializationInfo.pData = data;
 
@@ -36,7 +36,7 @@ ShaderFunction::ShaderFunction(std::shared_ptr<ShaderModule> m, const std::strin
 			{
 				const ShaderSpecialization& sp = values[i];
 				mapEntries[i].constantID = sp.index;
-				mapEntries[i].offset = offset;
+				mapEntries[i].offset = (uint32_t)offset;
 				mapEntries[i].size = sp.size;
 
 				memcpy(&data[offset], sp.data, sp.size);

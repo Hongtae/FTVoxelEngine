@@ -46,7 +46,7 @@ namespace
         const char8_t* inputEnd = reinterpret_cast<const char8_t*>(&input[inputLen]);
         while (inputBegin != inputEnd)
         {
-            size_t length = trailingBytesForUTF8[(*inputBegin) & 0xff] + 1;
+            ptrdiff_t length = trailingBytesForUTF8[(*inputBegin) & 0xff] + 1;
             if (length > (inputEnd - inputBegin) || !isLegalUTF8(inputBegin, length))
                 return false;
             inputBegin += length;

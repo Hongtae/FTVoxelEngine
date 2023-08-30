@@ -79,7 +79,7 @@ std::shared_ptr<DescriptorPool> DescriptorPoolChain::addNewPool(VkDescriptorPool
 
     VkDescriptorPoolCreateInfo ci = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
     ci.flags = flags;
-    ci.poolSizeCount = poolSizes.size();
+    ci.poolSizeCount = (uint32_t)poolSizes.size();
     ci.pPoolSizes = poolSizes.data();
     ci.maxSets = maxSets;
 

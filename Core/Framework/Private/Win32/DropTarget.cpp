@@ -76,7 +76,7 @@ HRESULT DropTarget::DragEnter(IDataObject* pDataObject, DWORD grfKeyState, POINT
         Window::DragOperation op = target->callback().draggingFeedback(
             target,
             state,
-            Point(pt2.x, pt2.y),
+            Point(float(pt2.x), float(pt2.y)),
             source);
 		switch (op)
 		{
@@ -126,7 +126,7 @@ HRESULT DropTarget::DragOver(DWORD grfKeyState, POINTL pt, DWORD* pdwEffect)
             Window::DragOperation op = target->callback().draggingFeedback(
                 target,
                 state,
-                Point(pt2.x, pt2.y),
+                Point(float(pt2.x), float(pt2.y)),
                 source);
 			switch (op)
 			{
@@ -161,7 +161,7 @@ HRESULT DropTarget::DragLeave()
         Window::DragOperation op = target->callback().draggingFeedback(
             target,
             state,
-            Point(lastPosition.x, lastPosition.y),
+            Point(float(lastPosition.x), float(lastPosition.y)),
             source);
     }
 	source.clear();
@@ -182,7 +182,7 @@ HRESULT DropTarget::Drop(IDataObject* pDataObject, DWORD grfKeyState, POINTL pt,
         Window::DragOperation op = target->callback().draggingFeedback(
             target,
             state,
-            Point(pt2.x, pt2.y),
+            Point(float(pt2.x), float(pt2.y)),
             source);
 		switch (op)
 		{
