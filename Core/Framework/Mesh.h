@@ -7,6 +7,7 @@
 #include "PipelineReflection.h"
 #include "RenderCommandEncoder.h"
 #include "VertexDescriptor.h"
+#include "GraphicsDeviceContext.h"
 
 namespace FV
 {
@@ -57,6 +58,13 @@ namespace FV
         void updateShadingProperties(const SceneState*);
 
         bool encodeRenderCommand(RenderCommandEncoder* encoder, uint32_t numInstances, uint32_t baseInstance) const;
+
+        // Enumerates the vertex buffer contents, and for each vertex,
+        // the given handler is called, with a vertex attribute as an argument.
+        // If the handler returns false, stop enumerating.
+        bool enumerateVertexBufferContent(VertexAttributeSemantic semantic,
+                                          CommandQueue* queue,
+                                          std::function<bool(const void* data, VertexFormat format, uint32_t index)> handler) const;
 
     private:
         struct ResourceBinding
