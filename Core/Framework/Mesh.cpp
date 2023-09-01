@@ -1057,13 +1057,16 @@ uint32_t Submesh::bindShaderUniformBuffer(ShaderUniformSemantic semantic,
         return bindMatrix4(sceneState.model);
         break;
     case ShaderUniformSemantic::ViewMatrix:
-        return bindMatrix4(sceneState.view.view.matrix4());
+        return bindMatrix4(sceneState.view.matrix4());
         break;
     case ShaderUniformSemantic::ProjectionMatrix:
-        return bindMatrix4(sceneState.view.projection.matrix);
+        return bindMatrix4(sceneState.projection.matrix);
         break;
     case ShaderUniformSemantic::ModelViewProjectionMatrix:
-        return bindMatrix4(sceneState.model.concatenating(sceneState.view.matrix()));
+        return bindMatrix4(
+            sceneState.model.concatenating(
+                sceneState.view.matrix4().concatenating(
+                    sceneState.projection.matrix)));
         break;
     default:
         Log::error("Not implemented yet!");

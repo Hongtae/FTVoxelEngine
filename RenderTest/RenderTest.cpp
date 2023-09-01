@@ -116,17 +116,14 @@ public:
         const float fov = degreeToRadian(80.0f);
 
         SceneState sceneState = {
-            .view = ViewFrustum
-            {
-                ViewTransform(camPosition,
+            .view = ViewTransform(camPosition,
                               camTarget - camPosition,
                               Vector3(0, 1, 0)),
-                ProjectionTransform::perspective(
+            .projection = ProjectionTransform::perspective(
                     fov,     // fov
                     1.0,     // aspect ratio
                     1.0,     // near
-                    1000.0)  // far
-            },
+                    1000.0), // far
             .model = Matrix4::identity
         };
 
@@ -233,8 +230,7 @@ public:
 
             modelTransform.rotate(Quaternion(Vector3(0, 1, 0), std::numbers::pi * delta * 0.4));
             sceneState.model = modelTransform.matrix4();
-
-            sceneState.view.projection = ProjectionTransform::perspective(
+            sceneState.projection = ProjectionTransform::perspective(
                 fov, // fov
                 float(width) / float(height),     // aspect ratio
                 1.0,      // near

@@ -23,7 +23,8 @@ namespace FV
 {
     struct SceneState
     {
-        ViewFrustum view;
+        ViewTransform view;
+        ProjectionTransform projection;
         Matrix4 model;
     };
 
