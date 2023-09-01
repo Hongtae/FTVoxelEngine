@@ -509,11 +509,9 @@ void Submesh::updateShadingProperties(const SceneState* sceneState)
 
         size_t bind(uint8_t* buffer, size_t length)
         {
-            uint32_t memberOffset = member.offset + offset;
-            if (memberOffset >= length)
-                return 0;   // insufficent buffer!
-            if (memberOffset + member.size > length)
-                return 0;   // insufficent buffer!
+            uint32_t bindingOffset = member.offset + offset;
+
+            FVASSERT_DEBUG(member.size <= length);
 
             std::string path;
             if (strlen(parentPath.c_str()) > 0 && strlen(member.name.c_str()) > 0)
@@ -521,26 +519,26 @@ void Submesh::updateShadingProperties(const SceneState* sceneState)
             else
                 path = member.name;
 
-            // write to dest
-            uint8_t* dest = &(buffer[memberOffset]);
-            size_t destLen = length - memberOffset;
-
             size_t copied = 0;
-
             if (member.dataType == ShaderDataType::Struct)
             {
                 for (const ShaderResourceStructMember& m : member.members)
                 {
+                    if (m.offset >= length)
+                        continue;
+                    if (m.offset + m.size > length)
+                        continue;
+
                     auto s = StructMemberBind(sceneState, mesh, m, path,
                                               structArrayIndex,
                                               set, binding,
-                                              offset + m.offset)
-                        .bind(buffer, length);
+                                              bindingOffset)
+                        .bind(buffer + m.offset, length - m.offset);
                     if (s == 0)
                     {
                         Log::warning(std::format(
                             "Unable to bind shader uniform struct element: {} name:\"{}\"",
-                            ShaderBindingLocation{ set, binding, memberOffset }, path));
+                            ShaderBindingLocation{ set, binding, bindingOffset }, path));
                     }
                     copied = member.offset + s;
                 }
@@ -549,7 +547,7 @@ void Submesh::updateShadingProperties(const SceneState* sceneState)
             {
                 // find semantic
                 auto material = mesh->material.get();
-                auto location = ShaderBindingLocation{ set, binding, memberOffset };
+                auto location = ShaderBindingLocation{ set, binding, bindingOffset };
                 MaterialShaderMap::Semantic semantic = MaterialSemantic::UserDefined;
                 if (auto it = material->shader.resourceSemantics.find(location);
                     it != material->shader.resourceSemantics.end())
@@ -562,7 +560,7 @@ void Submesh::updateShadingProperties(const SceneState* sceneState)
                                                                member.dataType,
                                                                path,
                                                                *sceneState,
-                                                               dest, destLen);
+                                                               buffer, length);
                 }
                 if (copied == 0)
                 {
@@ -573,7 +571,7 @@ void Submesh::updateShadingProperties(const SceneState* sceneState)
                     copied = mesh->bindMaterialProperty(ms, location, 
                                                         member.dataType,
                                                         path, offset,
-                                                        dest, destLen);
+                                                        buffer, length);
                 }
                 if (copied == 0)
                 {
@@ -602,11 +600,28 @@ void Submesh::updateShadingProperties(const SceneState* sceneState)
                     continue;
                 if (member.offset >= (offset + size))
                     break;
+                if (member.offset + member.size > offset + size)
+                    break;
 
+                std::string path;
+                if (strlen(name.c_str()) > 0 && strlen(member.name.c_str()) > 0)
+                    path = std::format("{}.{}", name, member.name);
+                else
+                    path = member.name;
+
+                if (member.offset + member.size - offset > bufferLength)
+                {
+                    Log::error(std::format(
+                        "Insufficient buffer for shader uniform struct {}, size:{}, name:\"{}\"",
+                            ShaderBindingLocation{ set, binding, member.offset }, size, path));
+                    break;
+                }
+
+                auto d = member.offset - offset;
                 auto s = StructMemberBind(sceneState, this, member, name,
                                           arrayIndex,
                                           set, binding, 0)
-                    .bind(buffer, bufferLength);
+                    .bind(buffer + d, bufferLength - d);
 
                 if (s > 0)
                 {
@@ -614,12 +629,6 @@ void Submesh::updateShadingProperties(const SceneState* sceneState)
                 }
                 else
                 {
-                    std::string path;
-                    if (strlen(name.c_str()) > 0 && strlen(member.name.c_str()) > 0)
-                        path = std::format("{}.{}", name, member.name);
-                    else
-                        path = member.name;
-
                     Log::warning(std::format(
                         "Unable to bind shader uniform struct {}, size:{}, name:\"{}\"",
                         ShaderBindingLocation{ set, binding, member.offset }, size, path));
@@ -789,13 +798,11 @@ void Submesh::updateShadingProperties(const SceneState* sceneState)
     }
     for (PushConstantData& pc : pushConstants)
     {
-        uint32_t structSize = pc.layout.offset + pc.layout.size;
-        for (const ShaderResourceStructMember& member : pc.layout.members)
-        {
-            structSize = std::max(structSize, member.offset + member.size);
-        }
+        if (pc.layout.size == 0)
+            continue;
+
         pc.data.clear();
-        pc.data.resize(structSize, 0);
+        pc.data.resize(pc.layout.size, 0);
 
         uint8_t* buffer = pc.data.data();
         size_t bufferLength = pc.data.size();
@@ -1079,17 +1086,42 @@ bool Submesh::encodeRenderCommand(RenderCommandEncoder* encoder,
         {
             encoder->setResources(rb.index, rb.bindingSet);
         }
-        for (auto& pc : pushConstants)
+        if (pushConstants.empty() == false)
         {
-            uint32_t size = pc.layout.offset + pc.layout.size;
-            if (size > pc.data.size())
-                size = uint32_t(pc.data.size());
+            // [VUID-vkCmdPushConstants-offset-01796]
+            // The Vulkan spec states: For each byte in the range specified by
+            // offset and size and for each push constant range that overlaps
+            // that byte, stageFlags must include all stages in that push
+            // constant range's VkPushConstantRange::stageFlags         
 
-            if (size > pc.layout.offset)
-                encoder->pushConstant(pc.layout.stages,
-                                      pc.layout.offset,
-                                      size - pc.layout.offset,
-                                      &pc.data.data()[pc.layout.offset]);
+            uint32_t begin = pushConstants.front().layout.offset;
+            uint32_t end = begin;
+            uint32_t stages = 0;
+
+            for (auto& pc : pushConstants)
+            {
+                begin = std::min(begin, pc.layout.offset);
+                end = std::max(end, pc.layout.offset + pc.layout.size);
+                stages = stages | pc.layout.stages;
+            }
+            auto bufferSize = end - begin;
+            if (bufferSize > 0 && stages != 0)
+            {
+                std::vector<uint8_t> buffer(bufferSize, 0);
+                for (auto& pc : pushConstants)
+                {
+                    if (pc.data.size() < pc.layout.size)
+                    {
+                        Log::error(std::format(
+                            "PushConstant (name:\"{}\", offset:{}, size:{}) data is missing!",
+                            pc.layout.name, pc.layout.offset, pc.layout.size));
+                        continue;
+                    }
+                    memcpy(&(buffer.data()[pc.layout.offset]), pc.data.data(), pc.layout.size);
+                }
+
+                encoder->pushConstant(stages, begin, bufferSize, buffer.data());
+            }
         }
         for (uint32_t index = 0; index < vertexBuffers.size(); ++index)
         {

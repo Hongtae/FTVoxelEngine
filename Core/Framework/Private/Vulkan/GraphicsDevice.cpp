@@ -1,4 +1,6 @@
 #include <chrono>
+#include <numeric>
+#include <algorithm>
 #include "../../Logger.h"
 #include "../../Hash.h"
 #include "GraphicsDevice.h"
@@ -1956,8 +1958,28 @@ VkPipelineLayout GraphicsDevice::makePipelineLayout(std::initializer_list<std::s
             {
                 VkPushConstantRange range = {};
                 range.stageFlags = module->stage;
-                range.offset = layout.offset;
-                range.size = layout.size;
+
+                // [VUID-VkGraphicsPipelineCreateInfo-layout-07987]
+                //  The Vulkan spec states: If a push constant block is declared
+                //  in a shader, a push constant range in layout must match both
+                //  the shader stage and range
+                //
+                auto begin = std::reduce(layout.members.begin(),
+                                         layout.members.end(),
+                                         layout.offset,
+                                         [](auto result, auto& member)
+                                         {
+                                             return std::min(result, member.offset);
+                                         });
+                auto end = std::reduce(layout.members.begin(),
+                                       layout.members.end(),
+                                       layout.offset + layout.size,
+                                       [](auto result, auto& member)
+                                       {
+                                           return std::max(result, member.offset + member.size);
+                                       });
+                range.offset = begin;
+                range.size = end - begin;
                 pushConstantRanges.push_back(range);
             }
         }
