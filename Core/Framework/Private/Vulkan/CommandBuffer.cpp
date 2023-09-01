@@ -123,7 +123,7 @@ bool CommandBuffer::commit()
             VkResult err = vkAllocateCommandBuffers(device, &bufferInfo, &commandBuffer);
             if (err != VK_SUCCESS)
             {
-                Log::error(std::format("vkAllocateCommandBuffers failed: {}", getVkResultString(err)));
+                Log::error(std::format("vkAllocateCommandBuffers failed: {}", err));
                 return cleanup(false);
             }
             submitCommandBuffers.push_back(commandBuffer);

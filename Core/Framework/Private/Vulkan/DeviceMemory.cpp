@@ -24,7 +24,7 @@ DeviceMemory::DeviceMemory(std::shared_ptr<GraphicsDevice> dev, VkDeviceMemory m
         VkResult err = vkMapMemory(gdevice->device, memory, offset, size, 0, &mapped);
         if (err != VK_SUCCESS)
         {
-            Log::error(std::format("vkMapMemory failed: {}", getVkResultString(err)));
+            Log::error(std::format("vkMapMemory failed: {}", err));
         }
     }
 }
@@ -61,7 +61,7 @@ bool DeviceMemory::invalidate(uint64_t offset, uint64_t size)
             }
             else
             {
-                Log::error(std::format("vkInvalidateMappedMemoryRanges failed: {}", getVkResultString(err)));
+                Log::error(std::format("vkInvalidateMappedMemoryRanges failed: {}", err));
             }
         }
         else
@@ -94,7 +94,7 @@ bool DeviceMemory::flush(uint64_t offset, uint64_t size)
             }
             else
             {
-                Log::error(std::format("vkFlushMappedMemoryRanges failed: {}", getVkResultString(err)));
+                Log::error(std::format("vkFlushMappedMemoryRanges failed: {}", err));
             }
         }
         else

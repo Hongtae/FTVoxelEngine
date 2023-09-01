@@ -216,7 +216,7 @@ bool RenderCommandEncoder::Encoder::encode(VkCommandBuffer commandBuffer)
     VkResult err = vkCreateRenderPass(device, &renderPassCreateInfo, gdevice->allocationCallbacks(), &this->renderPass);
     if (err != VK_SUCCESS)
     {
-        Log::error(std::format("vkCreateRenderPass failed: {}", getVkResultString(err)));
+        Log::error(std::format("vkCreateRenderPass failed: {}", err));
         return false;
     }
 
@@ -230,7 +230,7 @@ bool RenderCommandEncoder::Encoder::encode(VkCommandBuffer commandBuffer)
     err = vkCreateFramebuffer(device, &frameBufferCreateInfo, gdevice->allocationCallbacks(), &this->framebuffer);
     if (err != VK_SUCCESS)
     {
-        Log::error(std::format("vkCreateFramebuffer failed: {}", getVkResultString(err)));
+        Log::error(std::format("vkCreateFramebuffer failed: {}", err));
         return false;
     }
 

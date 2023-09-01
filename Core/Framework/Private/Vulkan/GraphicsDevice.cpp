@@ -163,8 +163,7 @@ GraphicsDevice::GraphicsDevice(std::shared_ptr<VulkanInstance> ins,
                                   instance->allocationCallback, &device);
     if (err != VK_SUCCESS)
     {
-        Log::error(std::format("vkCreateDevice failed: {}",
-                               getVkResultString(err)));
+        Log::error(std::format("vkCreateDevice failed: {}", err));
         throw std::runtime_error("vkCreateDevice failed");
     }
     this->device = device;
@@ -357,8 +356,7 @@ std::shared_ptr<FV::ShaderModule> GraphicsDevice::makeShaderModule(const FV::Sha
     VkResult err = vkCreateShaderModule(this->device, &shaderModuleCreateInfo, this->allocationCallbacks(), &shaderModule);
     if (err != VK_SUCCESS)
     {
-        Log::error(std::format("vkCreateShaderModule failed: {}",
-                               getVkResultString(err)));
+        Log::error(std::format("vkCreateShaderModule failed: {}", err));
         return nullptr;
     }
 
@@ -429,8 +427,7 @@ std::shared_ptr<FV::ShaderBindingSet> GraphicsDevice::makeShaderBindingSet(const
         VkResult err = vkCreateDescriptorSetLayout(device, &layoutCreateInfo, allocationCallbacks(), &setLayout);
         if (err != VK_SUCCESS)
         {
-            Log::error(std::format("vkCreateDescriptorSetLayout failed: {}",
-                                   getVkResultString(err)));
+            Log::error(std::format("vkCreateDescriptorSetLayout failed: {}", err));
             return nullptr;
         }
         return std::make_shared<ShaderBindingSet>(shared_from_this(), setLayout, poolID, layoutCreateInfo);
@@ -545,8 +542,7 @@ std::shared_ptr<FV::GPUBuffer> GraphicsDevice::makeBuffer(size_t length, GPUBuff
     VkResult err = vkCreateBuffer(device, &bufferCreateInfo, allocationCallbacks(), &buffer);
     if (err != VK_SUCCESS)
     {
-        Log::error(std::format("vkCreateBuffer failed: {}", 
-                               getVkResultString(err)));
+        Log::error(std::format("vkCreateBuffer failed: {}", err));
         return nullptr;
     }
     VkMemoryPropertyFlags memProperties;
@@ -605,15 +601,13 @@ std::shared_ptr<FV::GPUBuffer> GraphicsDevice::makeBuffer(size_t length, GPUBuff
 
     if (err != VK_SUCCESS)
     {
-        Log::error(std::format("vkAllocateMemory failed: {}",
-                               getVkResultString(err)));
+        Log::error(std::format("vkAllocateMemory failed: {}", err));
         return nullptr;
     }
     err = vkBindBufferMemory(device, buffer, memory, 0);
     if (err != VK_SUCCESS)
     {
-        Log::error(std::format("vkBindBufferMemory failed: {}",
-                               getVkResultString(err)));
+        Log::error(std::format("vkBindBufferMemory failed: {}", err));
         return nullptr;
     }
 
@@ -721,8 +715,7 @@ std::shared_ptr<FV::Texture> GraphicsDevice::makeTexture(const TextureDescriptor
     VkResult err = vkCreateImage(device, &imageCreateInfo, allocationCallbacks(), &image);
     if (err != VK_SUCCESS)
     {
-        Log::error(std::format("vkCreateImage failed: {}",
-                               getVkResultString(err)));
+        Log::error(std::format("vkCreateImage failed: {}", err));
         return nullptr;
     }
 
@@ -772,15 +765,13 @@ std::shared_ptr<FV::Texture> GraphicsDevice::makeTexture(const TextureDescriptor
     }
     if (err != VK_SUCCESS)
     {
-        Log::error(std::format("vkAllocateMemory failed: {}",
-                               getVkResultString(err)));
+        Log::error(std::format("vkAllocateMemory failed: {}", err));
         return nullptr;
     }
     err = vkBindImageMemory(device, image, memory, 0);
     if (err != VK_SUCCESS)
     {
-        Log::error(std::format("vkBindImageMemory failed: {}",
-                               getVkResultString(err)));
+        Log::error(std::format("vkBindImageMemory failed: {}", err));
         return nullptr;
     }
 
@@ -853,8 +844,7 @@ std::shared_ptr<FV::Texture> GraphicsDevice::makeTexture(const TextureDescriptor
         err = vkCreateImageView(device, &imageViewCreateInfo, allocationCallbacks(), &imageView);
         if (err != VK_SUCCESS)
         {
-            Log::error(std::format("vkCreateImageView failed: {}",
-                                   getVkResultString(err)));
+            Log::error(std::format("vkCreateImageView failed: {}", err));
             return nullptr;
         }
         return std::make_shared<ImageView>(imageObject, imageView, imageViewCreateInfo);
@@ -929,8 +919,7 @@ std::shared_ptr<FV::Texture> GraphicsDevice::makeTransientRenderTarget(TextureTy
     VkResult err = vkCreateImage(device, &imageCreateInfo, allocationCallbacks(), &image);
     if (err != VK_SUCCESS)
     {
-        Log::error(std::format("vkCreateImage failed: {}",
-                               getVkResultString(err)));
+        Log::error(std::format("vkCreateImage failed: {}", err));
         return nullptr;
     }
 
@@ -980,15 +969,13 @@ std::shared_ptr<FV::Texture> GraphicsDevice::makeTransientRenderTarget(TextureTy
     }
     if (err != VK_SUCCESS)
     {
-        Log::error(std::format("vkAllocateMemory failed: {}",
-                               getVkResultString(err)));
+        Log::error(std::format("vkAllocateMemory failed: {}", err));
         return nullptr;
     }
     err = vkBindImageMemory(device, image, memory, 0);
     if (err != VK_SUCCESS)
     {
-        Log::error(std::format("vkBindImageMemory failed: {}",
-                               getVkResultString(err)));
+        Log::error(std::format("vkBindImageMemory failed: {}", err));
         return nullptr;
     }
 
@@ -1048,8 +1035,7 @@ std::shared_ptr<FV::Texture> GraphicsDevice::makeTransientRenderTarget(TextureTy
     err = vkCreateImageView(device, &imageViewCreateInfo, allocationCallbacks(), &imageView);
     if (err != VK_SUCCESS)
     {
-        Log::error(std::format("vkCreateImageView failed: {}",
-                               getVkResultString(err)));
+        Log::error(std::format("vkCreateImageView failed: {}", err));
         return nullptr;
     }
     return std::make_shared<ImageView>(imageObject, imageView, imageViewCreateInfo);
@@ -1147,8 +1133,7 @@ std::shared_ptr<FV::SamplerState> GraphicsDevice::makeSamplerState(const Sampler
     VkResult err = vkCreateSampler(device, &createInfo, allocationCallbacks(), &sampler);
     if (err != VK_SUCCESS)
     {
-        Log::error(std::format("vkCreateSampler failed: {}",
-                               getVkResultString(err)));
+        Log::error(std::format("vkCreateSampler failed: {}", err));
         return nullptr;
     }
     return std::make_shared<Sampler>(shared_from_this(), sampler);
@@ -1176,8 +1161,7 @@ std::shared_ptr<FV::GPUEvent> GraphicsDevice::makeEvent()
     VkResult err = vkCreateSemaphore(device, &createInfo, allocationCallbacks(), &semaphore);
     if (err != VK_SUCCESS)
     {
-        Log::error(std::format("vkCreateSemaphore failed: {}",
-                               getVkResultString(err)));
+        Log::error(std::format("vkCreateSemaphore failed: {}", err));
         return nullptr;
     }
     return std::make_shared<Semaphore>(shared_from_this(), semaphore);
@@ -1198,8 +1182,7 @@ std::shared_ptr<FV::GPUSemaphore> GraphicsDevice::makeSemaphore()
     VkResult err = vkCreateSemaphore(device, &createInfo, allocationCallbacks(), &semaphore);
     if (err != VK_SUCCESS)
     {
-        Log::error(std::format("vkCreateSemaphore failed: {}",
-                               getVkResultString(err)));
+        Log::error(std::format("vkCreateSemaphore failed: {}", err));
         return nullptr;
     }
     return std::make_shared<TimelineSemaphore>(shared_from_this(), semaphore);
@@ -1579,8 +1562,7 @@ std::shared_ptr<FV::RenderPipelineState> GraphicsDevice::makeRenderPipeline(cons
 	err = vkCreateRenderPass(device, &renderPassCreateInfo, allocationCallbacks(), &renderPass);
 	if (err != VK_SUCCESS)
 	{
-        Log::error(std::format("vkCreateRenderPass failed: {}",
-                               getVkResultString(err)));
+        Log::error(std::format("vkCreateRenderPass failed: {}", err));
 		return nullptr;
 	}
 	pipelineCreateInfo.renderPass = renderPass;
@@ -1596,8 +1578,7 @@ std::shared_ptr<FV::RenderPipelineState> GraphicsDevice::makeRenderPipeline(cons
 	err = vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineCreateInfo, allocationCallbacks(), &pipeline);
     if (err != VK_SUCCESS)
     {
-        Log::error(std::format("vkCreateGraphicsPipelines failed: {}",
-                               getVkResultString(err)));
+        Log::error(std::format("vkCreateGraphicsPipelines failed: {}", err));
         return nullptr;
     }
 	savePipelineCache();
@@ -1756,8 +1737,7 @@ std::shared_ptr<FV::ComputePipelineState> GraphicsDevice::makeComputePipeline(co
     err = vkCreateComputePipelines(device, pipelineCache, 1, &pipelineCreateInfo, allocationCallbacks(), &pipeline);
     if (err != VK_SUCCESS)
     {
-        Log::error(std::format("vkCreateComputePipelines failed: {}",
-                               getVkResultString(err)));
+        Log::error(std::format("vkCreateComputePipelines failed: {}", err));
         return nullptr;
     }
     savePipelineCache();
@@ -1869,8 +1849,7 @@ void GraphicsDevice::loadPipelineCache()
 	VkResult err = vkCreatePipelineCache(this->device, &pipelineCreateInfo, allocationCallbacks(), &this->pipelineCache);
 	if (err != VK_SUCCESS)
 	{
-        Log::error(std::format("vkCreatePipelineCache failed: {}",
-                               getVkResultString(err)));
+        Log::error(std::format("vkCreatePipelineCache failed: {}", err));
 	}
 }
 
@@ -1905,8 +1884,7 @@ void GraphicsDevice::savePipelineCache()
 		}
 		else
 		{
-            Log::error(std::format("vkGetPipelineCacheData failed: {}",
-                                   getVkResultString(err)));
+            Log::error(std::format("vkGetPipelineCacheData failed: {}", err));
 		}
 	}
 	else
@@ -2057,8 +2035,7 @@ VkPipelineLayout GraphicsDevice::makePipelineLayout(std::initializer_list<std::s
         err = vkCreateDescriptorSetLayout(device, &setLayoutCreateInfo, allocationCallbacks(), &setLayout);
         if (err != VK_SUCCESS)
         {
-            Log::error(std::format("vkCreateDescriptorSetLayout failed: {}",
-                                   getVkResultString(err)));
+            Log::error(std::format("vkCreateDescriptorSetLayout failed: {}", err));
             return VK_NULL_HANDLE;
         }
         descriptorSetLayouts.push_back(setLayout);
@@ -2074,8 +2051,7 @@ VkPipelineLayout GraphicsDevice::makePipelineLayout(std::initializer_list<std::s
     err = vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, allocationCallbacks(), &pipelineLayout);
     if (err != VK_SUCCESS)
     {
-        Log::error(std::format("vkCreatePipelineLayout failed: {}",
-                               getVkResultString(err)));
+        Log::error(std::format("vkCreatePipelineLayout failed: {}", err));
         return VK_NULL_HANDLE;
     }
     return pipelineLayout;
@@ -2142,8 +2118,7 @@ void GraphicsDevice::fenceCompletionCallbackThreadProc(std::stop_token stopToken
                                         (uint32_t)fences.size(), fences.data());
                     if (err != VK_SUCCESS)
                     {
-                        Log::error(std::format("vkResetFences failed: {}",
-                                               getVkResultString(err)));
+                        Log::error(std::format("vkResetFences failed: {}", err));
                         // runtime error!
                         //FVASSERT(err == VK_SUCCESS);
                         FVERROR_ABORT("vkResetFences failed");
@@ -2152,8 +2127,7 @@ void GraphicsDevice::fenceCompletionCallbackThreadProc(std::stop_token stopToken
             }
             else if (err != VK_TIMEOUT)
             {
-                Log::error(std::format("vkResetFences failed: {}",
-                                       getVkResultString(err)));
+                Log::error(std::format("vkResetFences failed: {}", err));
                 //FVASSERT(0);
                 FVERROR_ABORT("vkResetFences failed");
             }
@@ -2228,8 +2202,7 @@ VkFence GraphicsDevice::getFence()
         VkResult err = vkCreateFence(device, &fenceCreateInfo, allocationCallbacks(), &fence);
         if (err != VK_SUCCESS)
         {
-            Log::error(std::format("vkCreateFence failed: {}",
-                                   getVkResultString(err)));
+            Log::error(std::format("vkCreateFence failed: {}", err));
             FVASSERT(err == VK_SUCCESS);
         }
         std::unique_lock lock(fenceCompletionMutex);

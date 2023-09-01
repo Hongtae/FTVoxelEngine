@@ -120,8 +120,7 @@ std::shared_ptr<VulkanInstance> VulkanInstance::makeInstance(
     err = vkEnumerateInstanceVersion(&instanceVersion);
     if (err != VK_SUCCESS)
     {
-        Log::error(std::format("vkEnumerateInstanceVersion failed: {}",
-            getVkResultString(err)));
+        Log::error(std::format("vkEnumerateInstanceVersion failed: {}", err));
         return nullptr;
     }
     Log::info(std::format("Vulkan Instance Version: {:d}.{:d}.{:d}",
@@ -176,8 +175,7 @@ std::shared_ptr<VulkanInstance> VulkanInstance::makeInstance(
         else
         {
             Log::error(
-                std::format("vkEnumerateInstanceExtensionProperties failed: {}",
-                    getVkResultString(err)));
+                std::format("vkEnumerateInstanceExtensionProperties failed: {}", err));
         }
         return extensions;
     };
@@ -382,7 +380,7 @@ std::shared_ptr<VulkanInstance> VulkanInstance::makeInstance(
     if (err != VK_SUCCESS)
     {
         Log::error(
-            std::format("vkCreateInstance failed: {}", getVkResultString(err)));
+            std::format("vkCreateInstance failed: {}", err));
         return nullptr;
     }
 
@@ -447,16 +445,14 @@ std::shared_ptr<VulkanInstance> VulkanInstance::makeInstance(
             &output->debugMessenger);
 
         if (err != VK_SUCCESS)
-            Log::error(std::format("vkCreateDebugUtilsMessengerEXT failed: {}",
-                getVkResultString(err)));
+            Log::error(std::format("vkCreateDebugUtilsMessengerEXT failed: {}", err));
     }
 
     // get physical device list
     uint32_t gpuCount = 0;
     err = vkEnumeratePhysicalDevices(instance, &gpuCount, nullptr);
     if (err != VK_SUCCESS)
-        Log::error(std::format("vkEnumeratePhysicalDevices failed: {}",
-            getVkResultString(err)));
+        Log::error(std::format("vkEnumeratePhysicalDevices failed: {}", err));
     if (gpuCount > 0)
     {
         std::vector<VkPhysicalDevice> physicalDevices(gpuCount);
@@ -464,8 +460,7 @@ std::shared_ptr<VulkanInstance> VulkanInstance::makeInstance(
             physicalDevices.data());
         if (err != VK_SUCCESS)
         {
-            Log::error(std::format("vkEnumeratePhysicalDevices failed: {}",
-                getVkResultString(err)));
+            Log::error(std::format("vkEnumeratePhysicalDevices failed: {}", err));
             return nullptr;
         }
         uint64_t maxQueueSize = 0;

@@ -97,8 +97,7 @@ PhysicalDeviceDescription::PhysicalDeviceDescription(VkPhysicalDevice dev)
     }
     else
     {
-        Log::error(std::format("vkEnumerateDeviceExtensionProperties failed: {}",
-            getVkResultString(err)));
+        Log::error(std::format("vkEnumerateDeviceExtensionProperties failed: {}", err));
     }
 }
 

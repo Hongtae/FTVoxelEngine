@@ -80,7 +80,7 @@ std::shared_ptr<BufferView> Buffer::makeBufferView(PixelFormat pixelFormat, size
             }
             else
             {
-                Log::error(std::format("vkCreateBufferView failed: {}", getVkResultString(err)));
+                Log::error(std::format("vkCreateBufferView failed: {}", err));
             }
         }
         else

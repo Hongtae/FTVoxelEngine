@@ -2,6 +2,8 @@
 
 #if FVCORE_ENABLE_VULKAN
 #include <vulkan/vulkan.h>
+#include <string>
+#include <format>
 
 #define DEF_VK_PFN(name)	PFN_##name name = nullptr
 #define GET_INSTANCE_PROC(inst, name)	name = reinterpret_cast<decltype(name)>(vkGetInstanceProcAddr(inst, #name))
@@ -188,7 +190,7 @@ namespace FV::Vulkan
 		}
 	};
 
-	inline const char* getVkResultString(VkResult r)
+	inline std::string getVkResultString(VkResult r)
 	{
 		switch (r)
 		{
@@ -211,8 +213,12 @@ namespace FV::Vulkan
             CASE_STR(VK_ERROR_TOO_MANY_OBJECTS);
             CASE_STR(VK_ERROR_FORMAT_NOT_SUPPORTED);
             CASE_STR(VK_ERROR_FRAGMENTED_POOL);
+            CASE_STR(VK_ERROR_UNKNOWN);
             CASE_STR(VK_ERROR_OUT_OF_POOL_MEMORY);
             CASE_STR(VK_ERROR_INVALID_EXTERNAL_HANDLE);
+            CASE_STR(VK_ERROR_FRAGMENTATION);
+            CASE_STR(VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS);
+            CASE_STR(VK_PIPELINE_COMPILE_REQUIRED);
             CASE_STR(VK_ERROR_SURFACE_LOST_KHR);
             CASE_STR(VK_ERROR_NATIVE_WINDOW_IN_USE_KHR);
             CASE_STR(VK_SUBOPTIMAL_KHR);
@@ -221,15 +227,32 @@ namespace FV::Vulkan
             CASE_STR(VK_ERROR_VALIDATION_FAILED_EXT);
             CASE_STR(VK_ERROR_INVALID_SHADER_NV);
             CASE_STR(VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT);
-            CASE_STR(VK_ERROR_FRAGMENTATION_EXT);
-            CASE_STR(VK_ERROR_NOT_PERMITTED_EXT);
+            CASE_STR(VK_ERROR_NOT_PERMITTED_KHR);
             CASE_STR(VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT);
+            CASE_STR(VK_THREAD_IDLE_KHR);
+            CASE_STR(VK_THREAD_DONE_KHR);
+            CASE_STR(VK_OPERATION_DEFERRED_KHR);
+            CASE_STR(VK_OPERATION_NOT_DEFERRED_KHR);
+            CASE_STR(VK_ERROR_COMPRESSION_EXHAUSTED_EXT);
 #undef CASE_STR
 		}
-		return "";
+		return std::format("VkResult({})", int(r));
 	}
 }
 #undef DEF_VK_PFN
 #undef GET_INSTANCE_PROC
 #undef GET_DEVICE_PROC
+
+namespace std
+{
+    template <> struct formatter<VkResult> : formatter<string>
+    {
+        auto format(VkResult arg, format_context& ctx)
+        {
+            return formatter<string>::format(
+                FV::Vulkan::getVkResultString(arg), ctx);
+        }
+    };
+}
+
 #endif //#if FVCORE_ENABLE_VULKAN

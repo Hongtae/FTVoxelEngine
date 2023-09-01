@@ -95,7 +95,7 @@ std::shared_ptr<DescriptorPool> DescriptorPoolChain::addNewPool(VkDescriptorPool
                                           &pool);
     if (err != VK_SUCCESS)
     {
-        Log::error(std::format("vkCreateDescriptorPool failed: {}", getVkResultString(err)));
+        Log::error(std::format("vkCreateDescriptorPool failed: {}", err));
         return nullptr;
     }
     FVASSERT_DEBUG(pool);

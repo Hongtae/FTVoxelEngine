@@ -29,7 +29,7 @@ std::shared_ptr<FV::CommandBuffer> CommandQueue::makeCommandBuffer()
 	VkResult err = vkCreateCommandPool(gdevice->device, &cmdPoolCreateInfo, gdevice->allocationCallbacks(), &commandPool);
 	if (err != VK_SUCCESS)
 	{
-		Log::error(std::format("vkCreateCommandPool failed: {}", getVkResultString(err)));
+		Log::error(std::format("vkCreateCommandPool failed: {}", err));
 		return nullptr;
 	}
 
@@ -54,7 +54,7 @@ std::shared_ptr<FV::SwapChain> CommandQueue::makeSwapChain(std::shared_ptr<Windo
 													  &supported);
 			if (err != VK_SUCCESS)
 			{
-				Log::error(std::format("vkGetPhysicalDeviceSurfaceSupportKHR failed: {}", getVkResultString(err)));
+				Log::error(std::format("vkGetPhysicalDeviceSurfaceSupportKHR failed: {}", err));
 				return nullptr;
 			}
 			if (!supported)
@@ -77,7 +77,7 @@ bool CommandQueue::submit(const VkSubmitInfo* submits, uint32_t submitCount, std
 	VkResult err = vkQueueSubmit(queue, submitCount, submits, fence);
 	if (err != VK_SUCCESS)
 	{
-		Log::error(std::format("vkQueueSubmit failed: {}", getVkResultString(err)));
+		Log::error(std::format("vkQueueSubmit failed: {}", err));
 		FVASSERT(err == VK_SUCCESS);
 	}
 	if (fence)

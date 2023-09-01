@@ -26,7 +26,7 @@ SwapChain::SwapChain(std::shared_ptr<CommandQueue> q, std::shared_ptr<FV::Window
 	VkResult err = vkCreateSemaphore(device, &semaphoreCreateInfo, gdevice->allocationCallbacks(), &frameReadySemaphore);
 	if (err != VK_SUCCESS)
 	{
-		Log::error(std::format("vkCreateSemaphore failed: {}", getVkResultString(err)));
+		Log::error(std::format("vkCreateSemaphore failed: {}", err));
 		FVASSERT_DEBUG(0);
 	}
 
@@ -84,7 +84,7 @@ bool SwapChain::setup()
 	err = vkCreateAndroidSurfaceKHR(instance, &surfaceCreateInfo, gdevice->allocationCallbacks, &surface);
 	if (err != VK_SUCCESS)
 	{
-		Log::error(std::format("vkCreateAndroidSurfaceKHR failed: {}", getVkResultString(err)));
+		Log::error(std::format("vkCreateAndroidSurfaceKHR failed: {}", err));
 		return false;
 	}	
 #endif
@@ -95,7 +95,7 @@ bool SwapChain::setup()
 	err = instance->extensionProc.vkCreateWin32SurfaceKHR(instance->instance, &surfaceCreateInfo, gdevice->allocationCallbacks(), &surface);
 	if (err != VK_SUCCESS)
 	{
-		Log::error(std::format("vkCreateWin32SurfaceKHR failed: {}", getVkResultString(err)));
+		Log::error(std::format("vkCreateWin32SurfaceKHR failed: {}", err));
 		return false;
 	}
 #endif
@@ -104,7 +104,7 @@ bool SwapChain::setup()
 	err = vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice.device, queueFamilyIndex, surface, &surfaceSupported);
 	if (err != VK_SUCCESS)
 	{
-		Log::error(std::format("vkGetPhysicalDeviceSurfaceSupportKHR failed: {}", getVkResultString(err)));
+		Log::error(std::format("vkGetPhysicalDeviceSurfaceSupportKHR failed: {}", err));
 		return false;
 	}
 	if (!surfaceSupported)
@@ -119,12 +119,12 @@ bool SwapChain::setup()
 	err = instance->extensionProc.vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.device, surface, &surfaceFormatCount, NULL);
 	if (err != VK_SUCCESS)
 	{
-		Log::error(std::format("vkGetPhysicalDeviceSurfaceFormatsKHR failed: {}", getVkResultString(err)));
+		Log::error(std::format("vkGetPhysicalDeviceSurfaceFormatsKHR failed: {}", err));
 		return false;
 	}
 	if (surfaceFormatCount == 0)
 	{
-		Log::error(std::format("vkGetPhysicalDeviceSurfaceFormatsKHR failed: {}", getVkResultString(err)));
+		Log::error(std::format("vkGetPhysicalDeviceSurfaceFormatsKHR failed: {}", err));
 		return false;
 	}
 
@@ -133,7 +133,7 @@ bool SwapChain::setup()
 	err = instance->extensionProc.vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.device, surface, &surfaceFormatCount, availableSurfaceFormats.data());
 	if (err != VK_SUCCESS)
 	{
-		Log::error(std::format("vkGetPhysicalDeviceSurfaceFormatsKHR failed: {}", getVkResultString(err)));
+		Log::error(std::format("vkGetPhysicalDeviceSurfaceFormatsKHR failed: {}", err));
 		return false;
 	}
 
@@ -175,7 +175,7 @@ bool SwapChain::updateDevice()
 	err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice.device, surface, &surfaceCaps);
 	if (err != VK_SUCCESS)
 	{
-		Log::error(std::format("vkGetPhysicalDeviceSurfaceCapabilitiesKHR failed: {}", getVkResultString(err)));
+		Log::error(std::format("vkGetPhysicalDeviceSurfaceCapabilitiesKHR failed: {}", err));
 		return false;
 	}
 
@@ -184,12 +184,12 @@ bool SwapChain::updateDevice()
 	err = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice.device, surface, &presentModeCount, nullptr);
 	if (err != VK_SUCCESS)
 	{
-		Log::error(std::format("vkGetPhysicalDeviceSurfacePresentModesKHR failed: {}", getVkResultString(err)));
+		Log::error(std::format("vkGetPhysicalDeviceSurfacePresentModesKHR failed: {}", err));
 		return false;
 	}
 	if (presentModeCount == 0)
 	{
-		Log::error(std::format("vkGetPhysicalDeviceSurfacePresentModesKHR failed: {}", getVkResultString(err)));
+		Log::error(std::format("vkGetPhysicalDeviceSurfacePresentModesKHR failed: {}", err));
 		return false;
 	}
 
@@ -199,7 +199,7 @@ bool SwapChain::updateDevice()
 	err = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice.device, surface, &presentModeCount, presentModes.data());
 	if (err != VK_SUCCESS)
 	{
-		Log::error(std::format("vkGetPhysicalDeviceSurfacePresentModesKHR failed: {}", getVkResultString(err)));
+		Log::error(std::format("vkGetPhysicalDeviceSurfacePresentModesKHR failed: {}", err));
 		return false;
 	}
 
@@ -296,7 +296,7 @@ bool SwapChain::updateDevice()
 	err = vkCreateSwapchainKHR(device, &swapchainCI, gdevice->allocationCallbacks(), &this->swapchain);
 	if (err != VK_SUCCESS)
 	{
-		Log::error(std::format("vkCreateSwapchainKHR failed: {}", getVkResultString(err)));
+		Log::error(std::format("vkCreateSwapchainKHR failed: {}", err));
 		return false;
 	}
 
@@ -336,7 +336,7 @@ bool SwapChain::updateDevice()
 	err = vkGetSwapchainImagesKHR(device, this->swapchain, &swapchainImageCount, nullptr);
 	if (err != VK_SUCCESS)
 	{
-		Log::error(std::format("vkGetSwapchainImagesKHR failed: {}", getVkResultString(err)));
+		Log::error(std::format("vkGetSwapchainImagesKHR failed: {}", err));
 		return false;
 	}
 
@@ -345,7 +345,7 @@ bool SwapChain::updateDevice()
 	err = vkGetSwapchainImagesKHR(device, this->swapchain, &swapchainImageCount, swapchainImages.data());
 	if (err != VK_SUCCESS)
 	{
-		Log::error(std::format("vkGetSwapchainImagesKHR failed: {}", getVkResultString(err)));
+		Log::error(std::format("vkGetSwapchainImagesKHR failed: {}", err));
 		return false;
 	}
 
@@ -374,7 +374,7 @@ bool SwapChain::updateDevice()
 		err = vkCreateImageView(device, &imageViewCreateInfo, gdevice->allocationCallbacks(), &imageView);
 		if (err != VK_SUCCESS)
 		{
-			Log::error(std::format("vkCreateImageView failed: {}", getVkResultString(err)));
+			Log::error(std::format("vkCreateImageView failed: {}", err));
 			return false;
 		}
 
@@ -481,7 +481,7 @@ void SwapChain::setupFrame()
 	case VK_SUBOPTIMAL_KHR:
 		break;
 	default:
-		Log::error(std::format("vkAcquireNextImageKHR failed: {}", getVkResultString(err)));
+		Log::error(std::format("vkAcquireNextImageKHR failed: {}", err));
 	}
 
 	RenderPassColorAttachmentDescriptor colorAttachment = {};
@@ -520,7 +520,7 @@ bool SwapChain::present(FV::GPUEvent** waitEvents, size_t numEvents)
     VkResult err = vkQueuePresentKHR(cqueue->queue, &presentInfo);
 	if (err != VK_SUCCESS)
 	{
-		Log::error(std::format("vkQueuePresentKHR failed: {}", getVkResultString(err)));
+		Log::error(std::format("vkQueuePresentKHR failed: {}", err));
 		//FVASSERT_DEBUG(err == VK_SUCCESS);
 	}
 

@@ -41,8 +41,7 @@ VkDescriptorSet DescriptorPool::allocateDescriptorSet(VkDescriptorSetLayout layo
     }
     else
     {
-        //Log::error(std::format("vkAllocateDescriptorSets failed: {}",
-        //                       getVkResultString(err)));
+        //Log::error(std::format("vkAllocateDescriptorSets failed: {}", err));
     }
 
     return descriptorSet;
@@ -58,8 +57,7 @@ void DescriptorPool::releaseDescriptorSets(VkDescriptorSet* sets, uint32_t n)
         VkResult err = vkResetDescriptorPool(gdevice->device, pool, 0);
         if (err != VK_SUCCESS)
         {
-            Log::error(std::format("vkResetDescriptorPool failed: {}",
-                getVkResultString(err)));
+            Log::error(std::format("vkResetDescriptorPool failed: {}", err));
         }
     }
     else if (createFlags & VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT)
@@ -68,8 +66,7 @@ void DescriptorPool::releaseDescriptorSets(VkDescriptorSet* sets, uint32_t n)
         FVASSERT_DEBUG(err == VK_SUCCESS);
         if (err != VK_SUCCESS)
         {
-            Log::error(std::format("vkFreeDescriptorSets failed: {}",
-                getVkResultString(err)));
+            Log::error(std::format("vkFreeDescriptorSets failed: {}", err));
         }
     }
 }
