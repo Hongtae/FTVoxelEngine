@@ -1088,12 +1088,7 @@ bool Submesh::encodeRenderCommand(RenderCommandEncoder* encoder,
         }
         if (pushConstants.empty() == false)
         {
-            // [VUID-vkCmdPushConstants-offset-01796]
-            // The Vulkan spec states: For each byte in the range specified by
-            // offset and size and for each push constant range that overlaps
-            // that byte, stageFlags must include all stages in that push
-            // constant range's VkPushConstantRange::stageFlags         
-
+            // VUID-vkCmdPushConstants-offset-01796
             uint32_t begin = pushConstants.front().layout.offset;
             uint32_t end = begin;
             uint32_t stages = 0;

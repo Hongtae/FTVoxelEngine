@@ -43,11 +43,10 @@ void DepthStencilState::bind(VkCommandBuffer commandBuffer)
     vkCmdSetStencilTestEnable(commandBuffer, this->stencilTestEnable);
     vkCmdSetDepthBoundsTestEnable(commandBuffer, this->depthBoundsTestEnable);
 
-    if (this->depthTestEnable != VK_FALSE)
-    {
-        vkCmdSetDepthCompareOp(commandBuffer, this->depthCompareOp);
-        vkCmdSetDepthWriteEnable(commandBuffer, this->depthWriteEnable);
-    }
+    // VUID-vkCmdDraw-None-07845, VUID-vkCmdDrawIndexed-None-07845
+    vkCmdSetDepthCompareOp(commandBuffer, this->depthCompareOp);
+    // VUID-vkCmdDraw-None-07844, VUID-vkCmdDrawIndexed-None-07844
+    vkCmdSetDepthWriteEnable(commandBuffer, this->depthWriteEnable);
 
     if (this->depthBoundsTestEnable != VK_FALSE)
     {
@@ -72,12 +71,7 @@ void DepthStencilState::bind(VkCommandBuffer commandBuffer)
                                  this->back.writeMask);
     }
 
-    // [VUID-vkCmdDrawIndexed-None-07848]
-    //  The Vulkan spec states: If the bound graphics pipeline state was created
-    // with the VK_DYNAMIC_STATE_STENCIL_OP dynamic state enabled then
-    // vkCmdSetStencilOp must have been called in the current command buffer
-    // prior to this drawing command
-
+    // VUID-vkCmdDrawIndexed-None-07848
     vkCmdSetStencilOp(commandBuffer,
                       VK_STENCIL_FACE_FRONT_BIT,
                       this->front.failOp,

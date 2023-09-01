@@ -1959,11 +1959,7 @@ VkPipelineLayout GraphicsDevice::makePipelineLayout(std::initializer_list<std::s
                 VkPushConstantRange range = {};
                 range.stageFlags = module->stage;
 
-                // [VUID-VkGraphicsPipelineCreateInfo-layout-07987]
-                //  The Vulkan spec states: If a push constant block is declared
-                //  in a shader, a push constant range in layout must match both
-                //  the shader stage and range
-                //
+                // VUID-VkGraphicsPipelineCreateInfo-layout-07987
                 auto begin = std::reduce(layout.members.begin(),
                                          layout.members.end(),
                                          layout.offset,
