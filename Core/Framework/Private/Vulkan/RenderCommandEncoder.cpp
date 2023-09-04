@@ -272,6 +272,29 @@ bool RenderCommandEncoder::Encoder::encode(VkCommandBuffer commandBuffer) {
     VkRect2D scissorRect = { {0, 0}, {frameWidth, frameHeight} };
     vkCmdSetScissor(commandBuffer, 0, 1, &scissorRect);
 
+    // VK_DYNAMIC_STATE_DEPTH_TEST_ENABLE
+    vkCmdSetDepthTestEnable(commandBuffer, VK_FALSE);
+
+    // VK_DYNAMIC_STATE_DEPTH_WRITE_ENABLE
+    vkCmdSetDepthWriteEnable(commandBuffer, VK_FALSE);
+
+    // VK_DYNAMIC_STATE_DEPTH_COMPARE_OP
+    vkCmdSetDepthCompareOp(commandBuffer, VK_COMPARE_OP_ALWAYS);
+
+    // VK_DYNAMIC_STATE_STENCIL_TEST_ENABLE
+    vkCmdSetStencilTestEnable(commandBuffer, VK_FALSE);
+
+    // VK_DYNAMIC_STATE_STENCIL_OP
+    vkCmdSetStencilOp(commandBuffer, VK_STENCIL_FACE_FRONT_BIT,
+                      VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP,
+                      VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS);
+    vkCmdSetStencilOp(commandBuffer, VK_STENCIL_FACE_BACK_BIT,
+                      VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP,
+                      VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS);
+
+    // VK_DYNAMIC_STATE_DEPTH_BOUNDS_TEST_ENABLE
+    vkCmdSetDepthBoundsTestEnable(commandBuffer, VK_FALSE);
+
     // recording commands
     for (EncoderCommand& cmd : commands)
         cmd(commandBuffer, state);
