@@ -1,9 +1,7 @@
 #pragma once
 
-namespace FV
-{
-    enum class PixelFormat
-    {
+namespace FV {
+    enum class PixelFormat {
         Invalid,
 
         // 8 bit formats
@@ -79,8 +77,7 @@ namespace FV
         Depth32Float_stencil8, // 32-bit float depth, 8-bit uint stencil, 24-bit unused.
     };
 
-    constexpr bool isColorFormat(PixelFormat f)
-    {
+    constexpr bool isColorFormat(PixelFormat f) {
         switch (f) {
         case PixelFormat::Invalid:
         case PixelFormat::Depth16Unorm:
@@ -93,10 +90,8 @@ namespace FV
         return true;
     }
 
-    constexpr bool isDepthFormat(PixelFormat f)
-    {
-        switch (f)
-        {
+    constexpr bool isDepthFormat(PixelFormat f) {
+        switch (f) {
         case PixelFormat::Depth16Unorm:
         case PixelFormat::Depth32Float:
         case PixelFormat::Depth24Unorm_stencil8:
@@ -106,10 +101,8 @@ namespace FV
         return false;
     }
 
-    constexpr bool isStencilFormat(PixelFormat f)
-    {
-        switch (f)
-        {
+    constexpr bool isStencilFormat(PixelFormat f) {
+        switch (f) {
         case PixelFormat::Stencil8:
         case PixelFormat::Depth24Unorm_stencil8:
         case PixelFormat::Depth32Float_stencil8:
@@ -118,10 +111,8 @@ namespace FV
         return false;
     }
 
-    constexpr uint32_t pixelFormatBytesPerPixel(PixelFormat f)
-    {
-        switch (f)
-        {
+    constexpr uint32_t pixelFormatBytesPerPixel(PixelFormat f) {
+        switch (f) {
             // 8 bit formats
         case PixelFormat::R8Unorm:
         case PixelFormat::R8Snorm:

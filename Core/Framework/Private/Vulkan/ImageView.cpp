@@ -11,8 +11,7 @@ ImageView::ImageView(std::shared_ptr<Image> img, VkImageView view, const VkImage
     , imageView(view)
     , gdevice(img->gdevice)
     , signalSemaphore(VK_NULL_HANDLE)
-    , waitSemaphore(VK_NULL_HANDLE)
-{
+    , waitSemaphore(VK_NULL_HANDLE) {
 }
 
 ImageView::ImageView(std::shared_ptr<GraphicsDevice> dev, VkImageView view)
@@ -20,12 +19,10 @@ ImageView::ImageView(std::shared_ptr<GraphicsDevice> dev, VkImageView view)
     , imageView(view)
     , gdevice(dev)
     , signalSemaphore(VK_NULL_HANDLE)
-    , waitSemaphore(VK_NULL_HANDLE)
-{
+    , waitSemaphore(VK_NULL_HANDLE) {
 }
 
-ImageView::~ImageView()
-{
+ImageView::~ImageView() {
     if (imageView)
         vkDestroyImageView(gdevice->device, imageView, gdevice->allocationCallbacks());
     if (signalSemaphore)
@@ -34,8 +31,7 @@ ImageView::~ImageView()
         vkDestroySemaphore(gdevice->device, waitSemaphore, gdevice->allocationCallbacks());
 }
 
-std::shared_ptr<FV::GraphicsDevice> ImageView::device() const
-{
+std::shared_ptr<FV::GraphicsDevice> ImageView::device() const {
     return gdevice;
 }
 #endif //#if FVCORE_ENABLE_VULKAN

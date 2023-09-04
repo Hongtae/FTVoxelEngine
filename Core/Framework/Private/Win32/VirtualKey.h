@@ -4,12 +4,9 @@
 #ifdef _WIN32
 #include <Windows.h>
 
-namespace FV::Win32
-{
-    inline VirtualKey getVirtualKey(int key)
-    {
-        switch (key)
-        {
+namespace FV::Win32 {
+    inline VirtualKey getVirtualKey(int key) {
+        switch (key) {
         case 0x03:  return VirtualKey::F15;         // VK_F15 (ctrl+break)
         case 0x08:  return VirtualKey::Backspace;   // VK_BACK
         case 0x09:  return VirtualKey::Tab;         // VK_TAB

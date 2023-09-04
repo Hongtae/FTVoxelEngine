@@ -7,10 +7,8 @@
 #include <FVCore.h>
 
 
-struct Model
-{
-    struct Scene
-    {
+struct Model {
+    struct Scene {
         std::string name;
         std::vector<FV::SceneNode> nodes;
     };

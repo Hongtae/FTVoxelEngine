@@ -17,25 +17,21 @@ const Rect Rect::infinite = Rect(0, 0,
                                  std::numeric_limits<float>::infinity(),
                                  std::numeric_limits<float>::infinity());
 
-bool Rect::isNull() const
-{
+bool Rect::isNull() const {
     return
         origin.x == std::numeric_limits<float>::infinity() ||
         origin.y == std::numeric_limits<float>::infinity();
 }
 
-bool Rect::isInfinite() const
-{
+bool Rect::isInfinite() const {
     return (*this) == infinite;
 }
 
-bool Rect::isEmpty() const
-{
+bool Rect::isEmpty() const {
     return isNull() || size.width == 0 || size.height == 0;
 }
 
-bool Rect::contains(const Point& pt) const
-{
+bool Rect::contains(const Point& pt) const {
     if (isNull() || isEmpty()) return false;
 
     return pt.x >= minX() && pt.x < maxX() &&

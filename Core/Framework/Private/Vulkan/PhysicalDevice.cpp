@@ -10,8 +10,7 @@ PhysicalDeviceDescription::PhysicalDeviceDescription(VkPhysicalDevice dev)
     , numGCQueues(0)
     , maxQueues(0)
     , deviceMemory(0)
-    , devicePriority(0)
-{
+    , devicePriority(0) {
     this->properties = {};
     this->features = {};
     this->timelineSemaphoreFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES };
@@ -28,8 +27,7 @@ PhysicalDeviceDescription::PhysicalDeviceDescription(VkPhysicalDevice dev)
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, this->queueFamilies.data());
 
     // calculate number of available queues. (Graphics & Compute)
-    for (const auto& qf : this->queueFamilies)
-    {
+    for (const auto& qf : this->queueFamilies) {
         if (qf.queueFlags & (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT))
             numGCQueues += qf.queueCount;
 
@@ -57,8 +55,7 @@ PhysicalDeviceDescription::PhysicalDeviceDescription(VkPhysicalDevice dev)
     this->features = features.features;
 
     this->devicePriority = 0;
-    switch (properties.properties.deviceType)
-    {
+    switch (properties.properties.deviceType) {
     case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
         this->devicePriority += 1;
     case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
@@ -73,8 +70,7 @@ PhysicalDeviceDescription::PhysicalDeviceDescription(VkPhysicalDevice dev)
 
     // calculate device memory
     this->deviceMemory = 0;
-    for (uint32_t i = 0; i < memoryProperties.memoryHeapCount; ++i)
-    {
+    for (uint32_t i = 0; i < memoryProperties.memoryHeapCount; ++i) {
         VkMemoryHeap& heap = memoryProperties.memoryHeaps[i];
         if (heap.flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT)
             this->deviceMemory += heap.size;
@@ -83,46 +79,35 @@ PhysicalDeviceDescription::PhysicalDeviceDescription(VkPhysicalDevice dev)
     // get list of supported extensions
     uint32_t extCount = 0;
     VkResult err = vkEnumerateDeviceExtensionProperties(device, nullptr, &extCount, nullptr);
-    if (err == VK_SUCCESS)
-    {
-        if (extCount > 0)
-        {
+    if (err == VK_SUCCESS) {
+        if (extCount > 0) {
             std::vector<VkExtensionProperties> rawExtensions(extCount);
             vkEnumerateDeviceExtensionProperties(device, nullptr, &extCount, rawExtensions.data());
-            for (const auto& ext : rawExtensions)
-            {
+            for (const auto& ext : rawExtensions) {
                 this->extensions[ext.extensionName] = ext.specVersion;
             }
         }
-    }
-    else
-    {
+    } else {
         Log::error(std::format("vkEnumerateDeviceExtensionProperties failed: {}", err));
     }
 }
 
-PhysicalDeviceDescription::~PhysicalDeviceDescription()
-{
-
+PhysicalDeviceDescription::~PhysicalDeviceDescription() {
 }
 
-std::string PhysicalDeviceDescription::registryID() const
-{
-    return std::format("{:08x}{:08x}", 
-        properties.vendorID, properties.deviceID);
+std::string PhysicalDeviceDescription::registryID() const {
+    return std::format("{:08x}{:08x}",
+                       properties.vendorID, properties.deviceID);
 }
 
-std::string PhysicalDeviceDescription::name() const
-{
-    return properties.deviceName; 
+std::string PhysicalDeviceDescription::name() const {
+    return properties.deviceName;
 }
 
-std::string PhysicalDeviceDescription::description() const
-{
+std::string PhysicalDeviceDescription::description() const {
     const char* deviceType = "Unknown";
 
-    switch (this->properties.deviceType)
-    {
+    switch (this->properties.deviceType) {
     case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
         deviceType = "INTEGRATED_GPU";
         break;
@@ -141,9 +126,9 @@ std::string PhysicalDeviceDescription::description() const
     }
 
     std::string apiVersion = std::format("{:d}.{:d}.{:d}",
-        VK_VERSION_MAJOR(this->properties.apiVersion),
-        VK_VERSION_MINOR(this->properties.apiVersion),
-        VK_VERSION_PATCH(this->properties.apiVersion));
+                                         VK_VERSION_MAJOR(this->properties.apiVersion),
+                                         VK_VERSION_MINOR(this->properties.apiVersion),
+                                         VK_VERSION_PATCH(this->properties.apiVersion));
 
     std::string desc = std::format(
         "[Vulkan] PhysicalDevice(name: {}, identifier: {}, type: {}, API: {}, QueueFamilies: {:d}, NumExtensions: {:d}.",

@@ -9,32 +9,26 @@ using namespace FV::Vulkan;
 DescriptorPoolChain::DescriptorPoolChain(GraphicsDevice* dev, const DescriptorPoolID& pid)
     : gdevice(dev)
     , poolID(pid)
-    , maxSets(0)
-{
+    , maxSets(0) {
     FVASSERT_DEBUG(gdevice);
     FVASSERT_DEBUG(poolID.mask);
 }
 
-DescriptorPoolChain::~DescriptorPoolChain()
-{
+DescriptorPoolChain::~DescriptorPoolChain() {
 
 }
 
-bool DescriptorPoolChain::allocateDescriptorSet(VkDescriptorSetLayout layout, AllocationInfo& info)
-{
+bool DescriptorPoolChain::allocateDescriptorSet(VkDescriptorSetLayout layout, AllocationInfo& info) {
     FVASSERT_DEBUG(gdevice);
 
-    for (auto it = descriptorPools.begin(); it != descriptorPools.end(); ++it)
-    {
+    for (auto it = descriptorPools.begin(); it != descriptorPools.end(); ++it) {
         std::shared_ptr<DescriptorPool> pool = *it;
         VkDescriptorSet ds = pool->allocateDescriptorSet(layout);
-        if (ds != VK_NULL_HANDLE)
-        {
+        if (ds != VK_NULL_HANDLE) {
             info.descriptorSet = ds;
             info.descriptorPool = pool;
 
-            if (it != descriptorPools.begin())
-            {
+            if (it != descriptorPools.begin()) {
                 // bring pool to front.
                 descriptorPools.erase(it);
                 descriptorPools.insert(descriptorPools.begin(), pool);
@@ -43,11 +37,9 @@ bool DescriptorPoolChain::allocateDescriptorSet(VkDescriptorSetLayout layout, Al
         }
     }
     std::shared_ptr<DescriptorPool> pool = addNewPool(0);
-    if (pool)
-    {
+    if (pool) {
         VkDescriptorSet ds = pool->allocateDescriptorSet(layout);
-        if (ds != VK_NULL_HANDLE)
-        {
+        if (ds != VK_NULL_HANDLE) {
             info.descriptorSet = ds;
             info.descriptorPool = pool;
             return true;
@@ -56,18 +48,15 @@ bool DescriptorPoolChain::allocateDescriptorSet(VkDescriptorSetLayout layout, Al
     return false;
 }
 
-std::shared_ptr<DescriptorPool> DescriptorPoolChain::addNewPool(VkDescriptorPoolCreateFlags flags)
-{
+std::shared_ptr<DescriptorPool> DescriptorPoolChain::addNewPool(VkDescriptorPoolCreateFlags flags) {
     FVASSERT_DEBUG(gdevice);
 
     maxSets = maxSets * 2 + 1;
 
     std::vector<VkDescriptorPoolSize> poolSizes;
     poolSizes.reserve(numDescriptorTypes);
-    for (uint32_t i = 0; i < numDescriptorTypes; ++i)
-    {
-        if (poolID.typeSize[i] > 0)
-        {
+    for (uint32_t i = 0; i < numDescriptorTypes; ++i) {
+        if (poolID.typeSize[i] > 0) {
             VkDescriptorType type = descriptorTypeAtIndex(i);
             VkDescriptorPoolSize poolSize = {
                 type,
@@ -93,8 +82,7 @@ std::shared_ptr<DescriptorPool> DescriptorPoolChain::addNewPool(VkDescriptorPool
                                           &ci,
                                           gdevice->allocationCallbacks(),
                                           &pool);
-    if (err != VK_SUCCESS)
-    {
+    if (err != VK_SUCCESS) {
         Log::error(std::format("vkCreateDescriptorPool failed: {}", err));
         return nullptr;
     }
@@ -105,24 +93,20 @@ std::shared_ptr<DescriptorPool> DescriptorPoolChain::addNewPool(VkDescriptorPool
     return dp;
 }
 
-size_t DescriptorPoolChain::cleanup()
-{
+size_t DescriptorPoolChain::cleanup() {
     std::vector<std::shared_ptr<DescriptorPool>> poolCopy = std::move(descriptorPools);
 
     std::vector<std::shared_ptr<DescriptorPool>> emptyPools;
     emptyPools.reserve(poolCopy.size());
-    for (auto& pool : poolCopy)
-    {
+    for (auto& pool : poolCopy) {
         if (pool->numAllocatedSets)
             descriptorPools.push_back(pool);
         else
             emptyPools.push_back(pool);
     }
-    if (emptyPools.size() > 1)
-    {
+    if (emptyPools.size() > 1) {
         std::sort(emptyPools.begin(), emptyPools.end(),
-                  [](auto& lhs, auto& rhs)->bool
-                  {
+                  [](auto& lhs, auto& rhs)->bool {
                       return lhs->maxSets > rhs->maxSets;
                   });
     }

@@ -9,61 +9,49 @@
 using namespace FV::Vulkan;
 
 CommandBuffer::CommandBuffer(std::shared_ptr<CommandQueue> q, VkCommandPool p)
-	: cpool(p)
-	, cqueue(q)
-{
-	FVASSERT_DEBUG(cpool);
+    : cpool(p)
+    , cqueue(q) {
+    FVASSERT_DEBUG(cpool);
 }
 
-CommandBuffer::~CommandBuffer()
-{
+CommandBuffer::~CommandBuffer() {
     auto gdevice = std::dynamic_pointer_cast<GraphicsDevice>(cqueue->device());
 
-    if (submitCommandBuffers.empty() == false)
-    {
+    if (submitCommandBuffers.empty() == false) {
         vkFreeCommandBuffers(gdevice->device, cpool, (uint32_t)submitCommandBuffers.size(), submitCommandBuffers.data());
     }
-	vkDestroyCommandPool(gdevice->device, cpool, gdevice->allocationCallbacks());
+    vkDestroyCommandPool(gdevice->device, cpool, gdevice->allocationCallbacks());
 }
 
-std::shared_ptr<FV::RenderCommandEncoder> CommandBuffer::makeRenderCommandEncoder(const RenderPassDescriptor& rp)
-{
-    if (cqueue->family->properties.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-    {
+std::shared_ptr<FV::RenderCommandEncoder> CommandBuffer::makeRenderCommandEncoder(const RenderPassDescriptor& rp) {
+    if (cqueue->family->properties.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
         return std::make_shared<RenderCommandEncoder>(shared_from_this(), rp);
     }
     return nullptr;
 }
 
-std::shared_ptr<FV::ComputeCommandEncoder> CommandBuffer::makeComputeCommandEncoder()
-{
-    if (cqueue->family->properties.queueFlags & VK_QUEUE_COMPUTE_BIT)
-    {
+std::shared_ptr<FV::ComputeCommandEncoder> CommandBuffer::makeComputeCommandEncoder() {
+    if (cqueue->family->properties.queueFlags & VK_QUEUE_COMPUTE_BIT) {
         return std::make_shared<ComputeCommandEncoder>(shared_from_this());
     }
     return nullptr;
 }
 
-std::shared_ptr<FV::CopyCommandEncoder> CommandBuffer::makeCopyCommandEncoder()
-{
+std::shared_ptr<FV::CopyCommandEncoder> CommandBuffer::makeCopyCommandEncoder() {
     return std::make_shared<CopyCommandEncoder>(shared_from_this());
 }
 
-void CommandBuffer::addCompletedHandler(std::function<void()> op)
-{
-    if (op)
-    {
+void CommandBuffer::addCompletedHandler(std::function<void()> op) {
+    if (op) {
         completedHandlers.push_back(op);
     }
 }
 
-bool CommandBuffer::commit()
-{
+bool CommandBuffer::commit() {
     auto gdevice = std::dynamic_pointer_cast<GraphicsDevice>(cqueue->device());
     VkDevice device = gdevice->device;
 
-    auto cleanup = [this, device](bool result)
-    {
+    auto cleanup = [this, device](bool result) {
         if (submitCommandBuffers.empty() == false)
             vkFreeCommandBuffers(device, cpool, (uint32_t)submitCommandBuffers.size(), submitCommandBuffers.data());
 
@@ -79,15 +67,13 @@ bool CommandBuffer::commit()
         return result;
     };
 
-    if (submitInfos.size() != encoders.size())
-    {
+    if (submitInfos.size() != encoders.size()) {
         cleanup(false);
 
         // reserve storage for semaphores.
         size_t numWaitSemaphores = 0;
         size_t numSignalSemaphores = 0;
-        for (auto& encoder : encoders)
-        {
+        for (auto& encoder : encoders) {
             numWaitSemaphores += encoder->waitSemaphores.size();
             numSignalSemaphores += encoder->signalSemaphores.size();
         }
@@ -97,13 +83,12 @@ bool CommandBuffer::commit()
 
         submitWaitTimelineSemaphoreValues.reserve(numWaitSemaphores);
         submitSignalTimelineSemaphoreValues.reserve(numSignalSemaphores);
-        
+
         submitCommandBuffers.reserve(encoders.size());
         submitInfos.reserve(encoders.size());
         submitTimelineSemaphoreInfos.reserve(encoders.size());
 
-        for (auto& encoder : encoders)
-        {
+        for (auto& encoder : encoders) {
             size_t commandBuffersOffset = submitCommandBuffers.size();
             size_t waitSemaphoresOffset = submitWaitSemaphores.size();
             size_t signalSemaphoresOffset = submitSignalSemaphores.size();
@@ -121,15 +106,13 @@ bool CommandBuffer::commit()
 
             VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
             VkResult err = vkAllocateCommandBuffers(device, &bufferInfo, &commandBuffer);
-            if (err != VK_SUCCESS)
-            {
+            if (err != VK_SUCCESS) {
                 Log::error(std::format("vkAllocateCommandBuffers failed: {}", err));
                 return cleanup(false);
             }
             submitCommandBuffers.push_back(commandBuffer);
 
-            for (auto& pair : encoder->waitSemaphores)
-            {
+            for (auto& pair : encoder->waitSemaphores) {
                 VkSemaphore semaphore = pair.first;
                 VkPipelineStageFlags stages = pair.second.stages;
                 uint64_t value = pair.second.value;
@@ -145,8 +128,7 @@ bool CommandBuffer::commit()
             FVASSERT_DEBUG(submitWaitStageMasks.size() <= numWaitSemaphores);
             FVASSERT_DEBUG(submitWaitTimelineSemaphoreValues.size() <= numWaitSemaphores);
 
-            for (auto& pair : encoder->signalSemaphores)
-            {
+            for (auto& pair : encoder->signalSemaphores) {
                 VkSemaphore semaphore = pair.first;
                 uint64_t value = pair.second;
 
@@ -162,8 +144,7 @@ bool CommandBuffer::commit()
             bool result = encoder->encode(commandBuffer);
             vkEndCommandBuffer(commandBuffer);
 
-            if (!result)
-            {
+            if (!result) {
                 return cleanup(false);
             }
 
@@ -172,15 +153,13 @@ bool CommandBuffer::commit()
             VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
             VkTimelineSemaphoreSubmitInfoKHR timelineSemaphoreSubmitInfo = { VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO_KHR };
 
-            if (submitCommandBuffers.size() > commandBuffersOffset)
-            {
+            if (submitCommandBuffers.size() > commandBuffersOffset) {
                 uint32_t count = uint32_t(submitCommandBuffers.size() - commandBuffersOffset);
                 VkCommandBuffer* commandBuffers = submitCommandBuffers.data();
                 submitInfo.commandBufferCount = count;
                 submitInfo.pCommandBuffers = &commandBuffers[commandBuffersOffset];
             }
-            if (submitWaitSemaphores.size() > waitSemaphoresOffset)
-            {
+            if (submitWaitSemaphores.size() > waitSemaphoresOffset) {
                 uint32_t count = uint32_t(submitWaitSemaphores.size() - waitSemaphoresOffset);
                 VkSemaphore* semaphores = submitWaitSemaphores.data();
                 VkPipelineStageFlags* stages = submitWaitStageMasks.data();
@@ -193,8 +172,7 @@ bool CommandBuffer::commit()
                 timelineSemaphoreSubmitInfo.pWaitSemaphoreValues = &timelineValues[waitSemaphoresOffset];
                 timelineSemaphoreSubmitInfo.waitSemaphoreValueCount = count;
             }
-            if (submitSignalSemaphores.size() > signalSemaphoresOffset)
-            {
+            if (submitSignalSemaphores.size() > signalSemaphoresOffset) {
                 uint32_t count = uint32_t(submitSignalSemaphores.size() - signalSemaphoresOffset);
                 VkSemaphore* semaphores = submitSignalSemaphores.data();
                 const uint64_t* timelineValue = submitSignalTimelineSemaphoreValues.data();
@@ -213,8 +191,7 @@ bool CommandBuffer::commit()
         }
     }
 
-    if (submitInfos.size() > 0)
-    {
+    if (submitInfos.size() > 0) {
         FVASSERT_DEBUG(submitTimelineSemaphoreInfos.size() == encoders.size());
         FVASSERT_DEBUG(submitTimelineSemaphoreInfos.size() == submitInfos.size());
 
@@ -222,8 +199,7 @@ bool CommandBuffer::commit()
         FVASSERT_DEBUG(cb);
         bool result = cqueue->submit(submitInfos.data(),
                                      (uint32_t)submitInfos.size(),
-                                     [cb]
-                                     {
+                                     [cb] {
                                          for (auto& op : cb->completedHandlers)
                                              op();
                                      });
@@ -232,18 +208,15 @@ bool CommandBuffer::commit()
     return true;
 }
 
-void CommandBuffer::endEncoder(FV::CommandEncoder*, std::shared_ptr<CommandEncoder> encoder)
-{
+void CommandBuffer::endEncoder(FV::CommandEncoder*, std::shared_ptr<CommandEncoder> encoder) {
     this->encoders.push_back(encoder);
 }
 
-QueueFamily* CommandBuffer::queueFamily()
-{
+QueueFamily* CommandBuffer::queueFamily() {
     return cqueue->family;
 }
 
-std::shared_ptr<FV::CommandQueue> CommandBuffer::queue() const
-{
+std::shared_ptr<FV::CommandQueue> CommandBuffer::queue() const {
     return cqueue;
 }
 

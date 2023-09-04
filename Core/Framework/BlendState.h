@@ -1,10 +1,8 @@
 #pragma once
 #include "../include.h"
 
-namespace FV
-{
-    enum class BlendFactor
-    {
+namespace FV {
+    enum class BlendFactor {
         Zero,
         One,
         SourceColor,
@@ -22,8 +20,7 @@ namespace FV
         OneMinusBlendAlpha,
     };
 
-    enum class BlendOperation
-    {
+    enum class BlendOperation {
         Add,
         Subtract,
         ReverseSubtract,
@@ -31,8 +28,7 @@ namespace FV
         Max,
     };
 
-    enum ColorWriteMask : uint8_t
-    {
+    enum ColorWriteMask : uint8_t {
         ColorWriteMaskNone = 0,
         ColorWriteMaskRed = 0x1 << 3,
         ColorWriteMaskGreen = 0x1 << 2,
@@ -41,8 +37,7 @@ namespace FV
         ColorWriteMaskAll = 0xf
     };
 
-    struct FVCORE_API BlendState
-    {
+    struct FVCORE_API BlendState {
         bool enabled = false;
 
         BlendFactor sourceRGBBlendFactor = BlendFactor::One;

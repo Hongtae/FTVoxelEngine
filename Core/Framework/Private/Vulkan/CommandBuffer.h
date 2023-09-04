@@ -9,16 +9,13 @@
 #include <vulkan/vulkan.h>
 #include "QueueFamily.h"
 
-namespace FV::Vulkan
-{
+namespace FV::Vulkan {
     class CommandBuffer;
-    class CommandEncoder
-    {
+    class CommandEncoder {
     public:
         enum { InitialNumberOfCommands = 128 };
 
-        struct WaitTimelineSemaphoreStageValue
-        {
+        struct WaitTimelineSemaphoreStageValue {
             VkPipelineStageFlags stages;
             uint64_t value; // 0 for non-timeline semaphore (binary semaphore)
         };
@@ -28,10 +25,8 @@ namespace FV::Vulkan
         virtual ~CommandEncoder() {}
         virtual bool encode(VkCommandBuffer) = 0;
 
-        void addWaitSemaphore(VkSemaphore semaphore, uint64_t value, VkPipelineStageFlags flags)
-        {
-            if (semaphore != VK_NULL_HANDLE)
-            {
+        void addWaitSemaphore(VkSemaphore semaphore, uint64_t value, VkPipelineStageFlags flags) {
+            if (semaphore != VK_NULL_HANDLE) {
                 if (auto pair = waitSemaphores.emplace(semaphore, WaitTimelineSemaphoreStageValue{ flags, value });
                     pair.second == false) // semaphore already exists.
                 {
@@ -41,13 +36,10 @@ namespace FV::Vulkan
                 }
             }
         }
-        void addSignalSemaphore(VkSemaphore semaphore, uint64_t value)
-        {
-            if (semaphore != VK_NULL_HANDLE)
-            {
+        void addSignalSemaphore(VkSemaphore semaphore, uint64_t value) {
+            if (semaphore != VK_NULL_HANDLE) {
                 if (auto pair = signalSemaphores.emplace(semaphore, value);
-                    pair.second == false)
-                {
+                    pair.second == false) {
                     if (value > pair.first->second)
                         pair.first->second = value;
                 }
@@ -55,18 +47,17 @@ namespace FV::Vulkan
         }
     };
 
-	class CommandBuffer : public FV::CommandBuffer, public std::enable_shared_from_this<CommandBuffer>
-	{
-	public:
-		CommandBuffer(std::shared_ptr<CommandQueue>, VkCommandPool);
-		~CommandBuffer();
+    class CommandBuffer : public FV::CommandBuffer, public std::enable_shared_from_this<CommandBuffer> {
+    public:
+        CommandBuffer(std::shared_ptr<CommandQueue>, VkCommandPool);
+        ~CommandBuffer();
 
-		std::shared_ptr<FV::RenderCommandEncoder> makeRenderCommandEncoder(const RenderPassDescriptor&) override;
-		std::shared_ptr<FV::ComputeCommandEncoder> makeComputeCommandEncoder() override;
-		std::shared_ptr<FV::CopyCommandEncoder> makeCopyCommandEncoder() override;
+        std::shared_ptr<FV::RenderCommandEncoder> makeRenderCommandEncoder(const RenderPassDescriptor&) override;
+        std::shared_ptr<FV::ComputeCommandEncoder> makeComputeCommandEncoder() override;
+        std::shared_ptr<FV::CopyCommandEncoder> makeCopyCommandEncoder() override;
 
         void addCompletedHandler(std::function<void()>) override;
-		bool commit() override;
+        bool commit() override;
 
         std::shared_ptr<FV::CommandQueue> queue() const override;
 

@@ -3,14 +3,13 @@
 using namespace FV;
 
 const Matrix4 Matrix4::identity = {
-	1, 0, 0, 0,
-	0, 1, 0, 0,
-	0, 0, 1, 0,
-	0, 0, 0, 1
+    1, 0, 0, 0,
+    0, 1, 0, 0,
+    0, 0, 1, 0,
+    0, 0, 0, 1
 };
 
-float Matrix4::determinant() const
-{
+float Matrix4::determinant() const {
     return
         _14 * _23 * _32 * _41 - _13 * _24 * _32 * _41 -
         _14 * _22 * _33 * _41 + _12 * _24 * _33 * _41 +
@@ -26,11 +25,9 @@ float Matrix4::determinant() const
         _12 * _21 * _33 * _44 + _11 * _22 * _33 * _44;
 }
 
-Matrix4 Matrix4::inverted() const
-{
+Matrix4 Matrix4::inverted() const {
     float det = determinant();
-    if (det != 0.0f)
-    {
+    if (det != 0.0f) {
         float inv = 1.0f / det;
 
         float m11 = (_23 * _34 * _42 - _24 * _33 * _42 + _24 * _32 * _43 - _22 * _34 * _43 - _23 * _32 * _44 + _22 * _33 * _44) * inv;
@@ -58,8 +55,7 @@ Matrix4 Matrix4::inverted() const
     return identity;
 }
 
-Matrix4 Matrix4::concatenating(const Matrix4& m) const
-{
+Matrix4 Matrix4::concatenating(const Matrix4& m) const {
     Vector4 row1 = this->row1();
     Vector4 row2 = this->row2();
     Vector4 row3 = this->row3();
@@ -75,10 +71,9 @@ Matrix4 Matrix4::concatenating(const Matrix4& m) const
                    Vector4::dot(row4, col1), Vector4::dot(row4, col2), Vector4::dot(row4, col3), Vector4::dot(row4, col4));
 }
 
-Matrix4& Matrix4::concatenate(const Matrix4& rhs)
-{
-	*this = concatenating(rhs);
-	return *this;
+Matrix4& Matrix4::concatenate(const Matrix4& rhs) {
+    *this = concatenating(rhs);
+    return *this;
 }
 
 Matrix4 Matrix4::operator + (const Matrix4& m) const {
@@ -102,10 +97,8 @@ Matrix4 Matrix4::operator * (float f) const {
                    _41 * f, _42 * f, _43 * f, _44 * f);
 }
 
-bool Matrix4::operator==(const Matrix4& m) const
-{
-    for (int i = 0; i < 16; ++i)
-    {
+bool Matrix4::operator==(const Matrix4& m) const {
+    for (int i = 0; i < 16; ++i) {
         if (val[i] != m.val[i]) return false;
     }
     return true;

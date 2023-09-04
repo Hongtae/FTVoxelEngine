@@ -11,15 +11,13 @@
 #include "DescriptorSet.h"
 #include "DescriptorPool.h"
 
-namespace FV::Vulkan
-{
+namespace FV::Vulkan {
     class GraphicsDevice;
-    class ShaderBindingSet : public FV::ShaderBindingSet
-    {
+    class ShaderBindingSet : public FV::ShaderBindingSet {
         const DescriptorPoolID poolID;
     public:
         ShaderBindingSet(std::shared_ptr<GraphicsDevice>,
-                         VkDescriptorSetLayout,                         
+                         VkDescriptorSetLayout,
                          const DescriptorPoolID&,
                          const VkDescriptorSetLayoutCreateInfo&);
         ~ShaderBindingSet();
@@ -45,4 +43,3 @@ namespace FV::Vulkan
     };
 }
 #endif //#if FVCORE_ENABLE_VULKAN
-                                      

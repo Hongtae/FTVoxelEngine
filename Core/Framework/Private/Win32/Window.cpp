@@ -24,19 +24,15 @@ namespace FV::Win32 {
 
 using namespace FV::Win32;
 
-namespace 
-{
-    float dpiScaleForWindow(HWND hWnd)
-    {
-        if (UINT dpi = ::GetDpiForWindow(hWnd); dpi)
-        {
+namespace {
+    float dpiScaleForWindow(HWND hWnd) {
+        if (UINT dpi = ::GetDpiForWindow(hWnd); dpi) {
             return float(dpi) / 96.0f;
         }
         return 1.0f;
     }
 
-    std::u8string win32ErrorString(DWORD code)
-    {
+    std::u8string win32ErrorString(DWORD code) {
         LPVOID lpMsgBuf;
         ::FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, nullptr, code,
                          MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPWSTR)&lpMsgBuf, 0, nullptr);
@@ -107,19 +103,16 @@ Window::Window(const std::u8string& title, Style s, const WindowCallback& cb)
                            CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
                            nullptr, nullptr, GetModuleHandleW(nullptr), 0);
 
-    if (hWnd == nullptr)
-    {
+    if (hWnd == nullptr) {
         Log::error("CreateWindow failed.\n");
         throw std::runtime_error("CreateWindow failed!");
     }
 
     ::SetLastError(0);
 
-    if (!::SetWindowLongPtrW(hWnd, GWLP_USERDATA, (LONG_PTR)this))
-    {
+    if (!::SetWindowLongPtrW(hWnd, GWLP_USERDATA, (LONG_PTR)this)) {
         DWORD err = ::GetLastError();
-        if (err)
-        {
+        if (err) {
             // error!
             Log::error(std::format(
                 "SetWindowLongPtr failed with error {:d}, {}",
@@ -132,16 +125,12 @@ Window::Window(const std::u8string& title, Style s, const WindowCallback& cb)
         }
     }
 
-    if (style & Window::StyleAcceptFileDrop)
-    {
+    if (style & Window::StyleAcceptFileDrop) {
         DropTarget* dropTarget = new DropTarget(this);
         HRESULT err = RegisterDragDrop(hWnd, dropTarget);
-        if (err == S_OK)
-        {
+        if (err == S_OK) {
             this->dropTarget = dropTarget;
-        }
-        else
-        {
+        } else {
             delete dropTarget;
 
             Log::error(std::format(
@@ -175,10 +164,8 @@ Window::Window(const std::u8string& title, Style s, const WindowCallback& cb)
     ::SetTimer(hWnd, TimerID_UpdateKeyboardMouse, UpdateKeyboardMouseInterval, nullptr);
 }
 
-Window::~Window()
-{
-    if (hWnd)
-    {
+Window::~Window() {
+    if (hWnd) {
         ::KillTimer(hWnd, TimerID_UpdateKeyboardMouse);
         ::SetWindowLongPtrW(hWnd, GWLP_USERDATA, 0);
         ::PostMessageW(hWnd, UINT(WM_CLOSE), 0, 0);
@@ -186,18 +173,14 @@ Window::~Window()
     ::OleUninitialize();
 }
 
-void Window::destroy()
-{
+void Window::destroy() {
     activated = false;
-    if (hWnd)
-    {
-        if (this->dropTarget)
-        {
+    if (hWnd) {
+        if (this->dropTarget) {
             RevokeDragDrop(hWnd);
             ULONG ref = this->dropTarget->Release();
             this->dropTarget = nullptr;
-            if (ref > 0)
-            {
+            if (ref > 0) {
                 Log::warning(std::format(
                     "DropTarget for Window:{} in use! ref-count:{:d}", name, ref
                 ));
@@ -225,15 +208,12 @@ void Window::destroy()
     }
 }
 
-FV::Size Window::resolution() const
-{
+FV::Size Window::resolution() const {
     return bounds.size * scaleFactor;
 }
 
-void Window::setResolution(Size size)
-{
-    if (hWnd)
-    {
+void Window::setResolution(Size size) {
+    if (hWnd) {
         LONG w = std::max(std::lround(size.width), 1L);
         LONG h = std::max(std::lround(size.height), 1L);
 
@@ -242,8 +222,7 @@ void Window::setResolution(Size size)
         BOOL menu = ::GetMenu(hWnd) != NULL;
 
         RECT rc = { 0, 0, w, h };
-        if (::AdjustWindowRectEx(&rc, style, menu, styleEx))
-        {
+        if (::AdjustWindowRectEx(&rc, style, menu, styleEx)) {
             Size size = Size(float(w), float(h));
             this->bounds.size = size / scaleFactor;
 
@@ -255,26 +234,21 @@ void Window::setResolution(Size size)
     }
 }
 
-void Window::setOrigin(Point origin)
-{
-    if (hWnd)
-    {
+void Window::setOrigin(Point origin) {
+    if (hWnd) {
         auto x = std::lround(origin.x);
         auto y = std::lround(origin.y);
-        ::SetWindowPos(hWnd, HWND_TOP, int(x), int(y), 0, 0, 
+        ::SetWindowPos(hWnd, HWND_TOP, int(x), int(y), 0, 0,
                        SWP_NOSIZE | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
     }
 }
 
-void Window::setContentSize(Size s)
-{
+void Window::setContentSize(Size s) {
     setResolution(s * scaleFactor);
 }
 
-void Window::show() 
-{
-    if (hWnd)
-    {
+void Window::show() {
+    if (hWnd) {
         if (::IsIconic(hWnd))
             ::ShowWindow(hWnd, SW_RESTORE);
         else
@@ -282,16 +256,13 @@ void Window::show()
     }
 }
 
-void Window::hide() 
-{
+void Window::hide() {
     if (hWnd)
         ::ShowWindow(hWnd, SW_HIDE);
 }
 
-void Window::activate() 
-{
-    if (hWnd)
-    {
+void Window::activate() {
+    if (hWnd) {
         if (::IsIconic(hWnd))
             ::ShowWindow(hWnd, SW_RESTORE);
 
@@ -302,16 +273,13 @@ void Window::activate()
     }
 }
 
-void Window::minimize() 
-{
+void Window::minimize() {
     if (hWnd)
         ::ShowWindow(hWnd, SW_MINIMIZE);
 }
 
-std::u8string Window::title() const 
-{
-    if (hWnd)
-    {
+std::u8string Window::title() const {
+    if (hWnd) {
         int len = GetWindowTextLengthW(hWnd);
         if (len > 0) {
             std::wstring title;
@@ -321,31 +289,25 @@ std::u8string Window::title() const
         }
         return {};
     }
-    return name; 
+    return name;
 }
 
-void Window::setTitle(const std::u8string& title)
-{
-    if (hWnd)
-    {
+void Window::setTitle(const std::u8string& title) {
+    if (hWnd) {
         ::SetWindowTextW(hWnd, (const wchar_t*)toUTF16(title).c_str());
     }
     name = title;
 }
 
-void Window::showMouse(int deviceID, bool show)
-{
-    if (hWnd && deviceID == mouseID)
-    {
+void Window::showMouse(int deviceID, bool show) {
+    if (hWnd && deviceID == mouseID) {
         WPARAM wParam = show ? WPARAM(1) : WPARAM(0);
         ::PostMessageW(hWnd, FV_WM_SHOWCURSOR, wParam, 0);
     }
 }
 
-bool Window::isMouseVisible(int deviceID) const 
-{
-    if (deviceID == mouseID)
-    {
+bool Window::isMouseVisible(int deviceID) const {
+    if (deviceID == mouseID) {
         CURSORINFO info = {};
         if (::GetCursorInfo(&info))
             return info.flags != 0;
@@ -353,10 +315,8 @@ bool Window::isMouseVisible(int deviceID) const
     return false;
 }
 
-void Window::lockMouse(int deviceID, bool lock) 
-{
-    if (deviceID == mouseID && hWnd)
-    {
+void Window::lockMouse(int deviceID, bool lock) {
+    if (deviceID == mouseID && hWnd) {
         this->mouseLocked = lock;
         this->mousePos = this->mousePosition(deviceID);
         this->lockedMousePos = this->mousePos;
@@ -365,17 +325,14 @@ void Window::lockMouse(int deviceID, bool lock)
     }
 }
 
-bool Window::isMouseLocked(int deviceID) const 
-{
+bool Window::isMouseLocked(int deviceID) const {
     if (deviceID == mouseID)
         return mouseLocked;
     return false;
 }
 
-void Window::setMousePosition(int deviceID, Point pos)
-{
-    if (hWnd && deviceID == mouseID)
-    {
+void Window::setMousePosition(int deviceID, Point pos) {
+    if (hWnd && deviceID == mouseID) {
         POINT pt = {
             std::lround(pos.x),
             std::lround(pos.y)
@@ -388,10 +345,8 @@ void Window::setMousePosition(int deviceID, Point pos)
     }
 }
 
-FV::Point Window::mousePosition(int deviceID) const 
-{
-    if (hWnd && deviceID == mouseID)
-    {
+FV::Point Window::mousePosition(int deviceID) const {
+    if (hWnd && deviceID == mouseID) {
         POINT pt;
         ::GetCursorPos(&pt);
         ::ScreenToClient(hWnd, &pt);
@@ -400,10 +355,8 @@ FV::Point Window::mousePosition(int deviceID) const
     return Point(-1, -1);
 }
 
-void Window::resetKeyStates()
-{
-    for (int i = 0; i < 256; ++i)
-    {
+void Window::resetKeyStates() {
+    for (int i = 0; i < 256; ++i) {
         if (i == VK_CAPITAL)
             continue;
 
@@ -413,16 +366,14 @@ void Window::resetKeyStates()
 
         std::size_t index = std::size_t(key);
 
-        if (keyboardStates[index])
-        {
+        if (keyboardStates[index]) {
             postKeyboardEvent({
                 KeyboardEvent::KeyUp,
                 weak_from_this(), 0, key, u8"" });
         }
     }
 
-    if (keyboardStates[std::size_t(VirtualKey::Capslock)])
-    {
+    if (keyboardStates[std::size_t(VirtualKey::Capslock)]) {
         postKeyboardEvent({
             KeyboardEvent::KeyUp,
             weak_from_this(), 0, VirtualKey::Capslock, u8"" });
@@ -434,10 +385,8 @@ void Window::resetKeyStates()
     keyboardStates.reset();
 }
 
-void Window::resetMouse()
-{
-    if (hWnd)
-    {
+void Window::resetMouse() {
+    if (hWnd) {
         POINT ptMouse;
         ::GetCursorPos(&ptMouse);
         ::ScreenToClient(hWnd, &ptMouse);
@@ -445,55 +394,44 @@ void Window::resetMouse()
     }
 }
 
-bool Window::isTextInputEnabled(int deviceID) const 
-{
+bool Window::isTextInputEnabled(int deviceID) const {
     if (deviceID == keyboardID)
         return textCompositionMode;
     return false;
 }
 
-void Window::enableTextInput(int deviceID, bool enable) 
-{
-    if (deviceID == keyboardID)
-    {
+void Window::enableTextInput(int deviceID, bool enable) {
+    if (deviceID == keyboardID) {
         textCompositionMode = enable;
     }
 }
 
-bool Window::keyState(int deviceID, VirtualKey k) 
-{
-    if (deviceID == keyboardID && k > VirtualKey::None && k < VirtualKey::MaxValue)
-    {
+bool Window::keyState(int deviceID, VirtualKey k) {
+    if (deviceID == keyboardID && k > VirtualKey::None && k < VirtualKey::MaxValue) {
         return keyboardStates[std::size_t(k)];
     }
     return false;
 }
 
-void Window::setKeyState(int deviceID, VirtualKey k, bool down) 
-{
-    if (deviceID == keyboardID && k > VirtualKey::None && k < VirtualKey::MaxValue)
-    {
+void Window::setKeyState(int deviceID, VirtualKey k, bool down) {
+    if (deviceID == keyboardID && k > VirtualKey::None && k < VirtualKey::MaxValue) {
         keyboardStates.set(std::size_t(k), down);
     }
 }
 
-void Window::resetKeyStates(int deviceID) 
-{
-    if (deviceID == keyboardID)
-    {
+void Window::resetKeyStates(int deviceID) {
+    if (deviceID == keyboardID) {
         resetKeyStates();
     }
 }
 
-void Window::synchronizeKeyStates()
-{
+void Window::synchronizeKeyStates() {
     if (activated == false) return;
 
-    BYTE keyStateCurrent[256] = {0};	// key-state buffer
+    BYTE keyStateCurrent[256] = { 0 };	// key-state buffer
     ::GetKeyboardState(keyStateCurrent);
 
-    for (int i = 0; i < 256; i++)
-    {
+    for (int i = 0; i < 256; i++) {
         if (i == VK_CAPITAL)
             continue;
 
@@ -503,21 +441,16 @@ void Window::synchronizeKeyStates()
 
         std::size_t index = std::size_t(key);
 
-        if (keyStateCurrent[i] & 0x80)
-        {
-            if (keyboardStates[index] == false)
-            {
+        if (keyStateCurrent[i] & 0x80) {
+            if (keyboardStates[index] == false) {
                 postKeyboardEvent({
                     KeyboardEvent::KeyDown,
                     weak_from_this(), 0, key, u8"" });
 
                 keyboardStates.set(index);
             }
-        }
-        else
-        {
-            if (keyboardStates[index])
-            {
+        } else {
+            if (keyboardStates[index]) {
                 postKeyboardEvent({
                     KeyboardEvent::KeyUp,
                     weak_from_this(), 0, key, u8"" });
@@ -527,21 +460,16 @@ void Window::synchronizeKeyStates()
         }
     }
 
-    if (keyStateCurrent[VK_CAPITAL] & 0x01)
-    {
-        if (keyboardStates[std::size_t(VirtualKey::Capslock)] == false)
-        {
+    if (keyStateCurrent[VK_CAPITAL] & 0x01) {
+        if (keyboardStates[std::size_t(VirtualKey::Capslock)] == false) {
             postKeyboardEvent({
                 KeyboardEvent::KeyDown,
                 weak_from_this(), 0, VirtualKey::Capslock, u8"" });
 
             keyboardStates.set(std::size_t(VirtualKey::Capslock));
         }
-    }
-    else
-    {
-        if (keyboardStates[std::size_t(VirtualKey::Capslock)])
-        {
+    } else {
+        if (keyboardStates[std::size_t(VirtualKey::Capslock)]) {
             postKeyboardEvent({
                 KeyboardEvent::KeyUp,
                 weak_from_this(), 0, VirtualKey::Capslock, u8"" });
@@ -551,13 +479,11 @@ void Window::synchronizeKeyStates()
     }
 }
 
-void Window::synchronizeMouse()
-{
+void Window::synchronizeMouse() {
     if (this->activated == false) return;
 
     // check mouse has gone out of window region.
-    if (hWnd && GetCapture() != hWnd)
-    {
+    if (hWnd && GetCapture() != hWnd) {
         POINT pt;
         ::GetCursorPos(&pt);
         ::ScreenToClient(hWnd, &pt);
@@ -565,22 +491,17 @@ void Window::synchronizeMouse()
         RECT rc;
         ::GetClientRect(hWnd, &rc);
 
-        if (pt.x < rc.left || pt.x > rc.right || pt.y > rc.bottom || pt.y < rc.top)
-        {
+        if (pt.x < rc.left || pt.x > rc.right || pt.y > rc.bottom || pt.y < rc.top) {
             ::PostMessageW(hWnd, UINT(WM_MOUSEMOVE), 0, MAKELPARAM(pt.x, pt.y));
         }
     }
 }
 
-LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-    if (hWnd)
-    {
+LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    if (hWnd) {
         Window* window = (Window*)::GetWindowLongPtrW(hWnd, GWLP_USERDATA);
-        if (window && window->hWnd == hWnd)
-        {
-            auto postWindowEvent = [&](WindowEvent::Type type)
-            {
+        if (window && window->hWnd == hWnd) {
+            auto postWindowEvent = [&](WindowEvent::Type type) {
                 window->postWindowEvent({
                 type,
                 window->weak_from_this(),
@@ -589,24 +510,18 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 window->scaleFactor });
             };
 
-            switch (uMsg)
-            {
+            switch (uMsg) {
             case WM_ACTIVATE:
-                if (wParam == WA_ACTIVE || wParam == WA_CLICKACTIVE)
-                {
-                    if (window->activated == false)
-                    {
+                if (wParam == WA_ACTIVE || wParam == WA_CLICKACTIVE) {
+                    if (window->activated == false) {
                         numActiveWindows += 1;
                         window->activated = true;
                         postWindowEvent(WindowEvent::WindowActivated);
                         window->resetKeyStates();
                         window->resetMouse();  // to prevent mouse cursor popped.
                     }
-                }
-                else
-                {
-                    if (window->activated)
-                    {
+                } else {
+                    if (window->activated) {
                         numActiveWindows -= 1;
                         window->resetKeyStates();	// release all keys
                         window->resetMouse();
@@ -616,19 +531,14 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 }
                 return 0;
             case WM_SHOWWINDOW:
-                if (wParam)
-                {
-                    if (window->visible == false)
-                    {
+                if (wParam) {
+                    if (window->visible == false) {
                         window->visible = true;
                         window->minimized = false;
                         postWindowEvent(WindowEvent::WindowShown);
                     }
-                }
-                else
-                {
-                    if (window->visible)
-                    {
+                } else {
+                    if (window->visible) {
                         window->visible = false;
                         postWindowEvent(WindowEvent::WindowHidden);
                     }
@@ -653,12 +563,11 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                         rcWindow.top != std::lround(window->frame.origin.y))
                         moved = true;
 
-                    if (resized || moved)
-                    {
-                        window->frame =  Rect(float(rcWindow.left),
-                                              float(rcWindow.top),
-                                              float(rcWindow.right - rcWindow.left),
-                                              float(rcWindow.bottom - rcWindow.top));
+                    if (resized || moved) {
+                        window->frame = Rect(float(rcWindow.left),
+                                             float(rcWindow.top),
+                                             float(rcWindow.right - rcWindow.left),
+                                             float(rcWindow.bottom - rcWindow.top));
                         window->bounds = Rect(float(rcClient.left),
                                               float(rcClient.top),
                                               float(rcClient.right - rcClient.left),
@@ -671,38 +580,28 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 } while (0);
                 return 0;
             case WM_SIZE:
-                if (wParam == SIZE_MAXHIDE)
-                {
-                    if (window->visible)
-                    {
+                if (wParam == SIZE_MAXHIDE) {
+                    if (window->visible) {
                         window->visible = false;
                         postWindowEvent(WindowEvent::WindowHidden);
                     }
-                }
-                else if (wParam == SIZE_MINIMIZED)
-                {
-                    if (window->minimized == false)
-                    {
+                } else if (wParam == SIZE_MINIMIZED) {
+                    if (window->minimized == false) {
                         window->minimized = true;
                         postWindowEvent(WindowEvent::WindowMinimized);
                     }
-                }
-                else
-                {
-                    if (window->minimized || window->visible == false)
-                    {
+                } else {
+                    if (window->minimized || window->visible == false) {
                         window->minimized = false;
                         window->visible = true;
                         postWindowEvent(WindowEvent::WindowShown);
-                    }
-                    else
-                    {
+                    } else {
                         Size size = Size(LOWORD(lParam), HIWORD(lParam));
                         window->bounds.size = size / window->scaleFactor;
 
                         RECT rc;
                         ::GetWindowRect(hWnd, &rc);
-                        window->frame = Rect(float(rc.left), float(rc.top), 
+                        window->frame = Rect(float(rc.left), float(rc.top),
                                              float(rc.right - rc.left),
                                              float(rc.bottom - rc.top));
                         postWindowEvent(WindowEvent::WindowResized);
@@ -710,8 +609,7 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 }
                 return 0;
             case WM_MOVE:
-                if (window->resizing == false)
-                {
+                if (window->resizing == false) {
                     int x = (int)(short)LOWORD(lParam);   // horizontal position 
                     int y = (int)(short)HIWORD(lParam);   // vertical position 
                     window->frame.origin = Point(float(x), float(y));
@@ -727,8 +625,7 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
                     window->scaleFactor = float(xDPI) / 96.0f;
 
-                    if (window->autoResize)
-                    {
+                    if (window->autoResize) {
                         ::SetWindowPos(hWnd,
                                        NULL,
                                        suggestedWindowRect->left,
@@ -736,9 +633,7 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                                        suggestedWindowRect->right - suggestedWindowRect->left,
                                        suggestedWindowRect->bottom - suggestedWindowRect->top,
                                        SWP_NOZORDER | SWP_NOACTIVATE);
-                    }
-                    else
-                    {
+                    } else {
                         RECT clientRect;
                         RECT windowRect;
                         ::GetClientRect(hWnd, &clientRect);
@@ -774,21 +669,18 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                     LONG h = std::lround(s.height);
                     RECT rc = { 0, 0, std::max(w, 1L), std::max(h, 1L) };
 
-                    if (::AdjustWindowRectEx(&rc, style, menu, styleEx))
-                    {
+                    if (::AdjustWindowRectEx(&rc, style, menu, styleEx)) {
                         MINMAXINFO* mm = (MINMAXINFO*)lParam;
                         mm->ptMinTrackSize.x = rc.right - rc.left;
                         mm->ptMinTrackSize.y = rc.bottom - rc.top;
                     }
-                    if (cb.contentMaxSize)
-                    {
+                    if (cb.contentMaxSize) {
                         Size s = cb.contentMaxSize(window);
                         LONG w = std::lround(s.width);
                         LONG h = std::lround(s.height);
                         RECT rc = { 0, 0, std::max(w, 1L), std::max(h, 1L) };
 
-                        if (::AdjustWindowRectEx(&rc, style, menu, styleEx))
-                        {
+                        if (::AdjustWindowRectEx(&rc, style, menu, styleEx)) {
                             MINMAXINFO* mm = (MINMAXINFO*)lParam;
                             if (s.width > 0)
                                 mm->ptMaxTrackSize.x = rc.right - rc.left;
@@ -799,46 +691,36 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 } while (0);
                 return 0;
             case WM_TIMER:
-                if (wParam == TimerID_UpdateKeyboardMouse)
-                {
+                if (wParam == TimerID_UpdateKeyboardMouse) {
                     window->synchronizeKeyStates();
                     window->synchronizeMouse();
                     return 0;
                 }
                 break;
             case WM_MOUSEMOVE:
-                if (window->activated)
-                {
+                if (window->activated) {
                     POINTS pt = MAKEPOINTS(lParam);
                     float scaleFactor = window->scaleFactor;
                     LONG oldPtX = std::lround(window->mousePos.x * scaleFactor);
                     LONG oldPtY = std::lround(window->mousePos.y * scaleFactor);
-                    if (pt.x != oldPtX || pt.y != oldPtY)
-                    {
+                    if (pt.x != oldPtX || pt.y != oldPtY) {
                         Point delta = (Point(pt.x, pt.y) - window->mousePos) / scaleFactor;
 
                         bool broadcast = true;
-                        if (window->mouseLocked)
-                        {
+                        if (window->mouseLocked) {
                             LONG lockedX = std::lround(window->lockedMousePos.x * scaleFactor);
                             LONG lockedY = std::lround(window->lockedMousePos.y * scaleFactor);
-                            if (pt.x == lockedX && pt.y == lockedY)
-                            {
+                            if (pt.x == lockedX && pt.y == lockedY) {
                                 broadcast = false;
-                            }
-                            else
-                            {
+                            } else {
                                 window->setMousePosition(window->mouseID, window->mousePos);
                                 window->lockedMousePos = window->mousePosition(window->mouseID);
                             }
-                        }
-                        else
-                        {
+                        } else {
                             window->mousePos = Point(pt.x, pt.y) / scaleFactor;
                         }
 
-                        if (broadcast)
-                        {
+                        if (broadcast) {
                             window->postMouseEvent({
                                 MouseEvent::Move,
                                 window->weak_from_this(),
@@ -959,8 +841,7 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                     POINTS pts = MAKEPOINTS(lParam);
                     Point pos = Point(pts.x, pts.y) / window->scaleFactor;
                     WORD button = GET_XBUTTON_WPARAM(wParam);
-                    if (button == XBUTTON1)
-                    {
+                    if (button == XBUTTON1) {
                         window->mouseButtonDown.button4 = true;
                         window->postMouseEvent({
                             MouseEvent::ButtonDown,
@@ -972,9 +853,7 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                             Point::zero,
                             0,
                             0 });
-                    }
-                    else if (button == XBUTTON2)
-                    {
+                    } else if (button == XBUTTON2) {
                         window->mouseButtonDown.button5 = true;
                         window->postMouseEvent({
                             MouseEvent::ButtonDown,
@@ -994,8 +873,7 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                     POINTS pts = MAKEPOINTS(lParam);
                     Point pos = Point(pts.x, pts.y) / window->scaleFactor;
                     WORD button = GET_XBUTTON_WPARAM(wParam);
-                    if (button == XBUTTON1)
-                    {
+                    if (button == XBUTTON1) {
                         window->mouseButtonDown.button4 = false;
                         window->postMouseEvent({
                             MouseEvent::ButtonUp,
@@ -1006,9 +884,7 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                             pos,
                             Point::zero,
                             0, 0 });
-                    }
-                    else if (button == XBUTTON2)
-                    {
+                    } else if (button == XBUTTON2) {
                         window->mouseButtonDown.button5 = false;
                         window->postMouseEvent({
                             MouseEvent::ButtonUp,
@@ -1047,13 +923,12 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 return 0;
             case WM_CHAR:
                 window->synchronizeKeyStates(); // synchronize key states
-                if (window->textCompositionMode)
-                {
+                if (window->textCompositionMode) {
                     wchar_t c[2] = { (wchar_t)wParam };
                     window->postKeyboardEvent({
                         KeyboardEvent::TextInput,
                         window->weak_from_this(),
-                        window->keyboardID, 
+                        window->keyboardID,
                         VirtualKey::None,
                         u8string(c) });
                 }
@@ -1069,21 +944,18 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                     // Result characters will be received via WM_CHAR,
                     // reset input-candidate characters here.
                     window->postKeyboardEvent({
-                        KeyboardEvent::TextComposition, 
+                        KeyboardEvent::TextComposition,
                         window->weak_from_this(),
                         window->keyboardID,
-                        VirtualKey::None, u8""});
+                        VirtualKey::None, u8"" });
                 }
                 if (lParam & GCS_COMPSTR) // composition in progress.
                 {
                     HIMC hIMC = ImmGetContext(hWnd);
-                    if (hIMC)
-                    {
-                        if (window->textCompositionMode)
-                        {
+                    if (hIMC) {
+                        if (window->textCompositionMode) {
                             LONG textLength = ImmGetCompositionStringW(hIMC, GCS_COMPSTR, 0, 0);
-                            if (textLength)
-                            {
+                            if (textLength) {
                                 unsigned char* tmp = (unsigned char*)malloc(textLength + 4);
                                 memset(tmp, 0, textLength + 4);
 
@@ -1096,17 +968,15 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                                     window->weak_from_this(),
                                     window->keyboardID,
                                     VirtualKey::None, u8string(compositionText) });
-                            }
-                            else // composition character's length become 0. (erased)
+                            } else // composition character's length become 0. (erased)
                             {
                                 window->postKeyboardEvent({
                                     KeyboardEvent::TextComposition,
                                     window->weak_from_this(),
                                     window->keyboardID,
-                                    VirtualKey::None, u8""});
+                                    VirtualKey::None, u8"" });
                             }
-                        }
-                        else // not text-input mode.
+                        } else // not text-input mode.
                         {
                             ImmNotifyIME(hIMC, NI_COMPOSITIONSTR, CPS_CANCEL, 0);
                         }
@@ -1115,8 +985,7 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 }
                 break;
             case WM_PAINT:
-                if (window->resizing == false)
-                {
+                if (window->resizing == false) {
                     postWindowEvent(WindowEvent::WindowUpdate);
                 }
                 break;
@@ -1134,8 +1003,7 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             case WM_COMMAND:
                 break;
             case WM_SYSCOMMAND:
-                switch (wParam)
-                {
+                switch (wParam) {
                 case SC_CONTEXTHELP:	// help menu
                 case SC_KEYMENU:		// alt-key
                 case SC_HOTKEY:			// hotkey
@@ -1162,13 +1030,10 @@ LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 }
                 return 0;
             case FV_WM_UPDATEMOUSECAPTURE:
-                if (::GetCapture() == hWnd)
-                {
+                if (::GetCapture() == hWnd) {
                     if (window->mouseButtonDown.buttons == 0 && !window->mouseLocked)
                         ::ReleaseCapture();
-                }
-                else
-                {
+                } else {
                     if (window->mouseButtonDown.buttons != 0 || window->mouseLocked)
                         ::SetCapture(hWnd);
                 }

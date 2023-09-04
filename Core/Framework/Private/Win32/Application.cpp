@@ -13,30 +13,23 @@
 #include <Sddl.h>
 #include <shlobj.h>
 
-namespace FV::Win32
-{
+namespace FV::Win32 {
     HHOOK keyboardHook = nullptr;
     bool disableWindowKey = true;
     uint64_t numActiveWindows = 0;
 
-    LRESULT keyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam)
-    {
+    LRESULT keyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
         bool hook = disableWindowKey && numActiveWindows > 0;
-        if (nCode == HC_ACTION && hook)
-        {
+        if (nCode == HC_ACTION && hook) {
             KBDLLHOOKSTRUCT* pkbhs = (KBDLLHOOKSTRUCT*)lParam;
-            if (pkbhs->vkCode == VK_LWIN || pkbhs->vkCode == VK_RWIN)
-            {
+            if (pkbhs->vkCode == VK_LWIN || pkbhs->vkCode == VK_RWIN) {
                 static BYTE keyState[256];
                 // To use window-key as regular key, update keyState.
-                if (wParam == WM_KEYDOWN)
-                {
+                if (wParam == WM_KEYDOWN) {
                     GetKeyboardState(keyState);
                     keyState[pkbhs->vkCode] = 0x80;
                     SetKeyboardState(keyState);
-                }
-                else if (wParam == WM_KEYUP)
-                {
+                } else if (wParam == WM_KEYUP) {
                     GetKeyboardState(keyState);
                     keyState[pkbhs->vkCode] = 0x00;
                     SetKeyboardState(keyState);
@@ -54,18 +47,15 @@ namespace FV::Win32
     std::mutex mainLoopQueueLock;
     std::vector<std::function<void()>> mainLoopQueue;
 
-    int runApplication(FV::Application* app)
-    {
+    int runApplication(FV::Application* app) {
         std::scoped_lock guard(mainLoopLock);
         auto logger = std::make_shared<Win32::Logger>();
         logger->bind(false);
 
         mainThreadID = ::GetCurrentThreadId();
 
-        if (::IsDebuggerPresent() == false)
-        {
-            if (keyboardHook)
-            {
+        if (::IsDebuggerPresent() == false) {
+            if (keyboardHook) {
                 Log::error("Keyboard hook state invalid. (already installed?)");
                 ::UnhookWindowsHookEx(keyboardHook);
                 keyboardHook = nullptr;
@@ -73,29 +63,22 @@ namespace FV::Win32
 
             bool installHook = false;
 
-            if (installHook)
-            {
+            if (installHook) {
                 keyboardHook = ::SetWindowsHookExW(WH_KEYBOARD_LL,
                                                    keyboardHookProc,
                                                    GetModuleHandleW(0), 0);
-                if (keyboardHook == nullptr)
-                {
+                if (keyboardHook == nullptr) {
                     Log::error("SetWindowsHookEx Failed.");
                 }
             }
         }
 
         // Setup process DPI
-        if (::SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2))
-        {
+        if (::SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)) {
             Log::info("Windows DPI-Awareness: DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2");
-        }
-        else if (::SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE))
-        {
+        } else if (::SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE)) {
             Log::info("Windows DPI-Awareness: DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE");
-        }
-        else
-        {
+        } else {
             Log::warning("Windows DPI-Awareness not set, please check application manifest.");
         }
 
@@ -113,21 +96,15 @@ namespace FV::Win32
         MSG	msg;
         BOOL ret;
         PostMessageW(NULL, WM_NULL, 0, 0); // To process first enqueued events.
-        while ((ret = GetMessageW(&msg, nullptr, 0, 0)) != 0)
-        {
-            if (ret == -1)
-            {
-            }
-            else
-            {
+        while ((ret = GetMessageW(&msg, nullptr, 0, 0)) != 0) {
+            if (ret == -1) {
+            } else {
                 ::TranslateMessage(&msg);
                 ::DispatchMessageW(&msg);
             }
-            if (terminateRequested == false)
-            {
+            if (terminateRequested == false) {
                 std::unique_lock lock(mainLoopQueueLock);
-                while (terminateRequested == false && mainLoopQueue.empty() == false)
-                {
+                while (terminateRequested == false && mainLoopQueue.empty() == false) {
                     std::function<void()> fn = mainLoopQueue.front();
                     mainLoopQueue.erase(mainLoopQueue.begin());
                     lock.unlock();
@@ -136,11 +113,8 @@ namespace FV::Win32
                 }
                 lock.unlock();
 
-                if (terminateRequested == false)
-                {
-                }
-                else
-                {
+                if (terminateRequested == false) {
+                } else {
                     PostQuitMessage(0);
                 }
             }
@@ -166,36 +140,30 @@ namespace FV::Win32
         return exitCode;
     }
 
-    void terminateApplication(int code)
-    {
-        postOperation([=]{
+    void terminateApplication(int code) {
+        postOperation([=] {
             terminateRequested = true;
             exitCode = code;
-        });
+                      });
     }
 
-    void postOperation(std::function<void()> fn)
-    {
+    void postOperation(std::function<void()> fn) {
         std::unique_lock lock(mainLoopQueueLock);
         mainLoopQueue.push_back(fn);
         lock.unlock();
 
-        if (mainThreadID)
-        {
+        if (mainThreadID) {
             PostThreadMessageW(mainThreadID, WM_NULL, 0, 0);
         }
     }
 
-    std::vector<std::u8string> commandLineArguments()
-    {
+    std::vector<std::u8string> commandLineArguments() {
         std::vector<std::u8string> result;
         int argc = 0;
         LPWSTR* args = ::CommandLineToArgvW(::GetCommandLineW(), &argc);
-        if (args)
-        {
+        if (args) {
             result.reserve(argc);
-            for (int i = 0; i < argc; ++i)
-            {
+            for (int i = 0; i < argc; ++i) {
                 std::wstring warg = args[i];
                 result.push_back(u8string(warg));
             }
@@ -203,25 +171,20 @@ namespace FV::Win32
         return result;
     }
 
-    std::u8string environmentPath(Application::EnvironmentPath aep)
-    {
+    std::u8string environmentPath(Application::EnvironmentPath aep) {
         WCHAR path[MAX_PATH];
-        auto getWindowsFolder = [&path](std::initializer_list<int> folders)->std::u8string
-        {
+        auto getWindowsFolder = [&path](std::initializer_list<int> folders)->std::u8string {
             ITEMIDLIST* pidl;
-            for (int fid : folders)
-            {
+            for (int fid : folders) {
                 if (SHGetSpecialFolderLocation(NULL, fid | CSIDL_FLAG_CREATE, &pidl) == NOERROR &&
-                    SHGetPathFromIDListW(pidl, path))
-                {
+                    SHGetPathFromIDListW(pidl, path)) {
                     return u8string(path);
                 }
             }
             return (const char8_t*)"C:\\";
         };
 
-        switch (aep)
-        {
+        switch (aep) {
         case Application::EnvironmentPath::SystemRoot:		// system root, (boot volume)
             ::GetWindowsDirectoryW(path, MAX_PATH);
             path[2] = NULL;
@@ -230,10 +193,8 @@ namespace FV::Win32
         case Application::EnvironmentPath::AppRoot:			// root directory of executable
         case Application::EnvironmentPath::AppResource:
         case Application::EnvironmentPath::AppExecutable:
-            for (DWORD len = ::GetModuleFileNameW(::GetModuleHandle(NULL), path, MAX_PATH); len > 0; len--)
-            {
-                if (path[len - 1] == L'\\')
-                {
+            for (DWORD len = ::GetModuleFileNameW(::GetModuleHandle(NULL), path, MAX_PATH); len > 0; len--) {
+                if (path[len - 1] == L'\\') {
                     path[len - 1] = L'\0';
                     return u8string(path);
                 }
@@ -256,8 +217,7 @@ namespace FV::Win32
             return getWindowsFolder({ CSIDL_LOCAL_APPDATA, CSIDL_APPDATA, CSIDL_PROFILE });
             break;
         case Application::EnvironmentPath::UserTemp:		// user's temporary dir
-            do
-            {
+            do {
                 DWORD ret = ::GetTempPathW(MAX_PATH, path);
                 if (ret > MAX_PATH || ret == 0)
                     return getWindowsFolder({ CSIDL_PROFILE, CSIDL_MYDOCUMENTS, CSIDL_DESKTOPDIRECTORY });

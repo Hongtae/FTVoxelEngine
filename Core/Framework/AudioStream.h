@@ -2,10 +2,8 @@
 #include "../include.h"
 #include <filesystem>
 
-namespace FV
-{
-    enum class AudioStreamEncodingFormat
-    {
+namespace FV {
+    enum class AudioStreamEncodingFormat {
         unknown,
         oggVorbis,
         oggFLAC,
@@ -14,8 +12,7 @@ namespace FV
         wave,
     };
 
-    class FVCORE_API AudioStream
-    {
+    class FVCORE_API AudioStream {
     public:
         AudioStream();
         AudioStream(const std::filesystem::path& path);

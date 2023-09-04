@@ -13,10 +13,8 @@
 #include "GPUResource.h"
 #include "ShaderBindingSet.h"
 
-namespace FV
-{
-    class GraphicsDevice
-    {
+namespace FV {
+    class GraphicsDevice {
     public:
         virtual ~GraphicsDevice() {}
 

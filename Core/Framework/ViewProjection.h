@@ -4,20 +4,16 @@
 #include "Matrix4.h"
 #include "Vector3.h"
 
-namespace FV
-{
-    struct ViewTransform
-    {
+namespace FV {
+    struct ViewTransform {
         Matrix3 matrix;
         Vector3 position;
 
-        Matrix3 matrix3() const
-        {
+        Matrix3 matrix3() const {
             return matrix;
         }
 
-        Matrix4 matrix4() const 
-        {
+        Matrix4 matrix4() const {
             return {
                 matrix._11, matrix._12, matrix._13, 0.0,
                 matrix._21, matrix._22, matrix._23, 0.0,
@@ -28,9 +24,9 @@ namespace FV
 
         ViewTransform(const Matrix3& mat = Matrix3::identity,
                       const Vector3& pos = Vector3::zero)
-            : matrix(mat), position(pos) {}
-        ViewTransform(const Vector3& pos, const Vector3& dir, const Vector3& up)
-        {
+            : matrix(mat), position(pos) {
+        }
+        ViewTransform(const Vector3& pos, const Vector3& dir, const Vector3& up) {
             FVASSERT_DEBUG(dir.magnitudeSquared() > 0.0f);
             FVASSERT_DEBUG(up.magnitudeSquared() > 0.0f);
 
@@ -48,23 +44,19 @@ namespace FV
             this->position = Vector3(tX, tY, tZ);
         }
 
-        Vector3 direction() const
-        {
+        Vector3 direction() const {
             return (-matrix.column3()).normalized();
         }
 
-        Vector3 up() const
-        {
+        Vector3 up() const {
             return matrix.column2().normalized();
         }
     };
 
-    struct ProjectionTransform
-    {
+    struct ProjectionTransform {
         Matrix4 matrix;
 
-        static ProjectionTransform perspective(float fov, float aspect, float nearZ, float farZ)
-        {
+        static ProjectionTransform perspective(float fov, float aspect, float nearZ, float farZ) {
             FVASSERT_DEBUG(aspect > 0.0);
             FVASSERT_DEBUG(fov > 0.0);
             FVASSERT_DEBUG(nearZ > 0.0);
@@ -81,8 +73,7 @@ namespace FV
             };
         }
 
-        static ProjectionTransform orthographic(float width, float height, float nearZ, float farZ)
-        {
+        static ProjectionTransform orthographic(float width, float height, float nearZ, float farZ) {
             FVASSERT_DEBUG(width > 0.0);
             FVASSERT_DEBUG(height > 0.0);
             FVASSERT_DEBUG(farZ > nearZ);
@@ -100,8 +91,7 @@ namespace FV
         bool isOrthographic() const { return matrix._44 == 1.0; }
     };
 
-    struct ViewFrustum
-    {
+    struct ViewFrustum {
         ViewTransform view;
         ProjectionTransform projection;
 
@@ -115,27 +105,24 @@ namespace FV
         Vector4 bottomPlane;
 
         ViewFrustum(const ViewTransform& v, const ProjectionTransform& p)
-            : view(v), projection(p)
-        {
+            : view(v), projection(p) {
             Vector3 vec[] = {
-                Vector3( 1,  1, -1),    // near right top
-                Vector3( 1, -1, -1),    // near right bottom
+                Vector3(1,  1, -1),    // near right top
+                Vector3(1, -1, -1),    // near right bottom
                 Vector3(-1, -1, -1),    // near left bottom
                 Vector3(-1,  1, -1),    // near left top
-                Vector3( 1,  1,  1),    // far right top
-                Vector3( 1, -1,  1),    // far right bottom
+                Vector3(1,  1,  1),    // far right top
+                Vector3(1, -1,  1),    // far right bottom
                 Vector3(-1, -1,  1),    // far left bottom
                 Vector3(-1,  1,  1),    // far left top
             };
             auto mat = this->matrix().inverted();
-            for (auto& v : vec)
-            {
+            for (auto& v : vec) {
                 auto v2 = Vector4(v.x, v.y, v.z, 1.0f).apply(mat);
                 v = Vector3(v2.x, v2.y, v2.z) / v2.w;
             }
 
-            auto makePlane = [](const Vector3& v1, const Vector3& v2, const Vector3& v3)->Vector4
-            {
+            auto makePlane = [](const Vector3& v1, const Vector3& v2, const Vector3& v3)->Vector4 {
                 auto n = Vector3::cross(v2 - v1, v3 - v1).normalized();
                 return Vector4(n.x, n.y, n.z, -Vector3::dot(n, v1));
             };
@@ -149,8 +136,7 @@ namespace FV
         }
 
 
-        bool isSphereInside(const Vector3& center, float radius) const
-        {
+        bool isSphereInside(const Vector3& center, float radius) const {
             if (radius < 0.0f) return false;
 
             Vector4 pt = Vector4(center.x, center.y, center.z, 1.0f);
@@ -163,8 +149,7 @@ namespace FV
             return true;
         }
 
-        bool isPointInside(const Vector3& point) const
-        {
+        bool isPointInside(const Vector3& point) const {
             return isSphereInside(point, 0.0f);
         }
     };

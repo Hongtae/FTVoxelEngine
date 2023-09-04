@@ -8,14 +8,11 @@
 #include "Vector2.h"
 #include "VirtualKey.h"
 
-namespace FV
-{
-    class FVCORE_API Window
-    {
+namespace FV {
+    class FVCORE_API Window {
     public:
         /// Window Style
-        enum Style : uint32_t
-        {
+        enum Style : uint32_t {
             StyleTitle = 1,
             StyleCloseButton = 1 << 1,
             StyleMinimizeButton = 1 << 2,
@@ -27,18 +24,15 @@ namespace FV
         };
 
         /// Mouse, (Multi) Touch, Table Stylus pen event.
-        struct MouseEvent
-        {
-            enum Type
-            {
+        struct MouseEvent {
+            enum Type {
                 ButtonDown = 0,
                 ButtonUp,
                 Move,
                 Wheel,
                 Pointing,
             };
-            enum Device
-            {
+            enum Device {
                 GenericMouse = 0,
                 Stylus,
                 Touch,
@@ -56,10 +50,8 @@ namespace FV
         };
 
         /// Keyboard and text event.
-        struct KeyboardEvent
-        {
-            enum Type
-            {
+        struct KeyboardEvent {
+            enum Type {
                 KeyDown = 0,
                 KeyUp,
                 TextInput,
@@ -73,10 +65,8 @@ namespace FV
         };
 
         /// Window event, reposition, resize etc.
-        struct WindowEvent
-        {
-            enum Type
-            {
+        struct WindowEvent {
+            enum Type {
                 WindowCreated = 0,	///< To receive this event, you must start the window event system asynchronously using 'DKEventLoop'.
                 WindowClosed,
                 WindowHidden,
@@ -100,16 +90,14 @@ namespace FV
         using MouseEventHandler = std::function<void(const MouseEvent&)>;
 
         /// drag and drop (files only)
-        enum DraggingState
-        {
+        enum DraggingState {
             DraggingEntered = 0,
             DraggingUpdated,
             DraggingExited,
             DraggingDropped,
         };
         /// drag and drop operation
-        enum DragOperation
-        {
+        enum DragOperation {
             DragOperationNone = 0,	///< drag & drop not allowed
             DragOperationCopy,		///< Inform the user that a copy operation will be performed.
             DragOperationMove,		///< Inform the user that a move operation will be performed.
@@ -118,8 +106,7 @@ namespace FV
 
         /// Window Callback
         /// Callback function is required for some events that cannot be processed asynchronously.
-        struct WindowCallback
-        {
+        struct WindowCallback {
             using DragOperationCallback = std::function<DragOperation(Window*, DraggingState, const Point&, const std::vector<std::u8string>&)>;
             DragOperationCallback draggingFeedback;
             std::function<Size(Window*)> contentMinSize;
@@ -183,8 +170,7 @@ namespace FV
     protected:
         WindowCallback _callback;
 
-        struct EventHandlers
-        {
+        struct EventHandlers {
             WindowEventHandler windowEventHandler;
             MouseEventHandler mouseEventHandler;
             KeyboardEventHandler keyboardEventHandler;

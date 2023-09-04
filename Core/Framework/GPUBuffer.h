@@ -1,16 +1,13 @@
 #pragma once
 #include "../include.h"
 
-namespace FV
-{
+namespace FV {
     class GraphicsDevice;
-    class GPUBuffer
-    {
+    class GPUBuffer {
     public:
         virtual ~GPUBuffer() {}
 
-        enum StorageMode
-        {
+        enum StorageMode {
             StorageModeShared = 0,	// accessible to both the CPU and the GPU
             StorageModePrivate,		// only accessible to the GPU
         };

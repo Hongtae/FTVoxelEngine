@@ -9,10 +9,8 @@
 #include "PhysicalDevice.h"
 #include "Extensions.h"
 
-namespace FV::Vulkan
-{
-    struct LayerProperties
-    {
+namespace FV::Vulkan {
+    struct LayerProperties {
         std::string name;
         uint32_t specVersion;
         uint32_t implementationVersion;
@@ -20,8 +18,7 @@ namespace FV::Vulkan
         std::map<std::string, uint32_t> extensions;
     };
 
-    class VulkanInstance : public std::enable_shared_from_this<VulkanInstance>
-    {
+    class VulkanInstance : public std::enable_shared_from_this<VulkanInstance> {
     public:
         VulkanInstance();
         ~VulkanInstance();

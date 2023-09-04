@@ -13,13 +13,11 @@ ShaderBindingSet::ShaderBindingSet(std::shared_ptr<GraphicsDevice> dev,
     : gdevice(dev)
     , descriptorSetLayout(layout)
     , poolID(poolID)
-    , layoutFlags(createInfo.flags)
-{
+    , layoutFlags(createInfo.flags) {
     FVASSERT_DEBUG(descriptorSetLayout != VK_NULL_HANDLE);
 
     bindings.reserve(createInfo.bindingCount);
-    for (uint32_t i = 0; i < createInfo.bindingCount; ++i)
-    {
+    for (uint32_t i = 0; i < createInfo.bindingCount; ++i) {
         const VkDescriptorSetLayoutBinding& binding = createInfo.pBindings[i];
 
         DescriptorBinding ds = { binding };
@@ -28,13 +26,11 @@ ShaderBindingSet::ShaderBindingSet(std::shared_ptr<GraphicsDevice> dev,
     }
 }
 
-ShaderBindingSet::~ShaderBindingSet()
-{
+ShaderBindingSet::~ShaderBindingSet() {
     vkDestroyDescriptorSetLayout(gdevice->device, descriptorSetLayout, gdevice->allocationCallbacks());
 }
 
-std::shared_ptr<DescriptorSet> ShaderBindingSet::makeDescriptorSet() const
-{
+std::shared_ptr<DescriptorSet> ShaderBindingSet::makeDescriptorSet() const {
     std::shared_ptr<DescriptorSet> descriptorSet = gdevice->makeDescriptorSet(descriptorSetLayout, poolID);
     FVASSERT_DEBUG(descriptorSet);
 
@@ -43,8 +39,7 @@ std::shared_ptr<DescriptorSet> ShaderBindingSet::makeDescriptorSet() const
     std::vector<VkWriteDescriptorSet> descriptorWrites;
     descriptorWrites.reserve(descriptorSet->bindings.size());
 
-    for (DescriptorBinding& binding : descriptorSet->bindings)
-    {
+    for (DescriptorBinding& binding : descriptorSet->bindings) {
         if (!binding.valueSet)
             continue;
 
@@ -71,29 +66,23 @@ std::shared_ptr<DescriptorSet> ShaderBindingSet::makeDescriptorSet() const
     return descriptorSet;
 }
 
-ShaderBindingSet::DescriptorBinding* ShaderBindingSet::findDescriptorBinding(uint32_t binding)
-{
-    for (DescriptorBinding& b : bindings)
-    {
-        if (b.layoutBinding.binding == binding)
-        {
+ShaderBindingSet::DescriptorBinding* ShaderBindingSet::findDescriptorBinding(uint32_t binding) {
+    for (DescriptorBinding& b : bindings) {
+        if (b.layoutBinding.binding == binding) {
             return &b;
         }
     }
     return nullptr;
 }
 
-void ShaderBindingSet::setBuffer(uint32_t binding, std::shared_ptr<FV::GPUBuffer> bufferObject, uint64_t offset, uint64_t length)
-{
+void ShaderBindingSet::setBuffer(uint32_t binding, std::shared_ptr<FV::GPUBuffer> bufferObject, uint64_t offset, uint64_t length) {
     BufferInfo bufferInfo = { bufferObject, offset, length };
     return setBufferArray(binding, 1, &bufferInfo);
 }
 
-void ShaderBindingSet::setBufferArray(uint32_t binding, uint32_t numBuffers, BufferInfo* bufferArray)
-{
+void ShaderBindingSet::setBufferArray(uint32_t binding, uint32_t numBuffers, BufferInfo* bufferArray) {
     DescriptorBinding* descriptorBinding = findDescriptorBinding(binding);
-    if (descriptorBinding)
-    {
+    if (descriptorBinding) {
         descriptorBinding->valueSet = false;
         descriptorBinding->bufferInfos.clear();
         descriptorBinding->imageInfos.clear();
@@ -118,14 +107,12 @@ void ShaderBindingSet::setBufferArray(uint32_t binding, uint32_t numBuffers, Buf
         FVASSERT_DEBUG(descriptorBinding->bufferInfos.empty());
         FVASSERT_DEBUG(descriptorBinding->texelBufferViews.empty());
 
-        switch (descriptor.descriptorType)
-        {
+        switch (descriptor.descriptorType) {
         case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
         case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
             // bufferView (pTexelBufferView)
             descriptorBinding->texelBufferViews.reserve(availableItems);
-            for (uint32_t i = 0; i < availableItems; ++i)
-            {
+            for (uint32_t i = 0; i < availableItems; ++i) {
                 auto bufferView = std::dynamic_pointer_cast<BufferView>(bufferArray[i].buffer);
                 FVASSERT_DEBUG(bufferView);
                 FVASSERT_DEBUG(bufferView->bufferView);
@@ -139,8 +126,7 @@ void ShaderBindingSet::setBufferArray(uint32_t binding, uint32_t numBuffers, Buf
         case  VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
             // buffer (pBufferInfo)
             descriptorBinding->bufferInfos.reserve(availableItems);
-            for (uint32_t i = 0; i < availableItems; ++i)
-            {
+            for (uint32_t i = 0; i < availableItems; ++i) {
                 auto bufferView = std::dynamic_pointer_cast<BufferView>(bufferArray[i].buffer);
                 FVASSERT_DEBUG(bufferView);
                 auto& buffer = bufferView->buffer;
@@ -165,8 +151,7 @@ void ShaderBindingSet::setBufferArray(uint32_t binding, uint32_t numBuffers, Buf
         // take ownership of resource.
         descriptorBinding->bufferViews.reserve(availableItems);
 
-        for (uint32_t i = 0; i < availableItems; ++i)
-        {
+        for (uint32_t i = 0; i < availableItems; ++i) {
             auto bufferView = std::dynamic_pointer_cast<BufferView>(bufferArray[i].buffer);
             FVASSERT_DEBUG(bufferView);
             descriptorBinding->bufferViews.push_back(bufferView);
@@ -176,16 +161,13 @@ void ShaderBindingSet::setBufferArray(uint32_t binding, uint32_t numBuffers, Buf
     }
 }
 
-void ShaderBindingSet::setTexture(uint32_t binding, std::shared_ptr<FV::Texture> textureObject)
-{
+void ShaderBindingSet::setTexture(uint32_t binding, std::shared_ptr<FV::Texture> textureObject) {
     return setTextureArray(binding, 1, &textureObject);
 }
 
-void ShaderBindingSet::setTextureArray(uint32_t binding, uint32_t numTextures, std::shared_ptr<FV::Texture>* textureArray)
-{
+void ShaderBindingSet::setTextureArray(uint32_t binding, uint32_t numTextures, std::shared_ptr<FV::Texture>* textureArray) {
     DescriptorBinding* descriptorBinding = findDescriptorBinding(binding);
-    if (descriptorBinding)
-    {
+    if (descriptorBinding) {
         //descriptorBinding->descriptorWrites.Clear();
         descriptorBinding->bufferInfos.clear();
         //descriptorBinding->imageInfos.clear();
@@ -200,8 +182,7 @@ void ShaderBindingSet::setTextureArray(uint32_t binding, uint32_t numTextures, s
         uint32_t availableItems = std::min(numTextures, descriptor.descriptorCount - startingIndex);
         FVASSERT_DEBUG(availableItems <= numTextures);
 
-        if (!descriptorBinding->valueSet)
-        {
+        if (!descriptorBinding->valueSet) {
             VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
             write.dstSet = VK_NULL_HANDLE;
             write.dstBinding = descriptor.binding;
@@ -212,19 +193,16 @@ void ShaderBindingSet::setTextureArray(uint32_t binding, uint32_t numTextures, s
             descriptorBinding->valueSet = true;
         }
         VkWriteDescriptorSet& write = descriptorBinding->write;
-        if (write.pImageInfo == nullptr)
-        {
+        if (write.pImageInfo == nullptr) {
             descriptorBinding->samplers.clear();
             descriptorBinding->imageInfos.clear();
         }
         write.dstArrayElement = startingIndex;
         write.descriptorCount = availableItems;
 
-        auto getImageLayout = [](VkDescriptorType type, PixelFormat pixelFormat)
-        {
+        auto getImageLayout = [](VkDescriptorType type, PixelFormat pixelFormat) {
             VkImageLayout imageLayout = VK_IMAGE_LAYOUT_UNDEFINED; /* imageView->LayerLayout(0);*/
-            switch (type)
-            {
+            switch (type) {
             case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
             case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
                 imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -241,18 +219,15 @@ void ShaderBindingSet::setTextureArray(uint32_t binding, uint32_t numTextures, s
             return imageLayout;
         };
 
-        switch (descriptor.descriptorType)
-        {
+        switch (descriptor.descriptorType) {
             // pImageInfo
         case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
         case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
         case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
         case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
             descriptorBinding->imageViews.reserve(availableItems);
-            for (uint32_t i = 0; i < availableItems; ++i)
-            {
-                if (i >= descriptorBinding->imageInfos.size())
-                {
+            for (uint32_t i = 0; i < availableItems; ++i) {
+                if (i >= descriptorBinding->imageInfos.size()) {
                     VkDescriptorImageInfo info = {};
                     auto index = descriptorBinding->imageInfos.size();
                     descriptorBinding->imageInfos.push_back(info);
@@ -263,10 +238,8 @@ void ShaderBindingSet::setTextureArray(uint32_t binding, uint32_t numTextures, s
                 FVASSERT_DEBUG(imageView);
                 FVASSERT_DEBUG(imageView->imageView != VK_NULL_HANDLE);
 
-                if (descriptor.descriptorType == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)
-                {
-                    if (!(imageView->image->usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT))
-                    {
+                if (descriptor.descriptorType == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT) {
+                    if (!(imageView->image->usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)) {
                         Log::error("ImageView image does not have usage flag:VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT");
                     }
                 }
@@ -287,16 +260,13 @@ void ShaderBindingSet::setTextureArray(uint32_t binding, uint32_t numTextures, s
     }
 }
 
-void ShaderBindingSet::setSamplerState(uint32_t binding, std::shared_ptr<FV::SamplerState> samplerState)
-{
+void ShaderBindingSet::setSamplerState(uint32_t binding, std::shared_ptr<FV::SamplerState> samplerState) {
     return setSamplerStateArray(binding, 1, &samplerState);
 }
 
-void ShaderBindingSet::setSamplerStateArray(uint32_t binding, uint32_t numSamplers, std::shared_ptr<FV::SamplerState>* samplerArray) 
-{
+void ShaderBindingSet::setSamplerStateArray(uint32_t binding, uint32_t numSamplers, std::shared_ptr<FV::SamplerState>* samplerArray) {
     DescriptorBinding* descriptorBinding = findDescriptorBinding(binding);
-    if (descriptorBinding)
-    {
+    if (descriptorBinding) {
         //descriptorBinding->descriptorWrites.clear();
         descriptorBinding->bufferInfos.clear();
         //descriptorBinding->imageInfos.clear();
@@ -311,8 +281,7 @@ void ShaderBindingSet::setSamplerStateArray(uint32_t binding, uint32_t numSample
         uint32_t availableItems = std::min(numSamplers, descriptor.descriptorCount - startingIndex);
         FVASSERT_DEBUG(availableItems <= numSamplers);
 
-        if (!descriptorBinding->valueSet)
-        {
+        if (!descriptorBinding->valueSet) {
             VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
             write.dstSet = VK_NULL_HANDLE;
             write.dstBinding = descriptor.binding;
@@ -324,28 +293,22 @@ void ShaderBindingSet::setSamplerStateArray(uint32_t binding, uint32_t numSample
         }
 
         VkWriteDescriptorSet& write = descriptorBinding->write;
-        if (write.pImageInfo == nullptr)
-        {
+        if (write.pImageInfo == nullptr) {
             descriptorBinding->imageViews.clear();
             descriptorBinding->imageInfos.clear();
         }
         write.dstArrayElement = startingIndex;
         write.descriptorCount = availableItems;
 
-        switch (descriptor.descriptorType)
-        {
+        switch (descriptor.descriptorType) {
         case VK_DESCRIPTOR_TYPE_SAMPLER:
         case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
             descriptorBinding->samplers.reserve(availableItems);
-            for (uint32_t i = 0; i < availableItems; ++i)
-            {
+            for (uint32_t i = 0; i < availableItems; ++i) {
                 VkDescriptorImageInfo* imageInfo = nullptr;
-                if (i < descriptorBinding->imageInfos.size())
-                {
+                if (i < descriptorBinding->imageInfos.size()) {
                     imageInfo = &descriptorBinding->imageInfos.at(i);
-                }
-                else
-                {
+                } else {
                     VkDescriptorImageInfo info = {};
                     auto index = descriptorBinding->imageInfos.size();
                     descriptorBinding->imageInfos.push_back(info);

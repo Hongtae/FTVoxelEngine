@@ -1,10 +1,8 @@
 #pragma once
 #include "../include.h"
 
-namespace FV
-{
-    enum CompareFunction
-    {
+namespace FV {
+    enum CompareFunction {
         CompareFunctionNever,
         CompareFunctionLess,
         CompareFunctionEqual,
@@ -15,8 +13,7 @@ namespace FV
         CompareFunctionAlways,
     };
 
-    enum StencilOperation
-    {
+    enum StencilOperation {
         StencilOperationKeep,
         StencilOperationZero,
         StencilOperationReplace,
@@ -27,8 +24,7 @@ namespace FV
         StencilOperationDecrementWrap,
     };
 
-    struct StencilDescriptor
-    {
+    struct StencilDescriptor {
         CompareFunction stencilCompareFunction = CompareFunctionAlways;
         StencilOperation stencilFailureOperation = StencilOperationKeep;
         StencilOperation depthFailOperation = StencilOperationKeep;
@@ -37,8 +33,7 @@ namespace FV
         uint32_t writeMask = 0xffffffff;
     };
 
-    struct DepthStencilDescriptor
-    {
+    struct DepthStencilDescriptor {
         CompareFunction depthCompareFunction = CompareFunctionAlways;
         StencilDescriptor frontFaceStencil;
         StencilDescriptor backFaceStencil;
@@ -46,8 +41,7 @@ namespace FV
     };
 
     class GraphicsDevice;
-    class DepthStencilState
-    {
+    class DepthStencilState {
     public:
         virtual ~DepthStencilState() {}
         virtual std::shared_ptr<GraphicsDevice> device() const = 0;

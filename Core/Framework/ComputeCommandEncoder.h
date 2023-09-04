@@ -4,10 +4,8 @@
 #include "ComputePipeline.h"
 #include "ShaderBindingSet.h"
 
-namespace FV
-{
-    class ComputeCommandEncoder : public CommandEncoder
-    {
+namespace FV {
+    class ComputeCommandEncoder : public CommandEncoder {
     public:
         virtual ~ComputeCommandEncoder() {}
 

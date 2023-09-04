@@ -8,14 +8,11 @@
 
 using namespace FV;
 
-namespace 
-{
-    ShaderDataType shaderDataTypeFromSPIRType(const spirv_cross::SPIRType& spType)
-    {
+namespace {
+    ShaderDataType shaderDataTypeFromSPIRType(const spirv_cross::SPIRType& spType) {
         ShaderDataType dataType = ShaderDataType::Unknown;
         // get item type
-        switch (spType.basetype)
-        {
+        switch (spType.basetype) {
         case spirv_cross::SPIRType::Void:
             dataType = ShaderDataType::None;
             break;
@@ -30,8 +27,7 @@ namespace
             dataType = ShaderDataType::Sampler;
             break;
         case spirv_cross::SPIRType::Boolean:
-            switch (spType.vecsize)
-            {
+            switch (spType.vecsize) {
             case 2:		dataType = ShaderDataType::Bool2;   break;
             case 3:		dataType = ShaderDataType::Bool3;   break;
             case 4:		dataType = ShaderDataType::Bool4;   break;
@@ -40,8 +36,7 @@ namespace
             break;
             //case spirv_cross::SPIRType::Char:
         case spirv_cross::SPIRType::SByte:
-            switch (spType.vecsize)
-            {
+            switch (spType.vecsize) {
             case 2:		dataType = ShaderDataType::Char2;   break;
             case 3:		dataType = ShaderDataType::Char3;   break;
             case 4:		dataType = ShaderDataType::Char4;   break;
@@ -49,8 +44,7 @@ namespace
             }
             break;
         case spirv_cross::SPIRType::UByte:
-            switch (spType.vecsize)
-            {
+            switch (spType.vecsize) {
             case 2:		dataType = ShaderDataType::UChar2;  break;
             case 3:		dataType = ShaderDataType::UChar3;  break;
             case 4:		dataType = ShaderDataType::UChar4;  break;
@@ -58,8 +52,7 @@ namespace
             }
             break;
         case spirv_cross::SPIRType::Short:
-            switch (spType.vecsize)
-            {
+            switch (spType.vecsize) {
             case 2:		dataType = ShaderDataType::Short2;  break;
             case 3:		dataType = ShaderDataType::Short3;  break;
             case 4:		dataType = ShaderDataType::Short4;  break;
@@ -67,8 +60,7 @@ namespace
             }
             break;
         case spirv_cross::SPIRType::UShort:
-            switch (spType.vecsize)
-            {
+            switch (spType.vecsize) {
             case 2:		dataType = ShaderDataType::UShort2; break;
             case 3:		dataType = ShaderDataType::UShort3; break;
             case 4:		dataType = ShaderDataType::UShort4; break;
@@ -76,8 +68,7 @@ namespace
             }
             break;
         case spirv_cross::SPIRType::Int:
-            switch (spType.vecsize)
-            {
+            switch (spType.vecsize) {
             case 2:		dataType = ShaderDataType::Int2;    break;
             case 3:		dataType = ShaderDataType::Int3;    break;
             case 4:		dataType = ShaderDataType::Int4;    break;
@@ -85,8 +76,7 @@ namespace
             }
             break;
         case spirv_cross::SPIRType::UInt:
-            switch (spType.vecsize)
-            {
+            switch (spType.vecsize) {
             case 2:		dataType = ShaderDataType::UInt2;   break;
             case 3:		dataType = ShaderDataType::UInt3;   break;
             case 4:		dataType = ShaderDataType::UInt4;   break;
@@ -94,8 +84,7 @@ namespace
             }
             break;
         case spirv_cross::SPIRType::Int64:
-            switch (spType.vecsize)
-            {
+            switch (spType.vecsize) {
             case 2:		dataType = ShaderDataType::Long2;   break;
             case 3:		dataType = ShaderDataType::Long3;   break;
             case 4:		dataType = ShaderDataType::Long4;   break;
@@ -103,8 +92,7 @@ namespace
             }
             break;
         case spirv_cross::SPIRType::UInt64:
-            switch (spType.vecsize)
-            {
+            switch (spType.vecsize) {
             case 2:		dataType = ShaderDataType::ULong2;  break;
             case 3:		dataType = ShaderDataType::ULong3;  break;
             case 4:		dataType = ShaderDataType::ULong4;  break;
@@ -112,11 +100,9 @@ namespace
             }
             break;
         case spirv_cross::SPIRType::Half:
-            switch (spType.vecsize)
-            {
+            switch (spType.vecsize) {
             case 2:
-                switch (spType.columns)
-                {
+                switch (spType.columns) {
                 case 2:     dataType = ShaderDataType::Half2x2; break;
                 case 3:     dataType = ShaderDataType::Half2x3; break;
                 case 4:     dataType = ShaderDataType::Half2x4; break;
@@ -124,8 +110,7 @@ namespace
                 }
                 break;
             case 3:
-                switch (spType.columns)
-                {
+                switch (spType.columns) {
                 case 2:     dataType = ShaderDataType::Half3x2; break;
                 case 3:     dataType = ShaderDataType::Half3x3; break;
                 case 4:     dataType = ShaderDataType::Half3x4; break;
@@ -133,8 +118,7 @@ namespace
                 }
                 break;
             case 4:
-                switch (spType.columns)
-                {
+                switch (spType.columns) {
                 case 2:     dataType = ShaderDataType::Half4x2; break;
                 case 3:     dataType = ShaderDataType::Half4x3; break;
                 case 4:     dataType = ShaderDataType::Half4x4; break;
@@ -146,11 +130,9 @@ namespace
             }
             break;
         case spirv_cross::SPIRType::Float:
-            switch (spType.vecsize)
-            {
+            switch (spType.vecsize) {
             case 2:
-                switch (spType.columns)
-                {
+                switch (spType.columns) {
                 case 2:     dataType = ShaderDataType::Float2x2;    break;
                 case 3:     dataType = ShaderDataType::Float2x3;    break;
                 case 4:     dataType = ShaderDataType::Float2x4;    break;
@@ -158,8 +140,7 @@ namespace
                 }
                 break;
             case 3:
-                switch (spType.columns)
-                {
+                switch (spType.columns) {
                 case 2:     dataType = ShaderDataType::Float3x2;    break;
                 case 3:     dataType = ShaderDataType::Float3x3;    break;
                 case 4:     dataType = ShaderDataType::Float3x4;    break;
@@ -167,8 +148,7 @@ namespace
                 }
                 break;
             case 4:
-                switch (spType.columns)
-                {
+                switch (spType.columns) {
                 case 2:     dataType = ShaderDataType::Float4x2;    break;
                 case 3:     dataType = ShaderDataType::Float4x3;    break;
                 case 4:     dataType = ShaderDataType::Float4x4;    break;
@@ -180,11 +160,9 @@ namespace
             }
             break;
         case spirv_cross::SPIRType::Double:
-            switch (spType.vecsize)
-            {
+            switch (spType.vecsize) {
             case 2:
-                switch (spType.columns)
-                {
+                switch (spType.columns) {
                 case 2:     dataType = ShaderDataType::Double2x2;   break;
                 case 3:     dataType = ShaderDataType::Double2x3;   break;
                 case 4:     dataType = ShaderDataType::Double2x4;   break;
@@ -192,8 +170,7 @@ namespace
                 }
                 break;
             case 3:
-                switch (spType.columns)
-                {
+                switch (spType.columns) {
                 case 2:     dataType = ShaderDataType::Double3x2;   break;
                 case 3:     dataType = ShaderDataType::Double3x3;   break;
                 case 4:     dataType = ShaderDataType::Double3x4;   break;
@@ -201,8 +178,7 @@ namespace
                 }
                 break;
             case 4:
-                switch (spType.columns)
-                {
+                switch (spType.columns) {
                 case 2:     dataType = ShaderDataType::Double4x2;   break;
                 case 3:     dataType = ShaderDataType::Double4x3;   break;
                 case 4:     dataType = ShaderDataType::Double4x4;   break;
@@ -222,25 +198,20 @@ namespace
 
 Shader::Shader()
     : _stage(ShaderStage::Unknown)
-    , _threadgroupSize({ 1, 1, 1 })
-{
+    , _threadgroupSize({ 1, 1, 1 }) {
 }
 
 Shader::Shader(const std::filesystem::path& path)
-    : Shader()
-{
+    : Shader() {
     std::ifstream fs(path, std::ifstream::binary | std::ifstream::in);
-    if (fs.good())
-    {
+    if (fs.good()) {
         std::vector<uint8_t> data((std::istreambuf_iterator<char>(fs)),
                                   std::istreambuf_iterator<char>());
-        if (data.empty() == false)
-        {
+        if (data.empty() == false) {
             auto words = data.size() / sizeof(uint32_t);
             auto ir = reinterpret_cast<const uint32_t*>(data.data());
             _data = std::vector<uint32_t>(&ir[0], &ir[words]);
-            if (compile() == false)
-            {
+            if (compile() == false) {
                 Log::error("shader compilation failed.");
                 _stage = ShaderStage::Unknown;
                 _data = {};
@@ -250,37 +221,30 @@ Shader::Shader(const std::filesystem::path& path)
 }
 
 Shader::Shader(const std::vector<uint32_t>& spv)
-    : Shader(spv.data(), spv.size())
-{
+    : Shader(spv.data(), spv.size()) {
 }
 
 Shader::Shader(const uint32_t* ir, size_t words)
-    : Shader()
-{
+    : Shader() {
     _data = std::vector<uint32_t>(&ir[0], &ir[words]);
-    if (compile() == false)
-    {
+    if (compile() == false) {
         Log::error("shader compilation failed.");
         _stage = ShaderStage::Unknown;
         _data = {};
     }
 }
 
-Shader::~Shader()
-{
+Shader::~Shader() {
 }
 
-bool Shader::compile()
-{
+bool Shader::compile() {
     if (_data.empty())
         return false;
 
-    try
-    {
+    try {
         spirv_cross::Compiler compiler(_data);
 
-        switch (spv::ExecutionModel exec = compiler.get_execution_model(); exec)
-        {
+        switch (spv::ExecutionModel exec = compiler.get_execution_model(); exec) {
         case spv::ExecutionModelVertex:
             this->_stage = ShaderStage::Vertex; break;
         case spv::ExecutionModelTessellationControl:
@@ -307,8 +271,7 @@ bool Shader::compile()
         this->_threadgroupSize = { 1,1,1 };
 
         // get thread group size
-        if (auto model = compiler.get_execution_model(); model == spv::ExecutionModelGLCompute)
-        {
+        if (auto model = compiler.get_execution_model(); model == spv::ExecutionModelGLCompute) {
             uint32_t localSizeX = compiler.get_execution_mode_argument(spv::ExecutionModeLocalSize, 0);
             uint32_t localSizeY = compiler.get_execution_mode_argument(spv::ExecutionModeLocalSize, 1);
             uint32_t localSizeZ = compiler.get_execution_mode_argument(spv::ExecutionModeLocalSize, 2);
@@ -332,17 +295,13 @@ bool Shader::compile()
             this->_threadgroupSize.z = std::max(localSizeZ, 1U);
         }
 
-        auto getStructMembers = [&compiler](const spirv_cross::SPIRType& spType)->std::vector<ShaderResourceStructMember>
-        {
-            struct StructMemberExtractor
-            {
+        auto getStructMembers = [&compiler](const spirv_cross::SPIRType& spType)->std::vector<ShaderResourceStructMember> {
+            struct StructMemberExtractor {
                 spirv_cross::Compiler& compiler;
-                auto operator () (const spirv_cross::SPIRType& spType) -> std::vector<ShaderResourceStructMember>
-                {
+                auto operator () (const spirv_cross::SPIRType& spType) -> std::vector<ShaderResourceStructMember> {
                     std::vector<ShaderResourceStructMember> members;
                     members.reserve(spType.member_types.size());
-                    for (uint32_t i = 0; i < spType.member_types.size(); ++i)
-                    {
+                    for (uint32_t i = 0; i < spType.member_types.size(); ++i) {
                         ShaderResourceStructMember member = {};
 
                         uint32_t type = spType.member_types[i];
@@ -358,8 +317,7 @@ bool Shader::compile()
                         member.size = (uint32_t)compiler.get_declared_struct_member_size(spType, i);
                         FVASSERT_THROW(member.size > 0);
 
-                        if (member.dataType == ShaderDataType::Struct)
-                        {
+                        if (member.dataType == ShaderDataType::Struct) {
                             member.members = StructMemberExtractor{ compiler }(memberType);
                             member.members.shrink_to_fit();
                         }
@@ -381,8 +339,7 @@ bool Shader::compile()
 
         auto active = compiler.get_active_interface_variables();
         uint32_t stage = static_cast<uint32_t>(this->_stage);
-        auto getResource = [&compiler, &active, stage, &getStructMembers](const spirv_cross::Resource& resource, ShaderResource::Access access)->ShaderResource
-        {
+        auto getResource = [&compiler, &active, stage, &getStructMembers](const spirv_cross::Resource& resource, ShaderResource::Access access)->ShaderResource {
             ShaderResource out = {};
             out.set = compiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
             out.binding = compiler.get_decoration(resource.id, spv::DecorationBinding);
@@ -410,8 +367,7 @@ bool Shader::compile()
                 return TextureTypeUnknown;
             };
 
-            switch (type.basetype)
-            {
+            switch (type.basetype) {
             case spirv_cross::SPIRType::Image:
                 out.type = ShaderResource::TypeTexture;
                 out.typeInfo.texture.dataType = ShaderDataType::Texture;
@@ -436,16 +392,14 @@ bool Shader::compile()
                 FVERROR_THROW("Not implemented");
             }
 
-            if (out.type == ShaderResource::TypeBuffer)
-            {
+            if (out.type == ShaderResource::TypeBuffer) {
                 out.members = getStructMembers(compiler.get_type(resource.base_type_id));
                 out.members.shrink_to_fit();
             }
             return out;
         };
 
-        auto getDescriptor = [&compiler](const spirv_cross::Resource& resource, ShaderDescriptorType type)->ShaderDescriptor
-        {
+        auto getDescriptor = [&compiler](const spirv_cross::Resource& resource, ShaderDescriptorType type)->ShaderDescriptor {
             ShaderDescriptor desc = {};
             desc.type = type;
             desc.set = compiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
@@ -455,8 +409,7 @@ bool Shader::compile()
 
             // get item count! (array size)
             desc.count = 1;
-            if (spType.array.size() > 0)
-            {
+            if (spType.array.size() > 0) {
                 for (auto i : spType.array)
                     desc.count *= i;
             }
@@ -467,56 +420,47 @@ bool Shader::compile()
         spirv_cross::ShaderResources resources = compiler.get_shader_resources();
         // https://github.com/KhronosGroup/SPIRV-Cross/wiki/Reflection-API-user-guide
         // uniform_buffers
-        for (const spirv_cross::Resource& resource : resources.uniform_buffers)
-        {
+        for (const spirv_cross::Resource& resource : resources.uniform_buffers) {
             this->_resources.push_back(getResource(resource, ShaderResource::AccessReadOnly));
             this->_descriptors.push_back(getDescriptor(resource, ShaderDescriptorType::UniformBuffer));
         }
         // storage_buffers
-        for (const spirv_cross::Resource& resource : resources.storage_buffers)
-        {
+        for (const spirv_cross::Resource& resource : resources.storage_buffers) {
             this->_resources.push_back(getResource(resource, ShaderResource::AccessReadWrite));
             this->_descriptors.push_back(getDescriptor(resource, ShaderDescriptorType::StorageBuffer));
         }
         // storage_images
-        for (const spirv_cross::Resource& resource : resources.storage_images)
-        {
+        for (const spirv_cross::Resource& resource : resources.storage_images) {
             const spirv_cross::SPIRType& spType = compiler.get_type_from_variable(resource.id);
             ShaderDescriptorType type = ShaderDescriptorType::StorageTexture;
-            if (spType.image.dim == spv::DimBuffer)
-            {
+            if (spType.image.dim == spv::DimBuffer) {
                 type = ShaderDescriptorType::StorageTexelBuffer;
             }
             this->_resources.push_back(getResource(resource, ShaderResource::AccessReadWrite));
             this->_descriptors.push_back(getDescriptor(resource, type));
         }
         // sampled_images (sampler2D)
-        for (const spirv_cross::Resource& resource : resources.sampled_images)
-        {
+        for (const spirv_cross::Resource& resource : resources.sampled_images) {
             this->_resources.push_back(getResource(resource, ShaderResource::AccessReadOnly));
             this->_descriptors.push_back(getDescriptor(resource, ShaderDescriptorType::TextureSampler));
         }
         // separate_images
-        for (const spirv_cross::Resource& resource : resources.separate_images)
-        {
+        for (const spirv_cross::Resource& resource : resources.separate_images) {
             const spirv_cross::SPIRType& spType = compiler.get_type_from_variable(resource.id);
             ShaderDescriptorType type = ShaderDescriptorType::Texture;
-            if (spType.image.dim == spv::DimBuffer)
-            {
+            if (spType.image.dim == spv::DimBuffer) {
                 type = ShaderDescriptorType::UniformTexelBuffer;
             }
             this->_resources.push_back(getResource(resource, ShaderResource::AccessReadOnly));
             this->_descriptors.push_back(getDescriptor(resource, type));
         }
         // separate_samplers
-        for (const spirv_cross::Resource& resource : resources.separate_samplers)
-        {
+        for (const spirv_cross::Resource& resource : resources.separate_samplers) {
             this->_resources.push_back(getResource(resource, ShaderResource::AccessReadOnly));
             this->_descriptors.push_back(getDescriptor(resource, ShaderDescriptorType::Sampler));
         }
 
-        auto getAttributes = [&compiler, &active](const spirv_cross::Resource& resource)->ShaderAttribute
-        {
+        auto getAttributes = [&compiler, &active](const spirv_cross::Resource& resource)->ShaderAttribute {
             uint32_t location = compiler.get_decoration(resource.id, spv::DecorationLocation);
             std::string name = "";
             if (resource.name.size() > 0)
@@ -531,8 +475,7 @@ bool Shader::compile()
 
             // get item count! (array size)
             uint32_t count = 1;
-            if (spType.array.size() > 0)
-            {
+            if (spType.array.size() > 0) {
                 for (auto i : spType.array)
                     count *= i;
             }
@@ -546,21 +489,18 @@ bool Shader::compile()
         };
         // stage inputs
         this->_inputAttributes.reserve(resources.stage_inputs.size());
-        for (const spirv_cross::Resource& resource : resources.stage_inputs)
-        {
+        for (const spirv_cross::Resource& resource : resources.stage_inputs) {
             this->_inputAttributes.push_back(getAttributes(resource));
         }
         // stage outputs
         this->_outputAttributes.reserve(resources.stage_outputs.size());
-        for (const spirv_cross::Resource& resource : resources.stage_outputs)
-        {
+        for (const spirv_cross::Resource& resource : resources.stage_outputs) {
             this->_outputAttributes.push_back(getAttributes(resource));
         }
 
         // pushConstant range.
         this->_pushConstantLayouts.reserve(resources.push_constant_buffers.size());
-        for (const spirv_cross::Resource& resource : resources.push_constant_buffers)
-        {
+        for (const spirv_cross::Resource& resource : resources.push_constant_buffers) {
             spirv_cross::SmallVector<spirv_cross::BufferRange> ranges = compiler.get_active_buffer_ranges(resource.id);
             if (ranges.empty())
                 continue;
@@ -568,8 +508,7 @@ bool Shader::compile()
             size_t pushConstantOffset = ranges[0].offset;
             size_t pushConstantSize = 0;
 
-            for (const spirv_cross::BufferRange& range : ranges)
-            {
+            for (const spirv_cross::BufferRange& range : ranges) {
                 pushConstantOffset = std::min(range.offset, pushConstantOffset);
                 pushConstantSize = std::max(range.offset + range.range, pushConstantSize);
             }
@@ -593,15 +532,13 @@ bool Shader::compile()
 
         // get module entry points
         spirv_cross::SmallVector<spirv_cross::EntryPoint> entryPoints = compiler.get_entry_points_and_stages();
-        for (const spirv_cross::EntryPoint& ep : entryPoints)
-        {
+        for (const spirv_cross::EntryPoint& ep : entryPoints) {
             this->_functions.push_back(ep.name);
         }
 
         // specialization constants
         spirv_cross::SmallVector<spirv_cross::SpecializationConstant> spConstants = compiler.get_specialization_constants();
-        for (const spirv_cross::SpecializationConstant& sc : spConstants)
-        {
+        for (const spirv_cross::SpecializationConstant& sc : spConstants) {
             auto spvID = sc.id;
             auto constantID = sc.constant_id;
             // 
@@ -609,17 +546,14 @@ bool Shader::compile()
 
         // sort bindings
         std::sort(this->_descriptors.begin(), this->_descriptors.end(),
-                  [](const auto& a, const auto& b)
-                  {
+                  [](const auto& a, const auto& b) {
                       if (a.set == b.set)
                           return a.binding < b.binding;
                       return a.set < b.set;
                   });
         std::sort(this->_resources.begin(), this->_resources.end(),
-                  [](const auto& a, const auto& b)
-                  {
-                      if (a.type == b.type)
-                      {
+                  [](const auto& a, const auto& b) {
+                      if (a.type == b.type) {
                           if (a.set == b.set)
                               return a.binding < b.binding;
                           return a.set < b.set;
@@ -627,13 +561,11 @@ bool Shader::compile()
                       return static_cast<int>(a.type) < static_cast<int>(b.type);
                   });
         std::sort(this->_inputAttributes.begin(), this->_inputAttributes.end(),
-                  [](const auto& a, const auto& b)
-                  {
+                  [](const auto& a, const auto& b) {
                       return a.location < b.location;
                   });
         std::sort(this->_outputAttributes.begin(), this->_outputAttributes.end(),
-                  [](const auto& a, const auto& b)
-                  {
+                  [](const auto& a, const auto& b) {
                       return a.location < b.location;
                   });
 
@@ -642,17 +574,11 @@ bool Shader::compile()
         this->_inputAttributes.shrink_to_fit();
         this->_outputAttributes.shrink_to_fit();
         return true;
-    }
-    catch (const spirv_cross::CompilerError& err)
-    {
+    } catch (const spirv_cross::CompilerError& err) {
         Log::error(std::format("Compiler error: {}", err.what()));
-    }
-    catch (const std::exception& err)
-    {
+    } catch (const std::exception& err) {
         Log::error(std::format("internal error: {}", err.what()));
-    }
-    catch (...)
-    {
+    } catch (...) {
         throw;
     }
 
@@ -667,12 +593,10 @@ bool Shader::compile()
     return false;
 }
 
-bool Shader::validate()
-{
+bool Shader::validate() {
     return isValid();
 }
 
-bool Shader::isValid() const
-{
+bool Shader::isValid() const {
     return _stage != ShaderStage::Unknown && _data.empty() == false;
 }

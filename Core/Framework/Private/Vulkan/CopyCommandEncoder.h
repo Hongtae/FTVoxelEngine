@@ -11,19 +11,15 @@
 #include "Semaphore.h"
 #include "TimelineSemaphore.h"
 
-namespace FV::Vulkan
-{
+namespace FV::Vulkan {
     class CommandBuffer;
-    class CopyCommandEncoder : public FV::CopyCommandEncoder
-    {
+    class CopyCommandEncoder : public FV::CopyCommandEncoder {
         class Encoder;
-        struct EncodingState
-        {
+        struct EncodingState {
             Encoder* encoder;
         };
         using EncoderCommand = std::function<void(VkCommandBuffer, EncodingState&)>;
-        class Encoder : public Vulkan::CommandEncoder
-        {
+        class Encoder : public Vulkan::CommandEncoder {
         public:
             Encoder(CommandBuffer*);
             ~Encoder();

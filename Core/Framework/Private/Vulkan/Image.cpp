@@ -15,8 +15,7 @@ Image::Image(std::shared_ptr<DeviceMemory> m, VkImage i, const VkImageCreateInfo
     , mipLevels(1)
     , arrayLayers(1)
     , usage(0)
-    , layoutInfo{ ci.initialLayout }
-{
+    , layoutInfo{ ci.initialLayout } {
     imageType = ci.imageType;
     format = ci.format;
     extent = ci.extent;
@@ -52,18 +51,15 @@ Image::Image(std::shared_ptr<GraphicsDevice> dev, VkImage img)
     , mipLevels(1)
     , arrayLayers(1)
     , usage(0)
-    , layoutInfo{ VK_IMAGE_LAYOUT_UNDEFINED }
-{
+    , layoutInfo{ VK_IMAGE_LAYOUT_UNDEFINED } {
     layoutInfo.accessMask = 0;
     layoutInfo.stageMaskBegin = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
     layoutInfo.stageMaskEnd = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
     layoutInfo.queueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 }
 
-Image::~Image()
-{
-    if (image)
-    {
+Image::~Image() {
+    if (image) {
         vkDestroyImage(gdevice->device, image, gdevice->allocationCallbacks());
     }
     deviceMemory = nullptr;
@@ -74,14 +70,12 @@ VkImageLayout Image::setLayout(VkImageLayout layout,
                                VkPipelineStageFlags stageBegin,
                                VkPipelineStageFlags stageEnd,
                                uint32_t queueFamilyIndex,
-                               VkCommandBuffer commandBuffer) const
-{
+                               VkCommandBuffer commandBuffer) const {
     FVASSERT_DEBUG(layout != VK_IMAGE_LAYOUT_UNDEFINED);
     FVASSERT_DEBUG(layout != VK_IMAGE_LAYOUT_PREINITIALIZED);
 
     std::scoped_lock guard(layoutLock);
-    if (commandBuffer)
-    {
+    if (commandBuffer) {
         VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
         barrier.srcAccessMask = layoutInfo.accessMask;
         barrier.dstAccessMask = accessMask;
@@ -94,8 +88,7 @@ VkImageLayout Image::setLayout(VkImageLayout layout,
         PixelFormat pixelFormat = this->pixelFormat();
         if (FV::isColorFormat(pixelFormat))
             barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        else
-        {
+        else {
             if (FV::isDepthFormat(pixelFormat))
                 barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
             if (FV::isStencilFormat(pixelFormat))
@@ -108,13 +101,11 @@ VkImageLayout Image::setLayout(VkImageLayout layout,
 
         VkPipelineStageFlags srcStageMask = layoutInfo.stageMaskEnd;
 
-        if (layoutInfo.queueFamilyIndex != queueFamilyIndex)
-        {
+        if (layoutInfo.queueFamilyIndex != queueFamilyIndex) {
             srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
             barrier.srcAccessMask = 0;
         }
-        if (srcStageMask == VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT)
-        {
+        if (srcStageMask == VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT) {
             srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
             barrier.srcAccessMask = 0;
         }
@@ -137,17 +128,14 @@ VkImageLayout Image::setLayout(VkImageLayout layout,
     return oldLayout;
 }
 
-VkImageLayout Image::layout() const
-{
+VkImageLayout Image::layout() const {
     std::scoped_lock guard(layoutLock);
     return layoutInfo.layout;
 }
 
-VkAccessFlags Image::commonLayoutAccessMask(VkImageLayout layout)
-{
+VkAccessFlags Image::commonLayoutAccessMask(VkImageLayout layout) {
     VkAccessFlags accessMask = 0;
-    switch (layout)
-    {
+    switch (layout) {
     case VK_IMAGE_LAYOUT_UNDEFINED:
         accessMask = 0;
         break;

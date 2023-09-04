@@ -7,29 +7,24 @@ using namespace FV::Vulkan;
 
 Semaphore::Semaphore(std::shared_ptr<GraphicsDevice> dev, VkSemaphore s)
     : device(dev)
-    , semaphore(s)
-{
+    , semaphore(s) {
 }
 
-Semaphore::~Semaphore()
-{
+Semaphore::~Semaphore() {
     vkDestroySemaphore(device->device, semaphore, device->allocationCallbacks());
 }
 
 AutoIncrementalTimelineSemaphore::AutoIncrementalTimelineSemaphore(std::shared_ptr<GraphicsDevice> dev, VkSemaphore s)
     : Semaphore(dev, s)
     , waitValue(0)
-    , signalValue(0)
-{
+    , signalValue(0) {
 }
 
-uint64_t AutoIncrementalTimelineSemaphore::nextWaitValue() const
-{
+uint64_t AutoIncrementalTimelineSemaphore::nextWaitValue() const {
     return waitValue.fetch_add(1, std::memory_order_relaxed);
 }
 
-uint64_t AutoIncrementalTimelineSemaphore::nextSignalValue() const
-{
+uint64_t AutoIncrementalTimelineSemaphore::nextSignalValue() const {
     return signalValue.fetch_add(1, std::memory_order_relaxed);
 }
 #endif //#if FVCORE_ENABLE_VULKAN

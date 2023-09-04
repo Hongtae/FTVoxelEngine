@@ -4,13 +4,10 @@
 #include <string>
 #include <filesystem>
 
-namespace FV
-{
-    class FVCORE_API Application
-    {
+namespace FV {
+    class FVCORE_API Application {
     public:
-        enum class EnvironmentPath
-        {
+        enum class EnvironmentPath {
             SystemRoot,			// system root. (boot volume on Windows)
             AppRoot,			// root directory of executable.
             AppResource,		// application resource directory.

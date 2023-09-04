@@ -3,10 +3,8 @@
 #include <unordered_map>
 #include <functional>
 
-namespace FV
-{
-    enum class MaterialSemantic
-    {
+namespace FV {
+    enum class MaterialSemantic {
         UserDefined,
         BaseColor,
         BaseColorTexture,
@@ -21,8 +19,7 @@ namespace FV
         EmissiveTexture,
     };
 
-    enum class ShaderUniformSemantic
-    {
+    enum class ShaderUniformSemantic {
         ModelMatrix,
         ViewMatrix,
         ProjectionMatrix,
@@ -38,8 +35,7 @@ namespace FV
         SpotLightColor,
     };
 
-    enum class VertexAttributeSemantic
-    {
+    enum class VertexAttributeSemantic {
         UserDefined,
         Position,
         Normal,
@@ -51,38 +47,30 @@ namespace FV
         BlendWeights,
     };
 
-    struct ShaderBindingLocation
-    {
+    struct ShaderBindingLocation {
         uint32_t set;
         uint32_t binding;
         uint32_t offset;
 
-        bool isPushConstant() const
-        {
+        bool isPushConstant() const {
             return set == uint32_t(-1) && binding == uint32_t(-1);
         }
-        static auto pushConstant(uint32_t offset) -> ShaderBindingLocation
-        {
+        static auto pushConstant(uint32_t offset) -> ShaderBindingLocation {
             return { uint32_t(-1), uint32_t(-1), offset };
         }
     };
 }
 
-namespace std
-{
-    template <> struct hash<FV::ShaderBindingLocation>
-    {
-        FORCEINLINE size_t _leftRotate(size_t x, int c) const
-        {
+namespace std {
+    template <> struct hash<FV::ShaderBindingLocation> {
+        FORCEINLINE size_t _leftRotate(size_t x, int c) const {
             return (((x) << (c)) | ((x) >> (sizeof(x) - (c))));
         }
         template <typename T>
-        inline size_t hash_combine(const T& val, size_t h) const
-        {
+        inline size_t hash_combine(const T& val, size_t h) const {
             return h ^ (_leftRotate(h, 5) + hash<T>{}(val));
         }
-        size_t operator()(const FV::ShaderBindingLocation& loc) const
-        {
+        size_t operator()(const FV::ShaderBindingLocation& loc) const {
             size_t s = 0x5be0cd19137e2179;
             s = hash_combine(loc.set, s);
             s = hash_combine(loc.binding, s);
@@ -90,18 +78,14 @@ namespace std
             return s;
         }
     };
-    template <> struct equal_to<FV::ShaderBindingLocation>
-    {
-        bool operator()(const FV::ShaderBindingLocation& a, const FV::ShaderBindingLocation& b) const
-        {
+    template <> struct equal_to<FV::ShaderBindingLocation> {
+        bool operator()(const FV::ShaderBindingLocation& a, const FV::ShaderBindingLocation& b) const {
             return a.set == b.set && a.binding == b.binding && a.offset == b.offset;
         }
     };
 
-    template <> struct formatter<FV::ShaderBindingLocation> : formatter<string>
-    {
-        auto format(const FV::ShaderBindingLocation& arg, format_context& ctx)
-        {
+    template <> struct formatter<FV::ShaderBindingLocation> : formatter<string> {
+        auto format(const FV::ShaderBindingLocation& arg, format_context& ctx) {
             std::string str;
             if (arg.isPushConstant())
                 str = std::format("pushConstant, offset:{}", arg.offset);

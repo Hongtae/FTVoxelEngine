@@ -4,10 +4,8 @@
 #include <unordered_map>
 #include "GraphicsDevice.h"
 
-namespace FV
-{
-    class FVCORE_API GraphicsDeviceContext
-    {
+namespace FV {
+    class FVCORE_API GraphicsDeviceContext {
     public:
         GraphicsDeviceContext(std::shared_ptr<GraphicsDevice>);
         ~GraphicsDeviceContext();

@@ -15,12 +15,10 @@ Logger::Logger()
     : console(nullptr)
     , allocatedConsole(false)
     , initTextAttrs(FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED)
-    , FV::Logger("Win32")
-{
+    , FV::Logger("Win32") {
     allocatedConsole = ::AllocConsole();
 
-    if (allocatedConsole)
-    {
+    if (allocatedConsole) {
         HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
         HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
         HANDLE hErr = GetStdHandle(STD_ERROR_HANDLE);
@@ -38,27 +36,21 @@ Logger::Logger()
         std::ios::sync_with_stdio();
 
         console = hOut;
-    }
-    else
-    {
+    } else {
         console = ::GetStdHandle(STD_OUTPUT_HANDLE);
     }
-    if (console)
-    {
+    if (console) {
         CONSOLE_SCREEN_BUFFER_INFO info;
         if (GetConsoleScreenBufferInfo(console, &info))
             initTextAttrs = info.wAttributes;
     }
 }
 
-Logger::~Logger()
-{
-    if (console)
-    {
+Logger::~Logger() {
+    if (console) {
         ::SetConsoleTextAttribute(console, initTextAttrs);
 
-        if (allocatedConsole)
-        {
+        if (allocatedConsole) {
             if (::IsDebuggerPresent() == false)
                 system("pause");
             //::FreeConsole();
@@ -66,12 +58,10 @@ Logger::~Logger()
     }
 }
 
-void Logger::log(Level level, const std::string& mesg) const
-{
+void Logger::log(Level level, const std::string& mesg) const {
     WORD attr;
     const char* header = "";
-    switch (level)
-    {
+    switch (level) {
     case Level::Debug:
         attr = FOREGROUND_GREEN;
         header = "D";
@@ -98,10 +88,10 @@ void Logger::log(Level level, const std::string& mesg) const
     }
 
     std::string mesg2 = std::format("[{:d}:{:d}/{}] {}",
-                                   (uint32_t)GetCurrentProcessId(),
-                                   (uint32_t)GetCurrentThreadId(),
-                                   header,
-                                   mesg);
+                                    (uint32_t)GetCurrentProcessId(),
+                                    (uint32_t)GetCurrentThreadId(),
+                                    header,
+                                    mesg);
 
     if (mesg2.ends_with("\n") == false)
         mesg2 += "\n";
@@ -111,16 +101,13 @@ void Logger::log(Level level, const std::string& mesg) const
     writeLog(attr, (const wchar_t*)ws.c_str());
 }
 
-void Logger::writeLog(WORD attr, const wchar_t* str) const
-{
-    if (console)
-    {
+void Logger::writeLog(WORD attr, const wchar_t* str) const {
+    if (console) {
         SetConsoleTextAttribute(console, attr);
         DWORD dwWritten = 0;
         WriteConsoleW(console, str, (DWORD)wcslen(str), &dwWritten, 0);
         return;
-    }
-    else
+    } else
         printf("%ls", str);
 }
 

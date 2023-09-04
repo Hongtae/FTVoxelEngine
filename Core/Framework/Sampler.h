@@ -2,31 +2,26 @@
 #include "../include.h"
 #include "DepthStencil.h"
 
-namespace FV
-{
-    enum class SamplerMinMagFilter
-    {
+namespace FV {
+    enum class SamplerMinMagFilter {
         Nearest,
         Linear
     };
 
-    enum class SamplerMipFilter
-    {
+    enum class SamplerMipFilter {
         NotMipmapped,
         Nearest,
         Linear
     };
 
-    enum class SamplerAddressMode
-    {
+    enum class SamplerAddressMode {
         ClampToEdge,
         Repeat,
         MirrorRepeat,
         ClampToZero
     };
 
-    struct SamplerDescriptor
-    {
+    struct SamplerDescriptor {
         using MinMagFilter = SamplerMinMagFilter;
         using MipFilter = SamplerMipFilter;
         using AddressMode = SamplerAddressMode;
@@ -51,8 +46,7 @@ namespace FV
     };
 
     class GraphicsDevice;
-    class SamplerState
-    {
+    class SamplerState {
     public:
         virtual ~SamplerState() {}
         virtual std::shared_ptr<GraphicsDevice> device() const = 0;

@@ -6,11 +6,9 @@
 #if FVCORE_ENABLE_VULKAN
 #include <vulkan/vulkan.h>
 
-namespace FV::Vulkan
-{
+namespace FV::Vulkan {
     class GraphicsDevice;
-    class Semaphore : public FV::GPUEvent
-    {
+    class Semaphore : public FV::GPUEvent {
     public:
         Semaphore(std::shared_ptr<GraphicsDevice>, VkSemaphore);
         ~Semaphore();
@@ -22,8 +20,7 @@ namespace FV::Vulkan
         virtual uint64_t nextSignalValue() const { return 0; }
     };
 
-    class AutoIncrementalTimelineSemaphore : public Semaphore
-    {
+    class AutoIncrementalTimelineSemaphore : public Semaphore {
         mutable std::atomic<uint64_t> waitValue;
         mutable std::atomic<uint64_t> signalValue;
 

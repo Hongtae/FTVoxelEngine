@@ -9,50 +9,41 @@
 using namespace FV::Vulkan;
 
 CopyCommandEncoder::Encoder::Encoder(CommandBuffer* cb)
-    : cbuffer(cb)
-{
+    : cbuffer(cb) {
     commands.reserve(InitialNumberOfCommands);
     setupCommands.reserve(InitialNumberOfCommands);
     cleanupCommands.reserve(InitialNumberOfCommands);
 }
 
-CopyCommandEncoder::Encoder::~Encoder()
-{
+CopyCommandEncoder::Encoder::~Encoder() {
 }
 
-bool CopyCommandEncoder::Encoder::encode(VkCommandBuffer commandBuffer)
-{
+bool CopyCommandEncoder::Encoder::encode(VkCommandBuffer commandBuffer) {
     // recording commands
     EncodingState state = { this };
-    for (EncoderCommand& cmd : setupCommands)
-    {
+    for (EncoderCommand& cmd : setupCommands) {
         cmd(commandBuffer, state);
     }
-    for (EncoderCommand& cmd : commands)
-    {
+    for (EncoderCommand& cmd : commands) {
         cmd(commandBuffer, state);
     }
-    for (EncoderCommand& cmd : cleanupCommands)
-    {
+    for (EncoderCommand& cmd : cleanupCommands) {
         cmd(commandBuffer, state);
     }
     return true;
 }
 
 CopyCommandEncoder::CopyCommandEncoder(std::shared_ptr<CommandBuffer> cb)
-    : cbuffer(cb)
-{
+    : cbuffer(cb) {
     encoder = std::make_shared<Encoder>(cb.get());
 }
 
-void CopyCommandEncoder::endEncoding()
-{
+void CopyCommandEncoder::endEncoding() {
     cbuffer->endEncoder(this, encoder);
     encoder = nullptr;
 }
 
-void CopyCommandEncoder::waitEvent(std::shared_ptr<FV::GPUEvent> event)
-{
+void CopyCommandEncoder::waitEvent(std::shared_ptr<FV::GPUEvent> event) {
     auto semaphore = std::dynamic_pointer_cast<Semaphore>(event);
     FVASSERT_DEBUG(semaphore);
 
@@ -62,8 +53,7 @@ void CopyCommandEncoder::waitEvent(std::shared_ptr<FV::GPUEvent> event)
     encoder->events.push_back(semaphore);
 }
 
-void CopyCommandEncoder::signalEvent(std::shared_ptr<FV::GPUEvent> event)
-{
+void CopyCommandEncoder::signalEvent(std::shared_ptr<FV::GPUEvent> event) {
     auto semaphore = std::dynamic_pointer_cast<Semaphore>(event);
     FVASSERT_DEBUG(semaphore);
 
@@ -71,8 +61,7 @@ void CopyCommandEncoder::signalEvent(std::shared_ptr<FV::GPUEvent> event)
     encoder->events.push_back(semaphore);
 }
 
-void CopyCommandEncoder::waitSemaphoreValue(std::shared_ptr<FV::GPUSemaphore> sema, uint64_t value)
-{
+void CopyCommandEncoder::waitSemaphoreValue(std::shared_ptr<FV::GPUSemaphore> sema, uint64_t value) {
     auto semaphore = std::dynamic_pointer_cast<TimelineSemaphore>(sema);
     FVASSERT_DEBUG(semaphore);
 
@@ -82,8 +71,7 @@ void CopyCommandEncoder::waitSemaphoreValue(std::shared_ptr<FV::GPUSemaphore> se
     encoder->semaphores.push_back(semaphore);
 }
 
-void CopyCommandEncoder::signalSemaphoreValue(std::shared_ptr<FV::GPUSemaphore> sema, uint64_t value)
-{
+void CopyCommandEncoder::signalSemaphoreValue(std::shared_ptr<FV::GPUSemaphore> sema, uint64_t value) {
     auto semaphore = std::dynamic_pointer_cast<TimelineSemaphore>(sema);
     FVASSERT_DEBUG(semaphore);
 
@@ -93,8 +81,7 @@ void CopyCommandEncoder::signalSemaphoreValue(std::shared_ptr<FV::GPUSemaphore> 
 
 void CopyCommandEncoder::copy(
     std::shared_ptr<FV::GPUBuffer> src, size_t srcOffset,
-    std::shared_ptr<FV::GPUBuffer> dst, size_t dstOffset, size_t size)
-{
+    std::shared_ptr<FV::GPUBuffer> dst, size_t dstOffset, size_t size) {
     auto srcView = std::dynamic_pointer_cast<BufferView>(src);
     auto dstView = std::dynamic_pointer_cast<BufferView>(dst);
     FVASSERT_DEBUG(srcView);
@@ -109,16 +96,14 @@ void CopyCommandEncoder::copy(
     size_t srcLength = srcBuffer->length();
     size_t dstLength = dstBuffer->length();
 
-    if (srcOffset + size > srcLength || dstOffset + size > dstLength)
-    {
+    if (srcOffset + size > srcLength || dstOffset + size > dstLength) {
         Log::error("CopyCommandEncoder::copy failed: Invalid buffer region");
         return;
     }
 
     VkBufferCopy region = { srcOffset, dstOffset, size };
 
-    EncoderCommand command = [=](VkCommandBuffer cbuffer, EncodingState& state) mutable
-    {
+    EncoderCommand command = [=](VkCommandBuffer cbuffer, EncodingState& state) mutable {
         vkCmdCopyBuffer(cbuffer,
                         srcBuffer->buffer,
                         dstBuffer->buffer,
@@ -132,8 +117,7 @@ void CopyCommandEncoder::copy(
 void CopyCommandEncoder::copy(
     std::shared_ptr<FV::GPUBuffer> src, const BufferImageOrigin& srcOffset,
     std::shared_ptr<FV::Texture> dst, const TextureOrigin& dstOffset,
-    const TextureSize& size)
-{
+    const TextureSize& size) {
     auto srcView = std::dynamic_pointer_cast<BufferView>(src);
     auto dstView = std::dynamic_pointer_cast<ImageView>(dst);
     FVASSERT_DEBUG(srcView);
@@ -155,13 +139,11 @@ void CopyCommandEncoder::copy(
 
     if (dstOffset.x + size.width > mipDimensions.width ||
         dstOffset.y + size.height > mipDimensions.height ||
-        dstOffset.z + size.depth > mipDimensions.depth)
-    {
+        dstOffset.z + size.depth > mipDimensions.depth) {
         Log::error("CopyCommandEncoder::copy failed: Invalid texture region");
         return;
     }
-    if (size.width > srcOffset.imageWidth || size.height > srcOffset.imageHeight)
-    {
+    if (size.width > srcOffset.imageWidth || size.height > srcOffset.imageHeight) {
         Log::error("CopyCommandEncoder::copy failed: Invalid buffer region");
         return;
     }
@@ -172,8 +154,7 @@ void CopyCommandEncoder::copy(
     FVASSERT_DEBUG(bytesPerPixel > 0);      // Unsupported texture format!
 
     size_t requiredBufferLengthForCopy = size_t(srcOffset.imageWidth) * size_t(srcOffset.imageHeight) * size.depth * bytesPerPixel + srcOffset.bufferOffset;
-    if (requiredBufferLengthForCopy > bufferLength)
-    {
+    if (requiredBufferLengthForCopy > bufferLength) {
         Log::error("CopyCommandEncoder::copy failed: buffer is too small!");
         return;
     }
@@ -186,8 +167,7 @@ void CopyCommandEncoder::copy(
     region.imageExtent = { size.width, size.height, size.depth };
     setupSubresource(dstOffset, 1, pixelFormat, region.imageSubresource);
 
-    EncoderCommand command = [=](VkCommandBuffer cbuffer, EncodingState& state) mutable
-    {
+    EncoderCommand command = [=](VkCommandBuffer cbuffer, EncodingState& state) mutable {
         image->setLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                          VK_ACCESS_TRANSFER_WRITE_BIT,
                          VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -210,8 +190,7 @@ void CopyCommandEncoder::copy(std::shared_ptr<FV::Texture> src,
                               const TextureOrigin& srcOffset,
                               std::shared_ptr<FV::GPUBuffer> dst,
                               const BufferImageOrigin& dstOffset,
-                              const TextureSize& size)
-{
+                              const TextureSize& size) {
     auto srcView = std::dynamic_pointer_cast<ImageView>(src);
     auto dstView = std::dynamic_pointer_cast<BufferView>(dst);
     FVASSERT_DEBUG(srcView);
@@ -233,13 +212,11 @@ void CopyCommandEncoder::copy(std::shared_ptr<FV::Texture> src,
 
     if (srcOffset.x + size.width > mipDimensions.width ||
         srcOffset.y + size.height > mipDimensions.height ||
-        srcOffset.z + size.depth > mipDimensions.depth)
-    {
+        srcOffset.z + size.depth > mipDimensions.depth) {
         Log::error("CopyCommandEncoder::copy failed: Invalid texture region");
         return;
     }
-    if (size.width > dstOffset.imageWidth || size.height > dstOffset.imageHeight)
-    {
+    if (size.width > dstOffset.imageWidth || size.height > dstOffset.imageHeight) {
         Log::error("CopyCommandEncoder::copy failed: Invalid buffer region");
         return;
     }
@@ -250,8 +227,7 @@ void CopyCommandEncoder::copy(std::shared_ptr<FV::Texture> src,
     FVASSERT_DEBUG(bytesPerPixel > 0);      // Unsupported texture format!
 
     size_t requiredBufferLengthForCopy = size_t(dstOffset.imageWidth) * size_t(dstOffset.imageHeight) * size.depth * bytesPerPixel + dstOffset.bufferOffset;
-    if (requiredBufferLengthForCopy > bufferLength)
-    {
+    if (requiredBufferLengthForCopy > bufferLength) {
         Log::error("CopyCommandEncoder::copy failed: buffer is too small!");
         return;
     }
@@ -264,8 +240,7 @@ void CopyCommandEncoder::copy(std::shared_ptr<FV::Texture> src,
     region.imageExtent = { size.width, size.height,size.depth };
     setupSubresource(srcOffset, 1, pixelFormat, region.imageSubresource);
 
-    EncoderCommand command = [=](VkCommandBuffer cbuffer, EncodingState& state) mutable
-    {
+    EncoderCommand command = [=](VkCommandBuffer cbuffer, EncodingState& state) mutable {
         image->setLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                          VK_ACCESS_TRANSFER_READ_BIT,
                          VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -288,8 +263,7 @@ void CopyCommandEncoder::copy(std::shared_ptr<FV::Texture> src,
                               const TextureOrigin& srcOffset,
                               std::shared_ptr<FV::Texture> dst,
                               const TextureOrigin& dstOffset,
-                              const TextureSize& size)
-{
+                              const TextureSize& size) {
     auto srcView = std::dynamic_pointer_cast<ImageView>(src);
     auto dstView = std::dynamic_pointer_cast<ImageView>(dst);
     FVASSERT_DEBUG(srcView);
@@ -314,15 +288,13 @@ void CopyCommandEncoder::copy(std::shared_ptr<FV::Texture> src,
 
     if (srcOffset.x + size.width > srcMipDimensions.width ||
         srcOffset.y + size.height > srcMipDimensions.height ||
-        srcOffset.z + size.depth > srcMipDimensions.depth)
-    {
+        srcOffset.z + size.depth > srcMipDimensions.depth) {
         Log::error("CopyCommandEncoder::copy failed: Invalid source texture region");
         return;
     }
     if (dstOffset.x + size.width > dstMipDimensions.width ||
         dstOffset.y + size.height > dstMipDimensions.height ||
-        dstOffset.z + size.depth > dstMipDimensions.depth)
-    {
+        dstOffset.z + size.depth > dstMipDimensions.depth) {
         Log::error("CopyCommandEncoder::copy failed: Invalid destination texture region");
         return;
     }
@@ -335,8 +307,7 @@ void CopyCommandEncoder::copy(std::shared_ptr<FV::Texture> src,
     FVASSERT_DEBUG(srcBytesPerPixel > 0);      // Unsupported texture format!
     FVASSERT_DEBUG(dstBytesPerPixel > 0);      // Unsupported texture format!
 
-    if (srcBytesPerPixel != dstBytesPerPixel)
-    {
+    if (srcBytesPerPixel != dstBytesPerPixel) {
         Log::error("CopyCommandEncoder::copy failed: Incompatible pixel formats");
         return;
     }
@@ -366,8 +337,7 @@ void CopyCommandEncoder::copy(std::shared_ptr<FV::Texture> src,
     imageMemoryBarriers[1].image = dstImage->image;
     setupSubresource(dstOffset, 1, 1, dstPixelFormat, imageMemoryBarriers[1].subresourceRange);
 
-    EncoderCommand command = [=](VkCommandBuffer cbuffer, EncodingState& state) mutable
-    {
+    EncoderCommand command = [=](VkCommandBuffer cbuffer, EncodingState& state) mutable {
         srcImage->setLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                             VK_ACCESS_TRANSFER_READ_BIT,
                             VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -395,16 +365,14 @@ void CopyCommandEncoder::copy(std::shared_ptr<FV::Texture> src,
 }
 
 void CopyCommandEncoder::fill(std::shared_ptr<FV::GPUBuffer> buffer,
-                              size_t offset, size_t length, uint8_t value)
-{
+                              size_t offset, size_t length, uint8_t value) {
     auto bufferView = std::dynamic_pointer_cast<BufferView>(buffer);
     FVASSERT_DEBUG(bufferView);
     auto& buf = bufferView->buffer;
     FVASSERT_DEBUG(buf && buf->buffer);
 
     size_t bufferLength = buf->length();
-    if (offset + length > bufferLength)
-    {
+    if (offset + length > bufferLength) {
         Log::error("CopyCommandEncoder::fill failed: Invalid buffer region");
         return;
     }
@@ -414,8 +382,7 @@ void CopyCommandEncoder::fill(std::shared_ptr<FV::GPUBuffer> buffer,
                      uint32_t(value) << 8 |
                      uint32_t(value));
 
-    EncoderCommand command = [=](VkCommandBuffer cbuffer, EncodingState& state) mutable
-    {
+    EncoderCommand command = [=](VkCommandBuffer cbuffer, EncodingState& state) mutable {
         vkCmdFillBuffer(cbuffer,
                         buf->buffer,
                         static_cast<VkDeviceSize>(offset),
@@ -429,12 +396,10 @@ void CopyCommandEncoder::fill(std::shared_ptr<FV::GPUBuffer> buffer,
 void CopyCommandEncoder::setupSubresource(const TextureOrigin& origin,
                                           uint32_t layerCount,
                                           PixelFormat pixelFormat,
-                                          VkImageSubresourceLayers& subresource)
-{
+                                          VkImageSubresourceLayers& subresource) {
     if (FV::isColorFormat(pixelFormat))
         subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    else
-    {
+    else {
         subresource.aspectMask = 0;
         if (FV::isDepthFormat(pixelFormat))
             subresource.aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -450,12 +415,10 @@ void CopyCommandEncoder::setupSubresource(const TextureOrigin& origin,
                                           uint32_t layerCount,
                                           uint32_t levelCount,
                                           PixelFormat pixelFormat,
-                                          VkImageSubresourceRange& subresource)
-{
+                                          VkImageSubresourceRange& subresource) {
     if (FV::isColorFormat(pixelFormat))
         subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    else
-    {
+    else {
         subresource.aspectMask = 0;
         if (FV::isDepthFormat(pixelFormat))
             subresource.aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;

@@ -5,26 +5,22 @@
 #include "Vector4.h"
 
 #pragma pack(push, 4)
-namespace FV
-{
+namespace FV {
     template <typename T,
-              typename = std::enable_if_t<std::is_floating_point_v<T>>>
-    inline constexpr T radianToDegree(T r)
-    {
+        typename = std::enable_if_t<std::is_floating_point_v<T>>>
+    inline constexpr T radianToDegree(T r) {
         return r * T(180.0 / std::numbers::pi);
     }
     template <typename T,
-              typename = std::enable_if_t<std::is_floating_point_v<T>>>
-    inline constexpr T degreeToRadian(T d)
-    {
+        typename = std::enable_if_t<std::is_floating_point_v<T>>>
+    inline constexpr T degreeToRadian(T d) {
         return d * T(std::numbers::pi / 180.0);
     }
 
     struct Vector3;
     struct Matrix3;
-    struct FVCORE_API Quaternion
-    {
-        Quaternion(): x(0), y(0), z(0), w(1) {}
+    struct FVCORE_API Quaternion {
+        Quaternion() : x(0), y(0), z(0), w(1) {}
         Quaternion(float _x, float _y, float _z, float _w)
             : x(_x), y(_y), z(_z), w(_w) {}
         Quaternion(const Vector3& axis, float angle);
@@ -76,8 +72,7 @@ namespace FV
 
         bool operator==(const Quaternion& v) const { return x == v.x && y == v.y && z == v.z && w == v.w; }
 
-        union
-        {
+        union {
             struct {
                 float x, y, z, w;
             };

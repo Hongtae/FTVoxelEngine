@@ -4,11 +4,9 @@
 #if FVCORE_ENABLE_VULKAN
 #include <vulkan/vulkan.h>
 
-namespace FV::Vulkan
-{
+namespace FV::Vulkan {
     class GraphicsDevice;
-    class TimelineSemaphore : public FV::GPUSemaphore
-    {
+    class TimelineSemaphore : public FV::GPUSemaphore {
     public:
         TimelineSemaphore(std::shared_ptr<GraphicsDevice>, VkSemaphore);
         ~TimelineSemaphore();

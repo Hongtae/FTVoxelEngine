@@ -6,14 +6,11 @@
 #include <vulkan/vulkan.h>
 #include "DescriptorPool.h"
 
-namespace FV::Vulkan
-{
+namespace FV::Vulkan {
     class GraphicsDevice;
-    class DescriptorPoolChain
-    {
+    class DescriptorPoolChain {
     public:
-        struct AllocationInfo
-        {
+        struct AllocationInfo {
             VkDescriptorSet descriptorSet;
             std::shared_ptr<DescriptorPool> descriptorPool;
         };
@@ -29,9 +26,9 @@ namespace FV::Vulkan
         const DescriptorPoolID poolID;
 
         size_t descriptorPoolCount() const { return descriptorPools.size(); }
-    
+
         std::shared_ptr<DescriptorPool> addNewPool(VkDescriptorPoolCreateFlags flags = 0);
-        
+
         std::vector<std::shared_ptr<DescriptorPool>> descriptorPools;
         uint32_t maxSets;
     };

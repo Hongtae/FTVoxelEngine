@@ -9,12 +9,10 @@
 #include "ImageView.h"
 #include "Sampler.h"
 
-namespace FV::Vulkan
-{
+namespace FV::Vulkan {
     class GraphicsDevice;
     class DescriptorPool;
-    class DescriptorSet
-    {
+    class DescriptorSet {
     public:
         DescriptorSet(std::shared_ptr<GraphicsDevice>, std::shared_ptr<DescriptorPool>, VkDescriptorSet);
         virtual ~DescriptorSet();
@@ -26,8 +24,7 @@ namespace FV::Vulkan
         using ImageLayoutMap = std::map<Image*, VkImageLayout>;
         using ImageViewLayoutMap = std::map<VkImageView, VkImageLayout>;
 
-        struct Binding
-        {
+        struct Binding {
             VkDescriptorSetLayoutBinding layoutBinding;
 
             // hold resource object ownership

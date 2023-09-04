@@ -19,17 +19,14 @@
 #undef min
 #undef max
 #endif
-namespace FV
-{
-    struct SceneState
-    {
+namespace FV {
+    struct SceneState {
         ViewTransform view;
         ProjectionTransform projection;
         Matrix4 model;
     };
 
-    struct AABB
-    {
+    struct AABB {
         Vector3 min = {
             std::numeric_limits<float>::max(),
             std::numeric_limits<float>::max(),
@@ -40,20 +37,17 @@ namespace FV
             -std::numeric_limits<float>::max(),
             -std::numeric_limits<float>::max()
         };
-        bool isValid() const 
-        {
+        bool isValid() const {
             return max.x > min.x && max.y > min.y && max.z > min.z;
         }
-        bool isPointInside(const Vector3& pt) const
-        {
+        bool isPointInside(const Vector3& pt) const {
             return pt.x >= min.x && pt.x <= max.x &&
                 pt.y >= min.y && pt.y <= max.y &&
                 pt.z >= min.z && pt.z <= max.z;
         }
     };
 
-    struct FVCORE_API SceneNode
-    {
+    struct FVCORE_API SceneNode {
         std::string name;
         std::optional<Mesh> mesh;
 
@@ -65,8 +59,7 @@ namespace FV
         void draw(RenderCommandEncoder*, const SceneState&) const;
     };
 
-    class FVCORE_API Scene
-    {
+    class FVCORE_API Scene {
     public:
         Scene();
         ~Scene();

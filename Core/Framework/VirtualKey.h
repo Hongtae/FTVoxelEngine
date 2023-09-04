@@ -1,10 +1,8 @@
 #pragma once
 #include "../include.h"
 
-namespace FV
-{
-    enum class VirtualKey : uint32_t
-    {
+namespace FV {
+    enum class VirtualKey : uint32_t {
         None = 0,
 
         Escape,

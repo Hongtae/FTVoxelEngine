@@ -4,10 +4,8 @@
 #include <string>
 #include <vector>
 
-namespace FV
-{
-    enum class ShaderDataType
-    {
+namespace FV {
+    enum class ShaderDataType {
         Unknown = -1,
         None = 0,
 
@@ -103,8 +101,7 @@ namespace FV
         Double4x4,
     };
 
-    struct ShaderDataTypeSize
-    {
+    struct ShaderDataTypeSize {
         uint32_t width;
         uint32_t rows;
         uint32_t columns;
@@ -112,14 +109,13 @@ namespace FV
         uint32_t Bytes() const noexcept { return width * rows * columns; }
 
         constexpr ShaderDataTypeSize(uint32_t w, uint32_t r, uint32_t c)
-            : width(w), rows(r), columns(c) {}
+            : width(w), rows(r), columns(c) {
+        }
 
         constexpr ShaderDataTypeSize(ShaderDataType type = ShaderDataType::None)
             : ShaderDataTypeSize(
-                [type]() constexpr -> ShaderDataTypeSize
-                {
-                    switch (type)
-                    {
+                [type]() constexpr -> ShaderDataTypeSize {
+                    switch (type) {
                     case ShaderDataType::None:
                     case ShaderDataType::Struct:
                     case ShaderDataType::Texture:
@@ -223,8 +219,7 @@ namespace FV
         }
     };
 
-    enum class ShaderStage
-    {
+    enum class ShaderStage {
         Unknown = 0,
         Vertex = 1U,
         TessellationControl = 1U << 1,
@@ -234,27 +229,23 @@ namespace FV
         Compute = 1U << 5,
     };
 
-    struct ShaderResourceBuffer
-    {
+    struct ShaderResourceBuffer {
         ShaderDataType dataType;
         uint32_t alignment;
         uint32_t size;
     };
 
-    struct ShaderResourceTexture
-    {
+    struct ShaderResourceTexture {
         ShaderDataType dataType;
         TextureType textureType;
     };
 
-    struct ShaderResourceThreadgroup
-    {
+    struct ShaderResourceThreadgroup {
         uint32_t alignment;
         uint32_t size;
     };
 
-    struct ShaderResourceStructMember
-    {
+    struct ShaderResourceStructMember {
         ShaderDataType dataType;
         std::string name;
         uint32_t offset;
@@ -265,17 +256,14 @@ namespace FV
         std::vector<ShaderResourceStructMember> members;
     };
 
-    struct ShaderResource
-    {
-        enum Type
-        {
+    struct ShaderResource {
+        enum Type {
             TypeBuffer,
             TypeTexture,
             TypeSampler,
             TypeTextureSampler, // texture and sampler (combined)
         };
-        enum Access
-        {
+        enum Access {
             AccessReadOnly,
             AccessWriteOnly,
             AccessReadWrite,
@@ -293,8 +281,7 @@ namespace FV
         bool enabled;
         Access access;
 
-        union
-        {
+        union {
             // only one of these is valid depending on the type.
             ShaderResourceBuffer buffer;
             ShaderResourceTexture texture;
@@ -305,8 +292,7 @@ namespace FV
         std::vector<ShaderResourceStructMember> members;
     };
 
-    struct ShaderPushConstantLayout
-    {
+    struct ShaderPushConstantLayout {
         std::string name;
         uint32_t offset;
         uint32_t size;

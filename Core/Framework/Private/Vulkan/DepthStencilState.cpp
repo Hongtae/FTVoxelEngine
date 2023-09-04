@@ -13,8 +13,7 @@ DepthStencilState::DepthStencilState(std::shared_ptr<GraphicsDevice> d)
     , depthBoundsTestEnable(VK_FALSE)
     , minDepthBounds(0.0)
     , maxDepthBounds(1.0)
-    , stencilTestEnable(VK_FALSE)
-{
+    , stencilTestEnable(VK_FALSE) {
     this->front = {
         VK_STENCIL_OP_KEEP,
         VK_STENCIL_OP_KEEP,
@@ -33,12 +32,10 @@ DepthStencilState::DepthStencilState(std::shared_ptr<GraphicsDevice> d)
         0 };
 }
 
-DepthStencilState::~DepthStencilState()
-{
+DepthStencilState::~DepthStencilState() {
 }
 
-void DepthStencilState::bind(VkCommandBuffer commandBuffer)
-{
+void DepthStencilState::bind(VkCommandBuffer commandBuffer) {
     vkCmdSetDepthTestEnable(commandBuffer, this->depthTestEnable);
     vkCmdSetStencilTestEnable(commandBuffer, this->stencilTestEnable);
     vkCmdSetDepthBoundsTestEnable(commandBuffer, this->depthBoundsTestEnable);
@@ -48,13 +45,11 @@ void DepthStencilState::bind(VkCommandBuffer commandBuffer)
     // VUID-vkCmdDraw-None-07844, VUID-vkCmdDrawIndexed-None-07844
     vkCmdSetDepthWriteEnable(commandBuffer, this->depthWriteEnable);
 
-    if (this->depthBoundsTestEnable != VK_FALSE)
-    {
+    if (this->depthBoundsTestEnable != VK_FALSE) {
         vkCmdSetDepthBounds(commandBuffer, this->minDepthBounds, this->maxDepthBounds);
     }
 
-    if (this->stencilTestEnable != VK_FALSE)
-    {
+    if (this->stencilTestEnable != VK_FALSE) {
         // front face stencil
         vkCmdSetStencilCompareMask(commandBuffer,
                                    VK_STENCIL_FACE_FRONT_BIT,
@@ -88,7 +83,7 @@ void DepthStencilState::bind(VkCommandBuffer commandBuffer)
 }
 
 std::shared_ptr<FV::GraphicsDevice> DepthStencilState::device() const {
-	return gdevice;
+    return gdevice;
 }
 
 #endif //#if FVCORE_ENABLE_VULKAN

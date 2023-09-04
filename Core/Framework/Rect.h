@@ -12,10 +12,8 @@
 #undef max
 #endif
 #pragma pack(push, 4)
-namespace FV
-{
-    struct FVCORE_API Point
-    {
+namespace FV {
+    struct FVCORE_API Point {
         float x, y;
 
         static const Point zero;
@@ -43,8 +41,7 @@ namespace FV
         Vector2 vector2() const { return { x, y }; }
     };
 
-    struct FVCORE_API Size
-    {
+    struct FVCORE_API Size {
         float width, height;
 
         static const Size zero;
@@ -72,8 +69,7 @@ namespace FV
         Vector2 vector2() const { return { width, height }; }
     };
 
-    struct FVCORE_API Rect
-    {
+    struct FVCORE_API Rect {
         Point origin;
         Size size;
 

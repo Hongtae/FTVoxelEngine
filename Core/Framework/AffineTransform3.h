@@ -5,28 +5,30 @@
 #include "Vector3.h"
 
 #pragma pack(push, 4)
-namespace FV
-{
+namespace FV {
     // 4x3 matrix for affine transform on 3 dimensional coordinates.
-    struct FVCORE_API AffineTransform3
-    {
+    struct FVCORE_API AffineTransform3 {
         AffineTransform3()
-            : matrix3(Matrix3::identity), translation(Vector3::zero) {}
+            : matrix3(Matrix3::identity), translation(Vector3::zero) {
+        }
         AffineTransform3(const Matrix3& m, const Vector3& t = Vector3::zero)
-            : matrix3(m), translation(t) {}
+            : matrix3(m), translation(t) {
+        }
         AffineTransform3(const Vector3& t)
-            : matrix3(Matrix3::identity), translation(t) {}
+            : matrix3(Matrix3::identity), translation(t) {
+        }
         AffineTransform3(const Vector3& axisX,
-                         const Vector3& axisY, 
+                         const Vector3& axisY,
                          const Vector3& axisZ,
                          const Vector3& origin = Vector3::zero)
-            : matrix3(axisX, axisY, axisZ), translation(origin) {}
+            : matrix3(axisX, axisY, axisZ), translation(origin) {
+        }
         explicit AffineTransform3(const Matrix4& m)
             : matrix3(m._11, m._12, m._13,
                       m._21, m._22, m._23,
                       m._31, m._32, m._33)
-            , translation(m._41, m._42, m._43)
-        {}
+            , translation(m._41, m._42, m._43) {
+        }
 
         Matrix3 matrix3;
         Vector3 translation;

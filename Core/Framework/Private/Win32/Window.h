@@ -7,10 +7,8 @@
 #ifdef _WIN32
 #include <Windows.h>
 
-namespace FV::Win32
-{
-    class Window : public FV::Window, public std::enable_shared_from_this<Window>
-    {
+namespace FV::Win32 {
+    class Window : public FV::Window, public std::enable_shared_from_this<Window> {
     public:
         Window(const std::u8string& name, Style style, const WindowCallback& callback);
         ~Window();

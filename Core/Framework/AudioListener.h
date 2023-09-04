@@ -3,11 +3,9 @@
 #include "Vector3.h"
 #include "Matrix3.h"
 
-namespace FV
-{
+namespace FV {
     class AudioDevice;
-    class FVCORE_API AudioListener
-    {
+    class FVCORE_API AudioListener {
     public:
         AudioListener(std::shared_ptr<AudioDevice>);
         ~AudioListener();

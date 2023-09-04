@@ -10,11 +10,9 @@
 
 using namespace FV;
 
-std::vector<AudioDevice::DeviceInfo> AudioDevice::availableDevices()
-{
+std::vector<AudioDevice::DeviceInfo> AudioDevice::availableDevices() {
     std::vector<DeviceInfo> deviceList;
-    if (alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT") == AL_TRUE)
-    {
+    if (alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT") == AL_TRUE) {
         // defaultDeviceName contains the name of the default device 
         std::string defaultDeviceName = alcGetString(nullptr, ALC_DEFAULT_DEVICE_SPECIFIER);
 
@@ -22,11 +20,9 @@ std::vector<AudioDevice::DeviceInfo> AudioDevice::availableDevices()
         const char* devices = (char*)alcGetString(nullptr, ALC_DEVICE_SPECIFIER);
         // devices contains the device names, separated by NULL  
         // and terminated by two consecutive NULLs. 
-        while (*devices != 0)
-        {
+        while (*devices != 0) {
             ALCdevice* device = alcOpenDevice(devices);
-            if (device)
-            {
+            if (device) {
                 DeviceInfo info = {};
                 info.name = alcGetString(device, ALC_DEVICE_SPECIFIER);
 
@@ -53,8 +49,7 @@ std::vector<AudioDevice::DeviceInfo> AudioDevice::availableDevices()
 
 AudioDevice::AudioDevice(const std::string& deviceName)
     : device(nullptr), context(nullptr)
-    , majorVersion(0), minorVersion(0)
-{
+    , majorVersion(0), minorVersion(0) {
     ALCdevice* device = alcOpenDevice(deviceName.c_str());
     FVASSERT_THROW(device != nullptr);
 
@@ -99,8 +94,7 @@ AudioDevice::AudioDevice(const std::string& deviceName)
     formatTable[BitsChannels{32, 8}.value] = alGetEnumValue("AL_FORMAT_71CHN32");
 }
 
-AudioDevice::~AudioDevice()
-{
+AudioDevice::~AudioDevice() {
     if (alcGetCurrentContext() == context)
         alcMakeContextCurrent(nullptr);
     if (context)
@@ -109,21 +103,20 @@ AudioDevice::~AudioDevice()
         alcCloseDevice((ALCdevice*)device);
 }
 
-uint32_t AudioDevice::format(uint16_t bits, uint16_t channels) const
-{
+uint32_t AudioDevice::format(uint16_t bits, uint16_t channels) const {
     BitsChannels bc = { bits, channels };
     if (auto it = formatTable.find(bc.value); it != formatTable.end())
         return it->second;
     return 0;
 }
 
-std::shared_ptr<AudioSource> AudioDevice::makeSource()
-{
+std::shared_ptr<AudioSource> AudioDevice::makeSource() {
     ALuint sourceID = 0;
     alGenSources(1, &sourceID);
     alSourcei(sourceID, AL_LOOPING, 0);
     alSourcei(sourceID, AL_BUFFER, 0);
     alSourceStop(sourceID);
 
-    return std::make_shared<AudioSource>(shared_from_this(), (uint32_t)sourceID);
+    return std::make_shared<AudioSource>(shared_from_this(),
+                                         (uint32_t)sourceID);
 }

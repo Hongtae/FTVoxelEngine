@@ -8,11 +8,9 @@
 using namespace FV::Vulkan;
 
 ShaderModule::ShaderModule(std::shared_ptr<GraphicsDevice> d, VkShaderModule m, const FV::Shader& s)
-	: gdevice(d)
-	, module(m)
-{
-    switch (s.stage())
-    {
+    : gdevice(d)
+    , module(m) {
+    switch (s.stage()) {
     case ShaderStage::Vertex:
         stage = VK_SHADER_STAGE_VERTEX_BIT;
         break;
@@ -43,44 +41,35 @@ ShaderModule::ShaderModule(std::shared_ptr<GraphicsDevice> d, VkShaderModule m, 
     resources = s.resources();
 }
 
-ShaderModule::~ShaderModule()
-{
-	vkDestroyShaderModule(gdevice->device, module, gdevice->allocationCallbacks());
+ShaderModule::~ShaderModule() {
+    vkDestroyShaderModule(gdevice->device, module, gdevice->allocationCallbacks());
 }
 
-std::shared_ptr<FV::ShaderFunction> ShaderModule::makeFunction(const std::string& name)
-{
+std::shared_ptr<FV::ShaderFunction> ShaderModule::makeFunction(const std::string& name) {
     if (auto it = std::find_if(fnNames.begin(), fnNames.end(),
-                               [&](const std::string& fn)
-                               {
+                               [&](const std::string& fn) {
                                    return fn.compare(name) == 0;
-                               }); it != fnNames.end())
-    {
+                               }); it != fnNames.end()) {
         return std::make_shared<ShaderFunction>(shared_from_this(), name, nullptr, 0);
     }
     return nullptr;
 }
 
-std::shared_ptr<FV::ShaderFunction> ShaderModule::makeSpecializedFunction(const std::string& name, const ShaderSpecialization* values, size_t numValues)
-{
-	if (values && numValues > 0)
-	{
-		// TODO: verify values with SPIR-V Cross reflection
+std::shared_ptr<FV::ShaderFunction> ShaderModule::makeSpecializedFunction(const std::string& name, const ShaderSpecialization* values, size_t numValues) {
+    if (values && numValues > 0) {
+        // TODO: verify values with SPIR-V Cross reflection
 
         if (auto it = std::find_if(fnNames.begin(), fnNames.end(),
-                                   [&](const std::string& fn)
-                                   {
+                                   [&](const std::string& fn) {
                                        return fn.compare(name) == 0;
-                                   }); it != fnNames.end())
-        {
+                                   }); it != fnNames.end()) {
             return std::make_shared<ShaderFunction>(shared_from_this(), name, values, numValues);
         }
-	}
-	return nullptr;
+    }
+    return nullptr;
 }
 
-std::shared_ptr<FV::GraphicsDevice> ShaderModule::device() const
-{
+std::shared_ptr<FV::GraphicsDevice> ShaderModule::device() const {
     return gdevice;
 }
 

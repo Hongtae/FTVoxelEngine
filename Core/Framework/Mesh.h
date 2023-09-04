@@ -9,23 +9,19 @@
 #include "VertexDescriptor.h"
 #include "GraphicsDeviceContext.h"
 
-namespace FV
-{
+namespace FV {
     struct SceneState;
 
-    struct FVCORE_API Submesh
-    {
+    struct FVCORE_API Submesh {
         std::shared_ptr<Material> material;
 
-        struct VertexAttribute
-        {
+        struct VertexAttribute {
             VertexAttributeSemantic semantic;
             VertexFormat format;
             uint32_t offset;
             std::string name; /* optional */
         };
-        struct VertexBuffer
-        {
+        struct VertexBuffer {
             uint32_t byteOffset;
             uint32_t byteStride;
             uint32_t vertexCount;
@@ -45,8 +41,7 @@ namespace FV
 
         VertexDescriptor vertexDescriptor() const;
 
-        enum class BufferUsagePolicy
-        {
+        enum class BufferUsagePolicy {
             UseExternalBufferManually = 0,
             SingleBuffer,
             SingleBufferPerSet,
@@ -67,19 +62,16 @@ namespace FV
                                           std::function<bool(const void* data, VertexFormat format, uint32_t index)> handler) const;
 
     private:
-        struct ResourceBinding
-        {
+        struct ResourceBinding {
             ShaderResource resource;    // from spir-v
             ShaderBinding binding;      // from descriptor-set layout
         };
-        struct ResourceBindingSet
-        {
+        struct ResourceBindingSet {
             uint32_t index; // binding-set
             std::shared_ptr<ShaderBindingSet> bindingSet;
             std::vector<ResourceBinding> resources;
         };
-        struct PushConstantData
-        {
+        struct PushConstantData {
             ShaderPushConstantLayout layout;
             std::vector<uint8_t> data;
         };
@@ -90,8 +82,7 @@ namespace FV
         std::vector<ResourceBindingSet> resourceBindings;
         std::vector<PushConstantData> pushConstants;
 
-        struct BufferResource
-        {
+        struct BufferResource {
             std::string name;
             std::vector<ShaderBindingSet::BufferInfo> buffers;
         };
@@ -106,8 +97,7 @@ namespace FV
         uint32_t bindShaderUniformBuffer(ShaderUniformSemantic semantic, ShaderDataType type, const std::string& name, const SceneState&, uint8_t* buffer, size_t length) const;
     };
 
-    struct FVCORE_API Mesh
-    {
+    struct FVCORE_API Mesh {
         std::string name;
         std::vector<Submesh> submeshes; // primitives
 

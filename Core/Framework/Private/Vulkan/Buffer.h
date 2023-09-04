@@ -7,11 +7,9 @@
 #include <vulkan/vulkan.h>
 #include "DeviceMemory.h"
 
-namespace FV::Vulkan
-{
+namespace FV::Vulkan {
     class GraphicsDevice;
-    class Buffer : public std::enable_shared_from_this<Buffer>
-    {
+    class Buffer : public std::enable_shared_from_this<Buffer> {
     public:
         Buffer(std::shared_ptr<DeviceMemory>, VkBuffer, const VkBufferCreateInfo&);
         Buffer(std::shared_ptr<GraphicsDevice>, VkBuffer);

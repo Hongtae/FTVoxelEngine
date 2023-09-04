@@ -21,10 +21,8 @@
 #include "MaterialSemantics.h"
 
 
-namespace FV
-{
-    struct MaterialProperty
-    {
+namespace FV {
+    struct MaterialProperty {
         MaterialSemantic semantic;
 
         using Buffer = std::vector<char8_t>; // ShaderDataType::Struct
@@ -40,15 +38,14 @@ namespace FV
         using FloatArray = std::vector<float>;
         using DoubleArray = std::vector<double>;
 
-        struct CombinedTextureSampler
-        {
+        struct CombinedTextureSampler {
             std::shared_ptr<Texture> texture;
             std::shared_ptr<SamplerState> sampler;
         };
         using TextureArray = std::vector<std::shared_ptr<Texture>>;
         using SamplerArray = std::vector<std::shared_ptr<SamplerState>>;
         using CombinedTextureSamplerArray = std::vector<CombinedTextureSampler>;
-        
+
         std::variant<std::monostate,
             Buffer,
             Int8Array,
@@ -65,55 +62,71 @@ namespace FV
 
         template <typename T, size_t Length>
         constexpr MaterialProperty(MaterialSemantic s, const T(&v)[Length])
-            : semantic(s), value(std::vector<T>(&v[0], &v[Length])) {}
+            : semantic(s), value(std::vector<T>(&v[0], &v[Length])) {
+        }
         template <typename T>
         constexpr MaterialProperty(MaterialSemantic s, const T* v, size_t len)
-            : semantic(s), value(std::vector<T>(&v[0], &v[len])) {}
+            : semantic(s), value(std::vector<T>(&v[0], &v[len])) {
+        }
         template <typename InputIt>
         constexpr MaterialProperty(MaterialSemantic s, InputIt first, InputIt last)
-            : semantic(s), value(first, last) {}
+            : semantic(s), value(first, last) {
+        }
         template <typename T>
         constexpr MaterialProperty(MaterialSemantic s, const std::vector<T>& vector)
-            : semantic(s), value(vector) {}
+            : semantic(s), value(vector) {
+        }
 
         MaterialProperty(MaterialSemantic s, const void* data, size_t len)
-            : MaterialProperty(s, (const char8_t*)data, len) {}
+            : MaterialProperty(s, (const char8_t*)data, len) {
+        }
         MaterialProperty(MaterialSemantic s, std::shared_ptr<Texture> texture)
-            : MaterialProperty(s, &texture, 1) {}
+            : MaterialProperty(s, &texture, 1) {
+        }
         MaterialProperty(MaterialSemantic s, std::shared_ptr<SamplerState> sampler)
-            : MaterialProperty(s, &sampler, 1) {}
+            : MaterialProperty(s, &sampler, 1) {
+        }
         MaterialProperty(MaterialSemantic s, const CombinedTextureSampler& textureSampler)
-            : MaterialProperty(s, &textureSampler, 1) {}
+            : MaterialProperty(s, &textureSampler, 1) {
+        }
 
         MaterialProperty(MaterialSemantic s, float v)
-            : MaterialProperty(s, &v, 1) {}
+            : MaterialProperty(s, &v, 1) {
+        }
         MaterialProperty(MaterialSemantic s, const Vector2& v)
-            : MaterialProperty(s, v.val) {}
+            : MaterialProperty(s, v.val) {
+        }
         MaterialProperty(MaterialSemantic s, const Vector3& v)
-            : MaterialProperty(s, v.val) {}
+            : MaterialProperty(s, v.val) {
+        }
         MaterialProperty(MaterialSemantic s, const Vector4& v)
-            : MaterialProperty(s, v.val) {}
+            : MaterialProperty(s, v.val) {
+        }
         MaterialProperty(MaterialSemantic s, const Color& v)
-            : MaterialProperty(s, v.val) {}
+            : MaterialProperty(s, v.val) {
+        }
         MaterialProperty(MaterialSemantic s, const Quaternion& v)
-            : MaterialProperty(s, v.val) {}
+            : MaterialProperty(s, v.val) {
+        }
         MaterialProperty(MaterialSemantic s, const Matrix2& v)
-            : MaterialProperty(s, v.val) {}
+            : MaterialProperty(s, v.val) {
+        }
         MaterialProperty(MaterialSemantic s, const Matrix3& v)
-            : MaterialProperty(s, v.val) {}
+            : MaterialProperty(s, v.val) {
+        }
         MaterialProperty(MaterialSemantic s, const Matrix4& v)
-            : MaterialProperty(s, v.val) {}
+            : MaterialProperty(s, v.val) {
+        }
 
         MaterialProperty()
-            : semantic(MaterialSemantic::UserDefined), value(std::monostate{}) {}
+            : semantic(MaterialSemantic::UserDefined), value(std::monostate{}) {
+        }
     };
 
-    struct MaterialShaderMap
-    {
+    struct MaterialShaderMap {
         using BindingLocation = ShaderBindingLocation;
 
-        struct Function
-        {
+        struct Function {
             std::shared_ptr<ShaderFunction> function;
             std::vector<ShaderDescriptor> descriptors;
         };
@@ -123,10 +136,8 @@ namespace FV
         std::unordered_map<BindingLocation, Semantic> resourceSemantics;
         std::unordered_map<uint32_t, VertexAttributeSemantic> inputAttributeSemantics;
 
-        std::shared_ptr<ShaderFunction> function(ShaderStage stage) const
-        {
-            for (auto& fn : functions)
-            {
+        std::shared_ptr<ShaderFunction> function(ShaderStage stage) const {
+            for (auto& fn : functions) {
                 if (fn.function && fn.function->stage() == stage)
                     return fn.function;
             }
@@ -134,16 +145,12 @@ namespace FV
         }
 
         std::optional<ShaderDescriptor> descriptor(BindingLocation location,
-                                                   uint32_t stages) const
-        {
-            for (auto& fn : functions)
-            {
+                                                   uint32_t stages) const {
+            for (auto& fn : functions) {
                 if (fn.function == nullptr)
                     continue;
-                if (uint32_t(fn.function->stage()) & stages)
-                {
-                    for (auto& descriptor : fn.descriptors)
-                    {
+                if (uint32_t(fn.function->stage()) & stages) {
+                    for (auto& descriptor : fn.descriptors) {
                         if (descriptor.set == location.set &&
                             descriptor.binding == location.binding)
                             return descriptor;
@@ -154,35 +161,29 @@ namespace FV
         }
     };
 
-    struct Material
-    {
+    struct Material {
         using Semantic = MaterialSemantic;
         using Property = MaterialProperty;
         using ShaderMap = MaterialShaderMap;
         using BindingLocation = ShaderBindingLocation;
 
-        void setProperty(const Property& prop)
-        {
+        void setProperty(const Property& prop) {
             properties[prop.semantic] = prop;
         }
         template <typename... Args>
-        constexpr void setProperty(Semantic semantic, Args&&... args)
-        {
+        constexpr void setProperty(Semantic semantic, Args&&... args) {
             properties[semantic] = Property(semantic, std::forward<Args>(args)...);
         }
-        void setProperty(const BindingLocation& loc, const Property& prop)
-        {
+        void setProperty(const BindingLocation& loc, const Property& prop) {
             userDefinedProperties[loc] = prop;
         }
         template <typename... Args>
-        constexpr void setProperty(const BindingLocation& loc, Args&&... args)
-        {
+        constexpr void setProperty(const BindingLocation& loc, Args&&... args) {
             userDefinedProperties[loc] = Property(Semantic::UserDefined, std::forward<Args>(args)...);
         }
 
         std::string name;
-        struct RenderPassAttachment
-        {
+        struct RenderPassAttachment {
             PixelFormat format;
             BlendState blendState;
         };

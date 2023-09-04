@@ -3,10 +3,8 @@
 #include <istream>
 #include <ostream>
 
-namespace FV
-{
-    enum class CompressionAlgorithm
-    {
+namespace FV {
+    enum class CompressionAlgorithm {
         Zlib,
         Zstd,
         Lz4,
@@ -14,8 +12,7 @@ namespace FV
         Automatic, // Default method for compression, Auto-detected method for decompression.
     };
 
-    struct FVCORE_API CompressionMethod
-    {
+    struct FVCORE_API CompressionMethod {
         CompressionAlgorithm algorithm;
         int level;
 
@@ -26,8 +23,7 @@ namespace FV
         static const CompressionMethod automatic;
     };
 
-    enum class CompressionResult
-    {
+    enum class CompressionResult {
         Success = 0,
         UnknownError,
         OutOfMemory,
@@ -41,4 +37,3 @@ namespace FV
     CompressionResult FVCORE_API compress(std::istream& input, std::ostream&, CompressionMethod method = CompressionMethod::automatic, size_t inputBytes = size_t(-1));
     CompressionResult FVCORE_API decompress(std::istream& input, std::ostream&, CompressionAlgorithm algorithm = CompressionAlgorithm::Automatic);
 }
-

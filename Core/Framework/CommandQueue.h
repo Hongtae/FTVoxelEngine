@@ -5,15 +5,12 @@
 #include "CommandBuffer.h"
 #include "SwapChain.h"
 
-namespace FV
-{
+namespace FV {
     class Window;
     class GraphicsDevice;
-    class CommandQueue
-    {
+    class CommandQueue {
     public:
-        enum TypeFlags : uint32_t
-        {
+        enum TypeFlags : uint32_t {
             Copy = 0,
             Render = 1,
             Compute = 1 << 1,
@@ -28,8 +25,7 @@ namespace FV
         virtual std::shared_ptr<GraphicsDevice> device() const = 0;
     };
 
-    inline std::shared_ptr<GraphicsDevice> CommandBuffer::device() const
-    {
+    inline std::shared_ptr<GraphicsDevice> CommandBuffer::device() const {
         return queue()->device();
     }
 }

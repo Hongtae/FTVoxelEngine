@@ -1,13 +1,11 @@
 #pragma once
 #include "../include.h"
 
-namespace FV
-{
+namespace FV {
     class GPUEvent;
     class GPUSemaphore;
     class CommandBuffer;
-    class CommandEncoder
-    {
+    class CommandEncoder {
     public:
         virtual ~CommandEncoder() {}
 

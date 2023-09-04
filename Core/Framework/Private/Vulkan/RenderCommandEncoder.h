@@ -11,13 +11,10 @@
 #include "Semaphore.h"
 #include "TimelineSemaphore.h"
 
-namespace FV::Vulkan
-{
-    class RenderCommandEncoder : public FV::RenderCommandEncoder
-    {
+namespace FV::Vulkan {
+    class RenderCommandEncoder : public FV::RenderCommandEncoder {
         class Encoder;
-        struct EncodingState
-        {
+        struct EncodingState {
             Encoder* encoder;
             RenderPipelineState* pipelineState;
             DepthStencilState* depthStencilState;
@@ -25,8 +22,7 @@ namespace FV::Vulkan
             DescriptorSet::ImageViewLayoutMap imageViewLayoutMap;
         };
         using EncoderCommand = std::function<void(VkCommandBuffer, EncodingState&)>;
-        class Encoder : public Vulkan::CommandEncoder
-        {
+        class Encoder : public Vulkan::CommandEncoder {
         public:
             Encoder(class CommandBuffer*, const RenderPassDescriptor& desc);
             ~Encoder();

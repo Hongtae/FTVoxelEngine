@@ -4,11 +4,9 @@
 #include "PixelFormat.h"
 #include "GPUResource.h"
 
-namespace FV
-{
+namespace FV {
     class CommandQueue;
-    class SwapChain
-    {
+    class SwapChain {
     public:
         virtual ~SwapChain() {}
 

@@ -6,10 +6,8 @@
 #ifdef _WIN32
 #include <Windows.h>
 
-namespace FV::Win32
-{
-    class DropTarget : public IDropTarget
-    {
+namespace FV::Win32 {
+    class DropTarget : public IDropTarget {
     public:
         DropTarget(Window* target);
         ~DropTarget();

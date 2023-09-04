@@ -5,8 +5,7 @@
 #include "../../Application.h"
 
 #ifdef _WIN32
-namespace FV::Win32
-{
+namespace FV::Win32 {
     int runApplication(Application*);
     void terminateApplication(int exitCode);
 

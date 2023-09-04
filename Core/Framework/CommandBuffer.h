@@ -5,15 +5,12 @@
 #include "ComputeCommandEncoder.h"
 #include "CopyCommandEncoder.h"
 
-namespace FV
-{
+namespace FV {
     class GraphicsDevice;
     class CommandQueue;
-    class CommandBuffer
-    {
+    class CommandBuffer {
     public:
-        enum class Status
-        {
+        enum class Status {
             NotEnqueued = 0,
             Enqueued,
             Committed,
@@ -30,7 +27,7 @@ namespace FV
 
         /// Registers one or more callback functions.
         /// However, registered functions can be called from other threads.
-        virtual void addCompletedHandler(std::function<void ()>) = 0;
+        virtual void addCompletedHandler(std::function<void()>) = 0;
         /// Commit this command buffer to the GPU-Queue (CommandQueue)
         virtual bool commit() = 0;
 

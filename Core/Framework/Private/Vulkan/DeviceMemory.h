@@ -4,11 +4,9 @@
 #if FVCORE_ENABLE_VULKAN
 #include <vulkan/vulkan.h>
 
-namespace FV::Vulkan
-{
+namespace FV::Vulkan {
     class GraphicsDevice;
-    class DeviceMemory final
-    {
+    class DeviceMemory final {
     public:
         DeviceMemory(std::shared_ptr<GraphicsDevice>, VkDeviceMemory, VkMemoryType, VkDeviceSize);
         ~DeviceMemory();

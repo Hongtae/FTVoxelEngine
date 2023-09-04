@@ -4,10 +4,8 @@
 #ifdef _WIN32
 #include <Windows.h>
 
-namespace FV::Win32
-{
-    class Logger : public FV::Logger
-    {
+namespace FV::Win32 {
+    class Logger : public FV::Logger {
     public:
         Logger();
         ~Logger();

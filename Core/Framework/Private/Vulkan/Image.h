@@ -8,40 +8,31 @@
 #include "Types.h"
 #include "DeviceMemory.h"
 
-namespace FV::Vulkan
-{
+namespace FV::Vulkan {
     class GraphicsDevice;
-    class Image
-    {
+    class Image {
     public:
         Image(std::shared_ptr<DeviceMemory>, VkImage, const VkImageCreateInfo&);
         Image(std::shared_ptr<GraphicsDevice>, VkImage);
         ~Image();
 
-        uint32_t width() const 
-        {
+        uint32_t width() const {
             return extent.width;
         }
-        uint32_t height() const 
-        {
+        uint32_t height() const {
             return extent.height;
         }
-        uint32_t depth() const 
-        {
+        uint32_t depth() const {
             return extent.depth;
         }
-        uint32_t mipmapCount() const 
-        {
+        uint32_t mipmapCount() const {
             return mipLevels;
         }
-        uint32_t arrayLength() const 
-        {
+        uint32_t arrayLength() const {
             return arrayLayers;
         }
-        TextureType type() const 
-        {
-            switch (imageType)
-            {
+        TextureType type() const {
+            switch (imageType) {
             case VK_IMAGE_TYPE_1D:
                 return TextureType1D;
             case VK_IMAGE_TYPE_2D:
@@ -51,8 +42,7 @@ namespace FV::Vulkan
             }
             return TextureTypeUnknown;
         }
-        PixelFormat pixelFormat() const 
-        {
+        PixelFormat pixelFormat() const {
             return getPixelFormat(format);
         }
 
@@ -79,8 +69,7 @@ namespace FV::Vulkan
         std::shared_ptr<GraphicsDevice> gdevice;
 
     private:
-        struct LayoutAccessInfo
-        {
+        struct LayoutAccessInfo {
             VkImageLayout layout;
             VkAccessFlags accessMask;
             VkPipelineStageFlags stageMaskBegin;

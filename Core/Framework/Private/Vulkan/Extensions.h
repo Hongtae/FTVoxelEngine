@@ -9,10 +9,8 @@
 #define GET_INSTANCE_PROC(inst, name)	name = reinterpret_cast<decltype(name)>(vkGetInstanceProcAddr(inst, #name))
 #define GET_DEVICE_PROC(dev, name)	name = reinterpret_cast<decltype(name)>(vkGetDeviceProcAddr(dev, #name))
 
-namespace FV::Vulkan
-{
-	struct InstanceProc
-	{
+namespace FV::Vulkan {
+    struct InstanceProc {
 #if 0
         // VK_EXT_debug_report
         DEF_VK_PFN(vkCreateDebugReportCallbackEXT);
@@ -68,8 +66,7 @@ namespace FV::Vulkan
 		DEF_VK_PFN(vkGetPhysicalDeviceWin32PresentationSupportKHR);
 #endif
 
-		void load(VkInstance instance)
-		{
+        void load(VkInstance instance) {
 #if 0
             // VK_EXT_debug_report
             GET_INSTANCE_PROC(instance, vkCreateDebugReportCallbackEXT);
@@ -121,8 +118,7 @@ namespace FV::Vulkan
 		}
 	};
 
-    struct DeviceProc
-	{
+    struct DeviceProc {
 #if 0
 		// VK_EXT_debug_marker
 		DEF_VK_PFN(vkDebugMarkerSetObjectTagEXT);
@@ -154,8 +150,7 @@ namespace FV::Vulkan
         DEF_VK_PFN(vkCmdSetStencilTestEnableEXT);
         DEF_VK_PFN(vkCmdSetStencilOpEXT);
 #endif
-		void load(VkDevice device)
-		{
+        void load(VkDevice device) {
 #if 0
             // VK_EXT_debug_marker
 			GET_DEVICE_PROC(device, vkDebugMarkerSetObjectTagEXT);
@@ -190,10 +185,8 @@ namespace FV::Vulkan
 		}
 	};
 
-	inline std::string getVkResultString(VkResult r)
-	{
-		switch (r)
-		{
+    inline std::string getVkResultString(VkResult r) {
+        switch (r) {
 #define CASE_STR(c) case c: return #c
             CASE_STR(VK_SUCCESS);
             CASE_STR(VK_NOT_READY);
@@ -243,12 +236,9 @@ namespace FV::Vulkan
 #undef GET_INSTANCE_PROC
 #undef GET_DEVICE_PROC
 
-namespace std
-{
-    template <> struct formatter<VkResult> : formatter<string>
-    {
-        auto format(VkResult arg, format_context& ctx)
-        {
+namespace std {
+    template <> struct formatter<VkResult> : formatter<string> {
+        auto format(VkResult arg, format_context& ctx) {
             return formatter<string>::format(
                 FV::Vulkan::getVkResultString(arg), ctx);
         }

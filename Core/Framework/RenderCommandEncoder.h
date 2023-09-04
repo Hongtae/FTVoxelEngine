@@ -6,16 +6,13 @@
 #include "GpuBuffer.h"
 #include "ShaderBindingSet.h"
 
-namespace FV
-{
-    enum class VisibilityResultMode
-    {
+namespace FV {
+    enum class VisibilityResultMode {
         Disabled,
         Boolean,
         Counting,
     };
-    struct Viewport
-    {
+    struct Viewport {
         float x;
         float y;
         float width;
@@ -23,16 +20,14 @@ namespace FV
         float nearZ;
         float farZ;
     };
-    struct ScissorRect
-    {
+    struct ScissorRect {
         int32_t x;
         int32_t y;
         int32_t width;
         int32_t height;
     };
 
-    class RenderCommandEncoder : public CommandEncoder
-    {
+    class RenderCommandEncoder : public CommandEncoder {
     public:
         virtual ~RenderCommandEncoder() {}
 

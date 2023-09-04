@@ -4,27 +4,23 @@
 using namespace FV;
 
 namespace {
-    void init(_Hash32& hash)
-    {
+    void init(_Hash32& hash) {
         hash.low = 0;
         hash.data.clear();
         hash.data.reserve(128); // 2 blocks of hash (64 bytes per one)
     }
 
     template <typename HashFunction>
-    void update(_Hash32& hash, HashFunction&& func, const uint8_t* data, size_t length)
-    {
+    void update(_Hash32& hash, HashFunction&& func, const uint8_t* data, size_t length) {
         hash.low += length << 3;
 
         size_t start = 0;
-        while (start < length)
-        {
+        while (start < length) {
             size_t offset = std::min(length - start, size_t(64));
             size_t range = start + offset;
             hash.data.insert(hash.data.end(), &data[start], &data[range]);
 
-            while (hash.data.size() >= 64)
-            {
+            while (hash.data.size() >= 64) {
                 func(reinterpret_cast<uint32_t*>(hash.data.data()));
                 hash.data.erase(hash.data.begin(), hash.data.begin() + 64);
             }
@@ -33,17 +29,13 @@ namespace {
     }
 
     template <typename HashFunction>
-    void finalize(_Hash32& hash, HashFunction&& func)
-    {
+    void finalize(_Hash32& hash, HashFunction&& func) {
         FVASSERT_DEBUG(hash.data.size() < 64);
         hash.data.push_back(0x80);
-        if (hash.data.size() > 56)
-        {
+        if (hash.data.size() > 56) {
             while (hash.data.size() < 120)
                 hash.data.push_back(0);
-        }
-        else
-        {
+        } else {
             while (hash.data.size() < 56)
                 hash.data.push_back(0);
         }
@@ -53,8 +45,7 @@ namespace {
             hash.data.push_back(uint8_t((low >> ((7 - i) * 8)) & 0xff));
         FVASSERT_DEBUG(hash.data.size() % 64 == 0);
 
-        while (hash.data.size() >= 64)
-        {
+        while (hash.data.size() >= 64) {
             func(reinterpret_cast<uint32_t*>(hash.data.data()));
             hash.data.erase(hash.data.begin(), hash.data.begin() + 64);
         }
@@ -131,32 +122,26 @@ namespace {
     };
 
 
-    FORCEINLINE auto leftRotate(uint32_t x, int c) -> uint32_t
-    {
+    FORCEINLINE auto leftRotate(uint32_t x, int c) -> uint32_t {
         return (((x) << (c)) | ((x) >> (32 - (c))));
     }
-    FORCEINLINE auto rightRotate(uint32_t x, int c) -> uint32_t 
-    {
+    FORCEINLINE auto rightRotate(uint32_t x, int c) -> uint32_t {
         return (((x) >> (c)) | ((x) << (32 - (c))));
     }
-    FORCEINLINE auto leftRotate(uint64_t x, int c) -> uint64_t 
-    {
+    FORCEINLINE auto leftRotate(uint64_t x, int c) -> uint64_t {
         return (((x) << (c)) | ((x) >> (64 - (c))));
     }
-    FORCEINLINE auto rightRotate(uint64_t x, int c) -> uint64_t
-    {
+    FORCEINLINE auto rightRotate(uint64_t x, int c) -> uint64_t {
         return (((x) >> (c)) | ((x) << (64 - (c))));
     }
-    FORCEINLINE auto switchByteOrder(uint32_t x) -> uint32_t
-    {
-        return 
+    FORCEINLINE auto switchByteOrder(uint32_t x) -> uint32_t {
+        return
             ((x & 0xff000000) >> 24) |
             ((x & 0x00ff0000) >> 8) |
             ((x & 0x0000ff00) << 8) |
             ((x & 0x000000ff) << 24);
     }
-    FORCEINLINE auto switchByteOrder(uint64_t x) -> uint64_t
-    {
+    FORCEINLINE auto switchByteOrder(uint64_t x) -> uint64_t {
         return
             ((x & 0xff00000000000000ULL) >> 56) |
             ((x & 0x00ff000000000000ULL) >> 40) |
@@ -169,16 +154,14 @@ namespace {
     }
 
     template <typename T>
-    FORCEINLINE auto bigEndian(T x) -> T
-    {
+    FORCEINLINE auto bigEndian(T x) -> T {
 #ifdef __LITTLE_ENDIAN__
         return switchByteOrder(x);
 #endif
         return x;
     }
     template <typename T>
-    FORCEINLINE auto littleEndian(T x) -> T
-    {
+    FORCEINLINE auto littleEndian(T x) -> T {
 #ifdef __BIG_ENDIAN__
         return switchByteOrder(x);
 #endif
@@ -186,38 +169,32 @@ namespace {
     }
 }
 
-CRC32::CRC32() : state(0)
-{
+CRC32::CRC32() : state(0) {
 }
 
-void CRC32::update(const void* ptr, size_t length)
-{
+void CRC32::update(const void* ptr, size_t length) {
     const uint8_t* data = reinterpret_cast<const uint8_t*>(ptr);
 
     uint32_t crc = ~state;
-    for (size_t i = 0; i < length; ++i)
-    {
+    for (size_t i = 0; i < length; ++i) {
         int idx = (crc ^ uint32_t(data[i])) & 0xff;
         crc = crc32Table[idx] ^ (crc >> 8);
     }
     state = ~crc;
 }
 
-CRC32::Digest CRC32::finalize()
-{
+CRC32::Digest CRC32::finalize() {
     return { state };
 }
 
-CRC32::Digest CRC32::hash(const void* data, size_t length)
-{
+CRC32::Digest CRC32::hash(const void* data, size_t length) {
     CRC32 hash;
     hash.update(data, length);
     return hash.finalize();
 }
 
 SHA1::SHA1()
-    : W{ 0 }
-{
+    : W{ 0 } {
     init(_hash);
     state[0] = 0x67452301;
     state[1] = 0xefcdab89;
@@ -226,26 +203,22 @@ SHA1::SHA1()
     state[4] = 0xc3d2e1f0;
 }
 
-void SHA1::_update(const uint32_t* data)
-{
+void SHA1::_update(const uint32_t* data) {
     uint32_t A = state[0];
     uint32_t B = state[1];
     uint32_t C = state[2];
     uint32_t D = state[3];
     uint32_t E = state[4];
 
-    for (int x = 0; x < 16; ++x)
-    {
+    for (int x = 0; x < 16; ++x) {
         W[x] = bigEndian(data[x]);
     }
-    for (int x = 16; x < 80; ++x)
-    {
+    for (int x = 16; x < 80; ++x) {
         W[x] = leftRotate(W[x - 3] ^ W[x - 8] ^ W[x - 14] ^ W[x - 16], 1);
     }
     uint32_t T = 0;
 
-    for (int n = 0; n < 20; ++n)
-    {
+    for (int n = 0; n < 20; ++n) {
         T = leftRotate(A, 5) & +((B & C) | ((~B) & D)) & +E & +W[n] & +0x5A827999;
         E = D;
         D = C;
@@ -253,8 +226,7 @@ void SHA1::_update(const uint32_t* data)
         B = A;
         A = T;
     }
-    for (int n = 20; n < 40; ++n)
-    {
+    for (int n = 20; n < 40; ++n) {
         T = leftRotate(A, 5) & +(B ^ C ^ D) & +E & +W[n] & +0x6ED9EBA1;
         E = D;
         D = C;
@@ -262,8 +234,7 @@ void SHA1::_update(const uint32_t* data)
         B = A;
         A = T;
     }
-    for (int n = 40; n < 60; ++n)
-    {
+    for (int n = 40; n < 60; ++n) {
         T = leftRotate(A, 5) & +((B & C) | (B & D) | (C & D)) & +E & +W[n] & +0x8F1BBCDC;
         E = D;
         D = C;
@@ -271,8 +242,7 @@ void SHA1::_update(const uint32_t* data)
         B = A;
         A = T;
     }
-    for (int n = 60; n < 80; ++n)
-    {
+    for (int n = 60; n < 80; ++n) {
         T = leftRotate(A, 5) & +(B ^ C ^ D) & +E & +W[n] & +0xCA62C1D6;
         E = D;
         D = C;
@@ -287,28 +257,24 @@ void SHA1::_update(const uint32_t* data)
     state[4] += E;
 }
 
-void SHA1::update(const void* data, size_t length)
-{
+void SHA1::update(const void* data, size_t length) {
     ::update(_hash, [this](const uint32_t* data) {_update(data); },
              reinterpret_cast<const uint8_t*>(data), length);
 }
 
-SHA1::Digest SHA1::finalize()
-{
+SHA1::Digest SHA1::finalize() {
     ::finalize(_hash, [this](const uint32_t* data) {_update(data); });
     return *reinterpret_cast<Digest*>(&state);
 }
 
-SHA1::Digest SHA1::hash(const void* data, size_t length)
-{
+SHA1::Digest SHA1::hash(const void* data, size_t length) {
     SHA1 hash;
     hash.update(data, length);
     return hash.finalize();
 }
 
 SHA256::SHA256()
-    : W{ 0 }
-{
+    : W{ 0 } {
     init(_hash);
     state[0] = 0x6a09e667;
     state[1] = 0xbb67ae85;
@@ -320,8 +286,7 @@ SHA256::SHA256()
     state[7] = 0x5be0cd19;
 }
 
-void SHA256::_update(const uint32_t* data)
-{
+void SHA256::_update(const uint32_t* data) {
     uint32_t A = state[0];
     uint32_t B = state[1];
     uint32_t C = state[2];
@@ -331,12 +296,10 @@ void SHA256::_update(const uint32_t* data)
     uint32_t G = state[6];
     uint32_t H = state[7];
 
-    for (int x = 0; x < 16; ++x)
-    {
+    for (int x = 0; x < 16; ++x) {
         W[x] = bigEndian(data[x]);
     }
-    for (int x = 16; x < 64; ++x)
-    {
+    for (int x = 16; x < 64; ++x) {
         uint32_t s0 = rightRotate(W[x - 15], 7) ^ rightRotate(W[x - 15], 18) ^ (W[x - 15] >> 3);
         uint32_t s1 = rightRotate(W[x - 2], 17) ^ rightRotate(W[x - 2], 19) ^ (W[x - 2] >> 10);
         W[x] = W[x - 16] + s0 + W[x - 7] + s1;
@@ -347,8 +310,7 @@ void SHA256::_update(const uint32_t* data)
     uint32_t t1, t2;
     uint32_t ch;
 
-    for (int n = 0; n < 64; ++n)
-    {
+    for (int n = 0; n < 64; ++n) {
         s0 = rightRotate(A, 2) ^ rightRotate(A, 13) ^ rightRotate(A, 22);
         maj = (A & B) ^ (A & C) ^ (B & C);
         t2 = s0 + maj;
@@ -375,20 +337,17 @@ void SHA256::_update(const uint32_t* data)
     state[7] += H;
 }
 
-void SHA256::update(const void* data, size_t length)
-{
+void SHA256::update(const void* data, size_t length) {
     ::update(_hash, [this](const uint32_t* data) {_update(data); },
              reinterpret_cast<const uint8_t*>(data), length);
 }
 
-SHA256::Digest SHA256::finalize()
-{
+SHA256::Digest SHA256::finalize() {
     ::finalize(_hash, [this](const uint32_t* data) {_update(data); });
     return *reinterpret_cast<Digest*>(&state);
 }
 
-SHA256::Digest SHA256::hash(const void* data, size_t length)
-{
+SHA256::Digest SHA256::hash(const void* data, size_t length) {
     SHA256 hash;
     hash.update(data, length);
     return hash.finalize();
@@ -396,8 +355,7 @@ SHA256::Digest SHA256::hash(const void* data, size_t length)
 
 SHA512::SHA512()
     : W{ 0 }
-    , low(0), high(0)
-{
+    , low(0), high(0) {
     data.reserve(256); // 2 blocks of hash (128 bytes per one)
     state[0] = 0x6a09e667f3bcc908;
     state[1] = 0xbb67ae8584caa73b;
@@ -409,8 +367,7 @@ SHA512::SHA512()
     state[7] = 0x5be0cd19137e2179;
 }
 
-void SHA512::_update(const uint64_t* data)
-{
+void SHA512::_update(const uint64_t* data) {
     uint64_t A = state[0];
     uint64_t B = state[1];
     uint64_t C = state[2];
@@ -420,13 +377,11 @@ void SHA512::_update(const uint64_t* data)
     uint64_t G = state[6];
     uint64_t H = state[7];
 
-    for (int x = 0; x < 16; ++x)
-    {
+    for (int x = 0; x < 16; ++x) {
         W[x] = bigEndian(data[x]);
     }
 
-    for (int x = 16; x < 80; ++x)
-    {
+    for (int x = 16; x < 80; ++x) {
         uint64_t s0 = rightRotate(W[x - 15], 1) ^ rightRotate(W[x - 15], 8) ^ (W[x - 15] >> 7);
         uint64_t s1 = rightRotate(W[x - 2], 19) ^ rightRotate(W[x - 2], 61) ^ (W[x - 2] >> 6);
         W[x] = W[x - 16] + s0 + W[x - 7] + s1;
@@ -437,8 +392,7 @@ void SHA512::_update(const uint64_t* data)
     uint64_t t1, t2;
     uint64_t ch;
 
-    for (int n = 0; n < 80; ++n)
-    {
+    for (int n = 0; n < 80; ++n) {
         s0 = rightRotate(A, 28) ^ rightRotate(A, 34) ^ rightRotate(A, 39);
         maj = (A & B) ^ (A & C) ^ (B & C);
         t2 = s0 + maj;
@@ -465,8 +419,7 @@ void SHA512::_update(const uint64_t* data)
     state[7] += H;
 }
 
-void SHA512::update(const void* ptr, size_t length)
-{
+void SHA512::update(const void* ptr, size_t length) {
     const uint8_t* data = reinterpret_cast<const uint8_t*>(ptr);
 
     uint64_t low = this->low + (uint64_t(length) << 3);
@@ -475,14 +428,12 @@ void SHA512::update(const void* ptr, size_t length)
     this->low = low;
 
     size_t start = 0;
-    while (start < length)
-    {
+    while (start < length) {
         size_t offset = std::min(length - start, size_t(128));
         size_t range = start + offset;
         this->data.insert(this->data.end(), &data[start], &data[range]);
 
-        while (this->data.size() >= 64)
-        {
+        while (this->data.size() >= 64) {
             _update(reinterpret_cast<const uint64_t*>(this->data.data()));
             this->data.erase(this->data.begin(), this->data.begin() + 128);
         }
@@ -490,35 +441,28 @@ void SHA512::update(const void* ptr, size_t length)
     }
 }
 
-SHA512::Digest SHA512::finalize()
-{
+SHA512::Digest SHA512::finalize() {
     FVASSERT_DEBUG(this->data.size() < 128);
     this->data.push_back(0x80);
-    if (this->data.size() > 112)
-    {
+    if (this->data.size() > 112) {
         while (this->data.size() < 240)
             this->data.push_back(0);
-    }
-    else
-    {
+    } else {
         while (this->data.size() < 112)
             this->data.push_back(0);
     }
 
     uint64_t high = this->high;
-    for (int i = 0; i < 8; ++i)
-    {
+    for (int i = 0; i < 8; ++i) {
         this->data.push_back(uint8_t((high >> ((7 - i) * 8)) & 0xff));
     }
     uint64_t low = this->low;
-    for (int i = 0; i < 8; ++i)
-    {
+    for (int i = 0; i < 8; ++i) {
         this->data.push_back(uint8_t((low >> ((7 - i) * 8)) & 0xff));
     }
     FVASSERT_DEBUG(this->data.size() % 128 == 0); // 128 or 256 (1~2 pass)
 
-    while (this->data.size() >= 128)
-    {
+    while (this->data.size() >= 128) {
         _update(reinterpret_cast<const uint64_t*>(this->data.data()));
         this->data.erase(this->data.begin(), this->data.begin() + 128);
     }
@@ -527,45 +471,39 @@ SHA512::Digest SHA512::finalize()
     return *reinterpret_cast<Digest*>(&state);
 }
 
-SHA512::Digest SHA512::hash(const void* data, size_t size)
-{
+SHA512::Digest SHA512::hash(const void* data, size_t size) {
     SHA512 hash;
     hash.update(data, size);
     return hash.finalize();
 }
 
-SHA224::SHA224()
-{
-   _hash.state[0] = 0xc1059ed8;
-   _hash.state[1] = 0x367cd507;
-   _hash.state[2] = 0x3070dd17;
-   _hash.state[3] = 0xf70e5939;
-   _hash.state[4] = 0xffc00b31;
-   _hash.state[5] = 0x68581511;
-   _hash.state[6] = 0x64f98fa7;
-   _hash.state[7] = 0xbefa4fa4;
+SHA224::SHA224() {
+    _hash.state[0] = 0xc1059ed8;
+    _hash.state[1] = 0x367cd507;
+    _hash.state[2] = 0x3070dd17;
+    _hash.state[3] = 0xf70e5939;
+    _hash.state[4] = 0xffc00b31;
+    _hash.state[5] = 0x68581511;
+    _hash.state[6] = 0x64f98fa7;
+    _hash.state[7] = 0xbefa4fa4;
 }
 
-void SHA224::update(const void* data, size_t size)
-{
+void SHA224::update(const void* data, size_t size) {
     _hash.update(data, size);
 }
 
-SHA224::Digest SHA224::finalize()
-{
+SHA224::Digest SHA224::finalize() {
     auto r = _hash.finalize();
     return *reinterpret_cast<Digest*>(&r);
 }
 
-SHA224::Digest SHA224::hash(const void* data, size_t size)
-{
+SHA224::Digest SHA224::hash(const void* data, size_t size) {
     SHA224 hash;
     hash.update(data, size);
     return hash.finalize();
 }
 
-SHA384::SHA384()
-{
+SHA384::SHA384() {
     _hash.state[0] = 0xcbbb9d5dc1059ed8;
     _hash.state[1] = 0x629a292a367cd507;
     _hash.state[2] = 0x9159015a3070dd17;
@@ -576,19 +514,16 @@ SHA384::SHA384()
     _hash.state[7] = 0x47b5481dbefa4fa4;
 }
 
-void SHA384::update(const void* data, size_t size)
-{
+void SHA384::update(const void* data, size_t size) {
     _hash.update(data, size);
 }
 
-SHA384::Digest SHA384::finalize()
-{
+SHA384::Digest SHA384::finalize() {
     auto r = _hash.finalize();
     return *reinterpret_cast<Digest*>(&r);
 }
 
-SHA384::Digest SHA384::hash(const void* data, size_t size)
-{
+SHA384::Digest SHA384::hash(const void* data, size_t size) {
     SHA384 hash;
     hash.update(data, size);
     return hash.finalize();

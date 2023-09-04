@@ -6,8 +6,7 @@
 
 using namespace FV;
 
-struct LoaderContext
-{
+struct LoaderContext {
     tinygltf::Model model;
     CommandQueue* queue;
     MaterialShaderMap shader;
@@ -22,43 +21,33 @@ struct LoaderContext
 
 std::shared_ptr<GPUBuffer> makeBuffer(CommandBuffer* cbuffer, size_t length, const void* data,
                                       GPUBuffer::StorageMode storageMode = GPUBuffer::StorageModePrivate,
-                                      CPUCacheMode cpuCacheMode = CPUCacheModeDefault)
-{
+                                      CPUCacheMode cpuCacheMode = CPUCacheModeDefault) {
     FVASSERT(length > 0);
 
     FVASSERT(cbuffer);
     auto device = cbuffer->device();
 
     std::shared_ptr<GPUBuffer> buffer;
-    if (storageMode == GPUBuffer::StorageModeShared)
-    {
+    if (storageMode == GPUBuffer::StorageModeShared) {
         buffer = device->makeBuffer(length, storageMode, cpuCacheMode);
         FVASSERT(buffer);
-        if (auto p = buffer->contents(); p)
-        {
+        if (auto p = buffer->contents(); p) {
             memcpy(p, data, length);
             buffer->flush();
-        }
-        else
-        {
+        } else {
             Log::error("GPUBuffer map failed.");
             FVERROR_ABORT("GPUBuffer map failed.");
             return nullptr;
         }
-    }
-    else
-    {
+    } else {
         auto stgBuffer = device->makeBuffer(length,
                                             GPUBuffer::StorageModeShared,
                                             CPUCacheModeWriteCombined);
         FVASSERT(stgBuffer);
-        if (auto p = stgBuffer->contents(); p)
-        {
+        if (auto p = stgBuffer->contents(); p) {
             memcpy(p, data, length);
             stgBuffer->flush();
-        }
-        else
-        {
+        } else {
             Log::error("GPUBuffer map failed.");
             FVERROR_ABORT("GPUBuffer map failed.");
             return nullptr;
@@ -74,16 +63,14 @@ std::shared_ptr<GPUBuffer> makeBuffer(CommandBuffer* cbuffer, size_t length, con
     return buffer;
 }
 
-void loadBuffers(LoaderContext& context)
-{
+void loadBuffers(LoaderContext& context) {
     auto cbuffer = context.queue->makeCommandBuffer();
     FVASSERT(cbuffer);
 
     const auto& model = context.model;
     context.buffers.resize(model.buffers.size(), nullptr);
 
-    for (int index = 0; index < model.buffers.size(); ++index)
-    {
+    for (int index = 0; index < model.buffers.size(); ++index) {
         auto& glTFBuffer = model.buffers.at(index);
 
         auto& data = glTFBuffer.data;
@@ -96,23 +83,20 @@ void loadBuffers(LoaderContext& context)
     cbuffer->commit();
 }
 
-void loadImages(LoaderContext& context)
-{
+void loadImages(LoaderContext& context) {
     const auto& model = context.model;
     context.images.resize(model.images.size(), nullptr);
 
-    for (int index = 0; index < model.images.size(); ++index)
-    {
+    for (int index = 0; index < model.images.size(); ++index) {
         auto& glTFImage = model.images.at(index);
-    
+
         auto width = glTFImage.width;
         auto height = glTFImage.height;
         auto component = glTFImage.component;
         auto bits = glTFImage.bits;
 
         ImagePixelFormat imageFormat = ImagePixelFormat::Invalid;
-        switch (component)
-        {
+        switch (component) {
         case 1:
             if (bits == 8)
                 imageFormat = ImagePixelFormat::R8;
@@ -146,42 +130,34 @@ void loadImages(LoaderContext& context)
                 imageFormat = ImagePixelFormat::RGBA32;
             break;
         }
-        if (imageFormat == ImagePixelFormat::Invalid)
-        {
+        if (imageFormat == ImagePixelFormat::Invalid) {
             Log::error("Unsupported image pixel format.");
             continue;
         }
         size_t reqLength = (bits >> 3) * width * height * component;
-        if (glTFImage.image.size() < reqLength)
-        {
+        if (glTFImage.image.size() < reqLength) {
             Log::error("invalid image pixel data.");
             continue;
         }
         auto image = std::make_shared<Image>(width, height, imageFormat, glTFImage.image.data());
-        if (auto texture = image->makeTexture(context.queue); texture)
-        {
+        if (auto texture = image->makeTexture(context.queue); texture) {
             context.images.at(index) = texture;
-        }
-        else
-        {
+        } else {
             Log::error(std::format("Failed to load image: {}", glTFImage.name));
         }
     }
     FVASSERT(context.images.size() == model.images.size());
 }
 
-void loadSamplerDescriptors(LoaderContext& context)
-{
+void loadSamplerDescriptors(LoaderContext& context) {
     const auto& model = context.model;
     context.samplerDescriptors.resize(model.samplers.size());
 
-    for (int index = 0; index < model.samplers.size(); ++index)
-    {
+    for (int index = 0; index < model.samplers.size(); ++index) {
         auto& glTFSampler = model.samplers.at(index);
 
         SamplerDescriptor desc = {};
-        switch (glTFSampler.minFilter)
-        {
+        switch (glTFSampler.minFilter) {
         case TINYGLTF_TEXTURE_FILTER_NEAREST:
         case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_NEAREST:
             desc.minFilter = SamplerMinMagFilter::Nearest;
@@ -229,23 +205,18 @@ void loadSamplerDescriptors(LoaderContext& context)
     }
 }
 
-void loadMaterials(LoaderContext& context)
-{
+void loadMaterials(LoaderContext& context) {
     const auto& model = context.model;
     context.materials.resize(model.materials.size(), nullptr);
-    for (int index = 0; index < model.materials.size(); ++index)
-    {
+    for (int index = 0; index < model.materials.size(); ++index) {
         auto& glTFMaterial = model.materials.at(index);
 
         auto material = std::make_shared<Material>();
         material->name = glTFMaterial.name;
 
-        if (_stricmp(glTFMaterial.alphaMode.c_str(), "BLEND") == 0)
-        {
+        if (_stricmp(glTFMaterial.alphaMode.c_str(), "BLEND") == 0) {
             material->attachments.front().blendState = BlendState::defaultAlpha;
-        }
-        else
-        {
+        } else {
             material->attachments.front().blendState = BlendState::defaultOpaque;
         }
 
@@ -255,23 +226,20 @@ void loadMaterials(LoaderContext& context)
             material->cullMode = CullMode::Back;
 
         material->setProperty(MaterialSemantic::BaseColor,
-            Color(
-                float(glTFMaterial.pbrMetallicRoughness.baseColorFactor[0]),
-                float(glTFMaterial.pbrMetallicRoughness.baseColorFactor[1]),
-                float(glTFMaterial.pbrMetallicRoughness.baseColorFactor[2]),
-                float(glTFMaterial.pbrMetallicRoughness.baseColorFactor[3])));
+                              Color(
+                                  float(glTFMaterial.pbrMetallicRoughness.baseColorFactor[0]),
+                                  float(glTFMaterial.pbrMetallicRoughness.baseColorFactor[1]),
+                                  float(glTFMaterial.pbrMetallicRoughness.baseColorFactor[2]),
+                                  float(glTFMaterial.pbrMetallicRoughness.baseColorFactor[3])));
 
-        auto textureSampler = [&](int index)->MaterialProperty::CombinedTextureSampler
-        {
-            if (index >= 0 && index < model.textures.size())
-            {
+        auto textureSampler = [&](int index)->MaterialProperty::CombinedTextureSampler {
+            if (index >= 0 && index < model.textures.size()) {
                 const auto& texture = model.textures.at(index);
                 std::shared_ptr<Texture> image;
                 if (texture.source >= 0 && texture.source < context.images.size())
                     image = context.images.at(texture.source);
                 std::shared_ptr<SamplerState> sampler;
-                if (texture.sampler >= 0 && texture.sampler < context.samplerDescriptors.size())
-                {
+                if (texture.sampler >= 0 && texture.sampler < context.samplerDescriptors.size()) {
                     auto samplerDesc = context.samplerDescriptors.at(texture.sampler);
                     sampler = context.queue->device()->makeSamplerState(samplerDesc);
                 }
@@ -302,28 +270,24 @@ void loadMaterials(LoaderContext& context)
     }
 }
 
-void loadMeshes(LoaderContext& context)
-{
+void loadMeshes(LoaderContext& context) {
     auto device = context.queue->device();
     auto cbuffer = context.queue->makeCommandBuffer();
     FVASSERT(cbuffer);
 
     const auto& model = context.model;
     context.meshes.resize(model.meshes.size());
-    for (int index = 0; index < model.meshes.size(); ++index)
-    {
+    for (int index = 0; index < model.meshes.size(); ++index) {
         auto& glTFMesh = model.meshes.at(index);
 
         Mesh mesh = {};
         mesh.name = glTFMesh.name;
 
-        for (auto& glTFPrimitive : glTFMesh.primitives)
-        {
+        for (auto& glTFPrimitive : glTFMesh.primitives) {
             Submesh submesh = {};
             std::unordered_map<int, Submesh::VertexBuffer> vertexBuffers;
 
-            for (auto& [attributeName, accessorIndex] : glTFPrimitive.attributes)
-            {
+            for (auto& [attributeName, accessorIndex] : glTFPrimitive.attributes) {
                 auto& glTFAccessor = model.accessors[accessorIndex];
                 auto& glTFBufferView = model.bufferViews[glTFAccessor.bufferView];
                 auto& glTFBuffer = model.buffers[glTFBufferView.buffer];
@@ -334,13 +298,11 @@ void loadMeshes(LoaderContext& context)
                 if (glTFAccessor.byteOffset < vertexStride) // interleaved
                 {
                     attribOffset = glTFAccessor.byteOffset;
-                }
-                else
-                {
+                } else {
                     bufferOffset += glTFAccessor.byteOffset;
                 }
 
-                Submesh::VertexBuffer buffer = 
+                Submesh::VertexBuffer buffer =
                 {
                     .byteOffset = bufferOffset,
                     .byteStride = vertexStride,
@@ -381,8 +343,7 @@ void loadMeshes(LoaderContext& context)
                     attribute.semantic = VertexAttributeSemantic::TextureCoordinates;
                 else if (_stricmp(attributeName.c_str(), "COLOR_0") == 0)
                     attribute.semantic = VertexAttributeSemantic::Color;
-                else
-                {
+                else {
                     Log::warning(std::format("Unhandled vertex buffer attribute: {}",
                                              attributeName));
                 }
@@ -391,8 +352,7 @@ void loadMeshes(LoaderContext& context)
                 submesh.vertexBuffers.push_back(buffer);
             }
 
-            switch (glTFPrimitive.mode)
-            {
+            switch (glTFPrimitive.mode) {
             case TINYGLTF_MODE_POINTS:
                 submesh.primitiveType = PrimitiveType::Point;
                 break;
@@ -412,8 +372,7 @@ void loadMeshes(LoaderContext& context)
                 throw std::runtime_error("Unknown primitive type");
             }
 
-            if (glTFPrimitive.indices >= 0)
-            {
+            if (glTFPrimitive.indices >= 0) {
                 auto& glTFAccessor = model.accessors[glTFPrimitive.indices];
                 auto& glTFBufferView = model.bufferViews[glTFAccessor.bufferView];
                 auto& glTFBuffer = model.buffers[glTFBufferView.buffer];
@@ -425,8 +384,7 @@ void loadMeshes(LoaderContext& context)
 
                 switch (glTFAccessor.componentType) {
                 case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: // convert to uint16
-                    do 
-                    {
+                    do {
                         FVASSERT(glTFAccessor.count > 0);
                         size_t size = glTFAccessor.count * 2;
 
@@ -453,12 +411,9 @@ void loadMeshes(LoaderContext& context)
                 }
             }
 
-            if (glTFPrimitive.material >= 0)
-            {
+            if (glTFPrimitive.material >= 0) {
                 submesh.material = context.materials[glTFPrimitive.material];
-            }
-            else
-            {
+            } else {
                 submesh.material = std::make_shared<Material>("default");
                 submesh.material->shader = context.shader;
             }
@@ -471,17 +426,14 @@ void loadMeshes(LoaderContext& context)
     }
 }
 
-SceneNode loadNode(const tinygltf::Node& node, LoaderContext& context)
-{
+SceneNode loadNode(const tinygltf::Node& node, LoaderContext& context) {
     const auto& model = context.model;
     SceneNode output = {};
     output.name = node.name;
-    if (node.mesh >= 0)
-    {
+    if (node.mesh >= 0) {
         output.mesh = context.meshes.at(node.mesh);
     }
-    if (node.matrix.size() == 16)
-    {
+    if (node.matrix.size() == 16) {
         Matrix4 mat;
         for (int i = 0; i < 16; ++i)
             mat.val[i] = float(node.matrix[i]);
@@ -495,8 +447,7 @@ SceneNode loadNode(const tinygltf::Node& node, LoaderContext& context)
         auto ulpOfOne = std::numeric_limits<float>::epsilon();
         if (fabs(scale.x) > ulpOfOne &&
             fabs(scale.y) > ulpOfOne &&
-            fabs(scale.z) > ulpOfOne)
-        {
+            fabs(scale.z) > ulpOfOne) {
             Matrix3 matrix3 = {
                 Vector3(mat._11, mat._12, mat._13) / scale.x,
                 Vector3(mat._21, mat._22, mat._23) / scale.y,
@@ -515,34 +466,28 @@ SceneNode loadNode(const tinygltf::Node& node, LoaderContext& context)
                 Vector3(mat._41, mat._42, mat._43)
             };
         }
-    }
-    else
-    {
+    } else {
         Quaternion rotation = Quaternion::identity;
         Vector3 scale = { 1, 1, 1 };
         Vector3 translation = Vector3::zero;
-        if (node.rotation.size() == 4)
-        {
+        if (node.rotation.size() == 4) {
             for (int i = 0; i < 4; ++i)
                 rotation.val[i] = float(node.rotation[i]);
         }
-        if (node.scale.size() == 3)
-        {
+        if (node.scale.size() == 3) {
             for (int i = 0; i < 3; ++i)
                 scale.val[i] = float(node.scale[i]);
         }
-        if (node.translation.size() == 3)
-        {
+        if (node.translation.size() == 3) {
             for (int i = 0; i < 3; ++i)
                 translation.val[i] = float(node.translation[i]);
         }
         output.transform = { rotation, translation };
         output.scale = scale;
     }
-    
+
     output.children.reserve(node.children.size());
-    for (auto index : node.children)
-    {
+    for (auto index : node.children) {
         auto& child = model.nodes.at(index);
         auto node = loadNode(child, context);
         output.children.push_back(node);
@@ -550,15 +495,13 @@ SceneNode loadNode(const tinygltf::Node& node, LoaderContext& context)
     return output;
 }
 
-Model::Scene loadScene(const tinygltf::Scene& scene, LoaderContext& context)
-{
+Model::Scene loadScene(const tinygltf::Scene& scene, LoaderContext& context) {
     const auto& model = context.model;
     Model::Scene output = {};
     output.name = scene.name;
 
     output.nodes.reserve(scene.nodes.size());
-    for (auto index : scene.nodes)
-    {
+    for (auto index : scene.nodes) {
         auto& glTFNode = model.nodes.at(index);
         auto node = loadNode(glTFNode, context);
         output.nodes.push_back(node);
@@ -566,9 +509,8 @@ Model::Scene loadScene(const tinygltf::Scene& scene, LoaderContext& context)
     return output;
 }
 
-std::shared_ptr<Model> loadModel(std::filesystem::path path, MaterialShaderMap shader, CommandQueue* queue)
-{
-    LoaderContext context = { .queue = queue, .shader = shader};
+std::shared_ptr<Model> loadModel(std::filesystem::path path, MaterialShaderMap shader, CommandQueue* queue) {
+    LoaderContext context = { .queue = queue, .shader = shader };
     tinygltf::TinyGLTF loader;
     std::string err, warn;
     bool result = loader.LoadBinaryFromFile(&context.model, &err, &warn, path.generic_string());
@@ -577,8 +519,7 @@ std::shared_ptr<Model> loadModel(std::filesystem::path path, MaterialShaderMap s
     if (err.empty() == false)
         Log::error(std::format("glTF error: {}", err));
 
-    if (result)
-    {
+    if (result) {
         tinygltf::Model& model = context.model;
 
         loadBuffers(context);
@@ -589,8 +530,7 @@ std::shared_ptr<Model> loadModel(std::filesystem::path path, MaterialShaderMap s
 
         auto output = std::make_shared<Model>();
 
-        for (auto& glTFScene : context.model.scenes)
-        {
+        for (auto& glTFScene : context.model.scenes) {
             auto scene = loadScene(glTFScene, context);
             output->scenes.push_back(scene);
         }
@@ -601,14 +541,11 @@ std::shared_ptr<Model> loadModel(std::filesystem::path path, MaterialShaderMap s
     return nullptr;
 }
 
-std::optional<MaterialShaderMap::Function> loadShader(std::filesystem::path path, GraphicsDevice* device)
-{
-    if (Shader shader(path); shader.validate())
-    {
+std::optional<MaterialShaderMap::Function> loadShader(std::filesystem::path path, GraphicsDevice* device) {
+    if (Shader shader(path); shader.validate()) {
         Log::info(std::format("Shader description: \"{}\"", path.generic_u8string()));
         printShaderReflection(shader);
-        if (auto module = device->makeShaderModule(shader); module)
-        {
+        if (auto module = device->makeShaderModule(shader); module) {
             auto names = module->functionNames();
             auto fn = module->makeFunction(names.front());
             return MaterialShaderMap::Function { fn, shader.descriptors() };

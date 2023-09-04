@@ -5,79 +5,69 @@
 #include <format>
 #include <vector>
 
-namespace FV
-{
-    struct CRC32Digest
-    {
+namespace FV {
+    struct CRC32Digest {
         uint32_t hash;
-        std::string string()
-        {
+        std::string string() {
             return std::format("{:08x}", hash);
         }
     };
 
-    struct SHA1Digest
-    {
+    struct SHA1Digest {
         uint32_t hash[5];
-        std::string string()
-        {
-            return std::format("{:08x}{:08x}{:08x}{:08x}{:08x}",
-                               hash[0], hash[1], hash[2], hash[3], hash[4]);
+        std::string string() {
+            return std::format(
+                "{:08x}{:08x}{:08x}{:08x}{:08x}",
+                hash[0], hash[1], hash[2], hash[3], hash[4]);
         }
     };
 
-    struct SHA224Digest
-    {
+    struct SHA224Digest {
         uint32_t hash[7];
-        std::string string()
-        {
-            return std::format("{:08x}{:08x}{:08x}{:08x}{:08x}{:08x}{:08x}",
-                               hash[0], hash[1], hash[2], hash[3],
-                               hash[4], hash[5], hash[6]);
+        std::string string() {
+            return std::format(
+                "{:08x}{:08x}{:08x}{:08x}{:08x}{:08x}{:08x}",
+                hash[0], hash[1], hash[2], hash[3],
+                hash[4], hash[5], hash[6]);
         }
     };
 
-    struct SHA256Digest
-    {
+    struct SHA256Digest {
         uint32_t hash[8];
-        std::string string()
-        {
-            return std::format("{:08x}{:08x}{:08x}{:08x}{:08x}{:08x}{:08x}{:08x}",
-                               hash[0], hash[1], hash[2], hash[3],
-                               hash[4], hash[5], hash[6], hash[7]);
+        std::string string() {
+            return std::format(
+                "{:08x}{:08x}{:08x}{:08x}{:08x}{:08x}{:08x}{:08x}",
+                hash[0], hash[1], hash[2], hash[3],
+                hash[4], hash[5], hash[6], hash[7]);
         }
     };
 
-    struct SHA384Digest
-    {
+    struct SHA384Digest {
         uint64_t hash[6];
-        std::string string()
-        {
-            return std::format("{:016x}{:016x}{:016x}{:016x}{:016x}{:016x}",
-                               hash[0], hash[1], hash[2],
-                               hash[3], hash[4], hash[5]);
+        std::string string() {
+            return std::format(
+                "{:016x}{:016x}{:016x}{:016x}{:016x}{:016x}",
+                hash[0], hash[1], hash[2],
+                hash[3], hash[4], hash[5]);
         }
     };
 
-    struct SHA512Digest
-    {
+    struct SHA512Digest {
         uint64_t hash[8];
-        std::string string()
-        {
-            return std::format("{:016x}{:016x}{:016x}{:016x}{:016x}{:016x}{:016x}{:016x}",
-                               hash[0], hash[1], hash[2], hash[3],
-                               hash[4], hash[5], hash[6], hash[7]);
+        std::string string() {
+            return std::format(
+                "{:016x}{:016x}{:016x}{:016x}{:016x}{:016x}{:016x}{:016x}",
+                hash[0], hash[1], hash[2], hash[3],
+                hash[4], hash[5], hash[6], hash[7]);
         }
     };
 
-    struct _Hash32
-    {
+    struct _Hash32 {
         uint64_t low;
         std::vector<uint8_t> data;
     };
 
-    struct FVCORE_API CRC32
-    {
+    struct FVCORE_API CRC32 {
         using Digest = CRC32Digest;
 
         CRC32();
@@ -89,8 +79,7 @@ namespace FV
         uint32_t state;
     };
 
-    struct FVCORE_API SHA1
-    {
+    struct FVCORE_API SHA1 {
         using Digest = SHA1Digest;
 
         SHA1();
@@ -105,8 +94,7 @@ namespace FV
         _Hash32 _hash;
     };
 
-    struct FVCORE_API SHA256
-    {
+    struct FVCORE_API SHA256 {
         using Digest = SHA256Digest;
         SHA256();
 
@@ -122,8 +110,7 @@ namespace FV
         friend struct SHA224;
     };
 
-    struct FVCORE_API SHA512
-    {
+    struct FVCORE_API SHA512 {
         using Digest = SHA512Digest;
         SHA512();
 
@@ -141,8 +128,7 @@ namespace FV
         friend struct SHA384;
     };
 
-    struct FVCORE_API SHA224
-    {
+    struct FVCORE_API SHA224 {
         using Digest = SHA224Digest;
         SHA224();
 
@@ -154,8 +140,7 @@ namespace FV
         SHA256 _hash;
     };
 
-    struct FVCORE_API SHA384
-    {
+    struct FVCORE_API SHA384 {
         using Digest = SHA384Digest;
         SHA384();
 

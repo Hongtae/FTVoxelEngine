@@ -4,18 +4,14 @@
 #include "Texture.h"
 #include <vector>
 
-namespace FV
-{
-    struct RenderPassAttachmentDescriptor
-    {
-        enum LoadAction
-        {
+namespace FV {
+    struct RenderPassAttachmentDescriptor {
+        enum LoadAction {
             LoadActionDontCare = 0,
             LoadActionLoad,
             LoadActionClear,
         };
-        enum StoreAction
-        {
+        enum StoreAction {
             StoreActionDontCare = 0,
             StoreActionStore,
         };
@@ -29,19 +25,16 @@ namespace FV
     using RenderPassLoadAction = RenderPassAttachmentDescriptor::LoadAction;
     using RenderPassStoreAction = RenderPassAttachmentDescriptor::StoreAction;
 
-    struct RenderPassColorAttachmentDescriptor : public RenderPassAttachmentDescriptor
-    {
+    struct RenderPassColorAttachmentDescriptor : public RenderPassAttachmentDescriptor {
         Color clearColor;
     };
 
-    struct RenderPassDepthStencilAttachmentDescriptor : public RenderPassAttachmentDescriptor
-    {
+    struct RenderPassDepthStencilAttachmentDescriptor : public RenderPassAttachmentDescriptor {
         float clearDepth = 1.0;
         uint32_t clearStencil = 0;
     };
 
-    struct RenderPassDescriptor
-    {
+    struct RenderPassDescriptor {
         std::vector<RenderPassColorAttachmentDescriptor> colorAttachments;
         RenderPassDepthStencilAttachmentDescriptor depthStencilAttachment;
 

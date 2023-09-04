@@ -2,10 +2,8 @@
 #include "../include.h"
 #include <vector>
 
-namespace FV
-{
-    enum class VertexFormat
-    {
+namespace FV {
+    enum class VertexFormat {
         Invalid = 0,
 
         UChar2,
@@ -63,8 +61,7 @@ namespace FV
         UInt1010102Normalized,
     };
 
-    struct VertexFormatInfo
-    {
+    struct VertexFormatInfo {
         uint32_t typeSize;
         uint32_t components;
         bool normalized;
@@ -72,14 +69,13 @@ namespace FV
         size_t bytes() const noexcept { return typeSize * components; }
 
         constexpr VertexFormatInfo(uint32_t s, uint32_t c = 1, bool n = false)
-            : typeSize(s), components(c), normalized(n) {}
+            : typeSize(s), components(c), normalized(n) {
+        }
 
         constexpr VertexFormatInfo(VertexFormat format)
             : VertexFormatInfo(
-                [format]() constexpr -> VertexFormatInfo
-                {
-                    switch (format)
-                    {
+                [format]() constexpr -> VertexFormatInfo {
+                    switch (format) {
                     case VertexFormat::UChar2:                return { 1, 2 };
                     case VertexFormat::UChar3:                return { 1, 3 };
                     case VertexFormat::UChar4:                return { 1, 4 };
@@ -139,35 +135,30 @@ namespace FV
                         break;
                     }
                     return { 0, 0 };
-                }())
-        {
+                }()) {
         }
     };
 
-	enum class VertexStepRate
-	{
-		Vertex = 0,
-		Instance,
-	};
+    enum class VertexStepRate {
+        Vertex = 0,
+        Instance,
+    };
 
-	struct VertexBufferLayoutDescriptor
-	{
-		VertexStepRate step;
-		uint32_t stride;
-		uint32_t bufferIndex;
-	};
+    struct VertexBufferLayoutDescriptor {
+        VertexStepRate step;
+        uint32_t stride;
+        uint32_t bufferIndex;
+    };
 
-	struct VertexAttributeDescriptor
-	{
-		VertexFormat format;
-		uint32_t offset;
-		uint32_t bufferIndex;
-		uint32_t location;
-	};
+    struct VertexAttributeDescriptor {
+        VertexFormat format;
+        uint32_t offset;
+        uint32_t bufferIndex;
+        uint32_t location;
+    };
 
-	struct VertexDescriptor
-	{
-		std::vector<VertexAttributeDescriptor> attributes;
-		std::vector<VertexBufferLayoutDescriptor> layouts;
-	};
+    struct VertexDescriptor {
+        std::vector<VertexAttributeDescriptor> attributes;
+        std::vector<VertexBufferLayoutDescriptor> layouts;
+    };
 }

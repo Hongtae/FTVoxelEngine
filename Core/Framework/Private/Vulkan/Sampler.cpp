@@ -7,17 +7,14 @@ using namespace FV::Vulkan;
 
 Sampler::Sampler(std::shared_ptr<GraphicsDevice> dev, VkSampler s)
     : gdevice(dev)
-    , sampler(s)
-{
+    , sampler(s) {
 }
 
-Sampler::~Sampler()
-{
+Sampler::~Sampler() {
     vkDestroySampler(gdevice->device, sampler, gdevice->allocationCallbacks());
 }
 
-std::shared_ptr<FV::GraphicsDevice> Sampler::device() const
-{
+std::shared_ptr<FV::GraphicsDevice> Sampler::device() const {
     return gdevice;
 }
 

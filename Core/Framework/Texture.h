@@ -2,12 +2,10 @@
 #include "../include.h"
 #include "PixelFormat.h"
 
-namespace FV
-{
+namespace FV {
     class GraphicsDevice;
 
-    enum TextureType
-    {
+    enum TextureType {
         TextureTypeUnknown = 0,
         TextureType1D,
         TextureType2D,
@@ -15,8 +13,7 @@ namespace FV
         TextureTypeCube,
     };
 
-    enum TextureUsage
-    {
+    enum TextureUsage {
         TextureUsageUnknown = 0U,
         TextureUsageCopySource = 1U,
         TextureUsageCopyDestination = 1U << 1,
@@ -28,8 +25,7 @@ namespace FV
         TextureUsagePixelFormatView = 1U << 7,
     };
 
-    class Texture
-    {
+    class Texture {
     public:
         virtual ~Texture() {}
 
@@ -45,8 +41,7 @@ namespace FV
         virtual std::shared_ptr<GraphicsDevice> device() const = 0;
     };
 
-    struct TextureDescriptor
-    {
+    struct TextureDescriptor {
         TextureType textureType;
         PixelFormat pixelFormat;
 

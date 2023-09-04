@@ -16,8 +16,7 @@
 
 using namespace FV;
 
-class RenderTestApp : public Application
-{
+class RenderTestApp : public Application {
 public:
     std::shared_ptr<Window> window;
     std::jthread renderThread;
@@ -25,8 +24,7 @@ public:
     std::shared_ptr<GraphicsDeviceContext> graphicsContext;
     std::filesystem::path appResourcesRoot;
 
-    void initialize() override
-    {
+    void initialize() override {
         appResourcesRoot = environmentPath(EnvironmentPath::AppRoot) / "RenderTest.Resources";
         Log::debug(std::format("App-Resources: \"{}\"", appResourcesRoot.generic_u8string()));
 
@@ -34,16 +32,12 @@ public:
 
         window = Window::makeWindow(u8"RenderTest",
                                     Window::StyleGenericWindow,
-                                    Window::WindowCallback
-        {
-            .contentMinSize 
-            {
-                [](Window*) { return Size(100, 100); } 
+                                    Window::WindowCallback {
+            .contentMinSize {
+                [](Window*) { return Size(100, 100); }
             },
-            .closeRequest
-            {
-                [this](Window*)
-                {
+            .closeRequest {
+                [this](Window*) {
                     renderThread.request_stop();
                     terminate(1234);
                     return true;
@@ -55,15 +49,13 @@ public:
         renderThread = std::jthread([this](auto stop) { renderLoop(stop); });
     }
 
-    void finalize() override
-    {
+    void finalize() override {
         renderThread.join();
         window = nullptr;
         graphicsContext = nullptr;
     }
 
-    void renderLoop(std::stop_token stop)
-    {
+    void renderLoop(std::stop_token stop) {
         auto queue = graphicsContext->renderQueue();
         auto swapchain = queue->makeSwapChain(window);
         if (swapchain == nullptr)
@@ -81,8 +73,7 @@ public:
         if (fragmentShader.has_value() == false)
             throw std::runtime_error("failed to load shader");
 
-        struct PushConstantBuffer
-        {
+        struct PushConstantBuffer {
             Matrix4 transform;
             Vector3 lightDir;
             Vector3 color;
@@ -127,11 +118,9 @@ public:
             .model = Matrix4::identity
         };
 
-        struct ForEachNode
-        {
+        struct ForEachNode {
             SceneNode& node;
-            void operator()(std::function<void (SceneNode&)> fn)
-            {
+            void operator()(std::function<void(SceneNode&)> fn) {
                 fn(node);
 
                 for (auto& child : node.children)
@@ -145,10 +134,8 @@ public:
         for (auto& scene : model->scenes)
             for (auto& node : scene.nodes)
                 ForEachNode{ node }(
-                    [&](auto& node)
-                    {
-                        if (node.mesh.has_value())
-                        {
+                    [&](auto& node) {
+                        if (node.mesh.has_value()) {
                             Mesh& mesh = node.mesh.value();
                             meshes.push_back(&mesh);
                             for (auto& submesh : mesh.submeshes)
@@ -161,8 +148,7 @@ public:
         std::shared_ptr<Texture> depthTexture = nullptr;
 
         // set user-defined property values
-        for (auto& material : materials)
-        {
+        for (auto& material : materials) {
             material->attachments.front().format = swapchain->pixelFormat();
             material->depthFormat = depthFormat;
             material->setProperty(ShaderBindingLocation::pushConstant(64), Vector3(1, -1, 1));
@@ -170,19 +156,14 @@ public:
             material->setProperty(ShaderBindingLocation::pushConstant(96), Vector3(0.3, 0.3, 0.3));
         }
 
-        for (auto& mesh : meshes)
-        {
-            for (int index = 0; index < mesh->submeshes.size(); ++index)
-            {
+        for (auto& mesh : meshes) {
+            for (int index = 0; index < mesh->submeshes.size(); ++index) {
                 auto& submesh = mesh->submeshes.at(index);
                 PipelineReflection reflection = {};
-                if (submesh.buildPipelineState(device, &reflection))
-                {
+                if (submesh.buildPipelineState(device, &reflection)) {
                     printPipelineReflection(reflection, Log::Level::Debug);
                     submesh.initResources(device, Submesh::BufferUsagePolicy::SingleBuffer);
-                }
-                else
-                {
+                } else {
                     Log::error(std::format(
                         "Failed to make pipeline descriptor for mesh:{}, submesh[{:d}]",
                         mesh->name, index));
@@ -204,8 +185,7 @@ public:
         double delta = 0.0;
         Transform modelTransform = Transform();
 
-        while (stop.stop_requested() == false)
-        {
+        while (stop.stop_requested() == false) {
             auto rp = swapchain->currentRenderPassDescriptor();
 
             auto& frontAttachment = rp.colorAttachments.front();
@@ -214,10 +194,7 @@ public:
             uint32_t width = frontAttachment.renderTarget->width();
             uint32_t height = frontAttachment.renderTarget->height();
 
-            if (depthTexture == nullptr ||
-                depthTexture->width() != width ||
-                depthTexture->height() != height)
-            {
+            if (depthTexture == nullptr || depthTexture->width() != width || depthTexture->height() != height) {
                 depthTexture = device->makeTransientRenderTarget(TextureType2D, depthFormat, width, height, 1);
             }
             rp.depthStencilAttachment.renderTarget = depthTexture;
@@ -239,10 +216,8 @@ public:
             auto& scene = model->scenes.at(model->defaultSceneIndex);
             for (auto& node : scene.nodes)
                 ForEachNode{ node }(
-                    [&](auto& node)
-                    {
-                        if (node.mesh.has_value())
-                        {
+                    [&](auto& node) {
+                        if (node.mesh.has_value()) {
                             node.mesh.value().updateShadingProperties(&sceneState);
                             node.mesh.value().encodeRenderCommand(encoder.get(), 1, 0);
                         }
@@ -250,7 +225,7 @@ public:
 
             encoder->endEncoding();
             buffer->commit();
-            
+
             swapchain->present();
 
             auto t = std::chrono::high_resolution_clock::now();
@@ -259,12 +234,9 @@ public:
             delta = d.count();
 
             auto interval = std::max(frameInterval - delta, 0.0);
-            if (interval > 0.0)
-            {
+            if (interval > 0.0) {
                 std::this_thread::sleep_for(std::chrono::duration<double>(interval));
-            }
-            else
-            {
+            } else {
                 std::this_thread::yield();
             }
         }
@@ -272,10 +244,9 @@ public:
 };
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
-                     _In_opt_ HINSTANCE hPrevInstance,
-                     _In_ LPWSTR    lpCmdLine,
-                     _In_ int       nCmdShow)
-{
+                      _In_opt_ HINSTANCE hPrevInstance,
+                      _In_ LPWSTR    lpCmdLine,
+                      _In_ int       nCmdShow) {
     //auto h = LoadLibraryA("C:\\Program Files\\RenderDoc\\RenderDoc.dll");
     return RenderTestApp().run();
 }

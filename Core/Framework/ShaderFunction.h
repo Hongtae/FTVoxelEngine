@@ -4,16 +4,13 @@
 #include <map>
 #include "Shader.h"
 
-namespace FV
-{
+namespace FV {
     class GraphicsDevice;
-    class ShaderFunction
-    {
+    class ShaderFunction {
     public:
         virtual ~ShaderFunction() {}
 
-        struct Constant
-        {
+        struct Constant {
             std::string name;
             ShaderDataType type;
             uint32_t index;

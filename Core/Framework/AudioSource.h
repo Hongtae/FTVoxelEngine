@@ -4,17 +4,14 @@
 #include <mutex>
 #include "Vector3.h"
 
-namespace FV
-{
+namespace FV {
     class AudioDevice;
-    class FVCORE_API AudioSource
-    {
+    class FVCORE_API AudioSource {
     public:
         AudioSource(std::shared_ptr<AudioDevice>, uint32_t);
         ~AudioSource();
 
-        enum State
-        {
+        enum State {
             StateStopped,
             StatePlaying,
             StatePaused,
@@ -88,8 +85,7 @@ namespace FV
     private:
         uint32_t sourceID;
         mutable std::mutex bufferLock;
-        struct Buffer
-        {
+        struct Buffer {
             double timestamp;
             size_t bytes;
             size_t bytesSecond;

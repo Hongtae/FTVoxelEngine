@@ -6,29 +6,24 @@
 #include "Shader.h"
 #include <vector>
 
-namespace FV
-{
-    struct ShaderBinding
-    {
+namespace FV {
+    struct ShaderBinding {
         uint32_t binding;
         ShaderDescriptorType type;
         uint32_t arrayLength; // array size or bytes of inline buffer
         std::shared_ptr<SamplerState> immutableSamplers;
     };
 
-    struct ShaderBindingSetLayout
-    {
+    struct ShaderBindingSetLayout {
         using Binding = ShaderBinding;
         std::vector<Binding> bindings;
     };
 
-    class ShaderBindingSet
-    {
+    class ShaderBindingSet {
     public:
         virtual ~ShaderBindingSet() {}
 
-        struct BufferInfo
-        {
+        struct BufferInfo {
             std::shared_ptr<GPUBuffer> buffer;
             uint64_t offset;
             uint64_t length;

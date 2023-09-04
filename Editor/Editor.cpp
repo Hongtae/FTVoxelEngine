@@ -8,8 +8,7 @@
 
 using namespace FV;
 
-class EditorApp : public Application
-{
+class EditorApp : public Application {
 public:
     std::shared_ptr<Window> window;
     std::jthread renderThread;
@@ -17,8 +16,7 @@ public:
     std::shared_ptr<GraphicsDeviceContext> graphicsContext;
     std::filesystem::path appResourcesRoot;
 
-    void initialize() override
-    {
+    void initialize() override {
         appResourcesRoot = environmentPath(EnvironmentPath::AppRoot) / "RenderTest.Resources";
         Log::debug(std::format("App-Resources: \"{}\"", appResourcesRoot.generic_u8string()));
 
@@ -26,16 +24,12 @@ public:
 
         window = Window::makeWindow(u8"RenderTest",
                                     Window::StyleGenericWindow,
-                                    Window::WindowCallback
-        {
-            .contentMinSize
-            {
+                                    Window::WindowCallback {
+            .contentMinSize {
                 [](Window*) { return Size(100, 100); }
             },
-                .closeRequest
-            {
-                [this](Window*)
-                {
+            .closeRequest {
+                [this](Window*) {
                     renderThread.request_stop();
                     terminate(1234);
                     return true;
@@ -47,15 +41,13 @@ public:
         renderThread = std::jthread([this](auto stop) { renderLoop(stop); });
     }
 
-    void finalize() override
-    {
+    void finalize() override {
         renderThread.join();
         window = nullptr;
         graphicsContext = nullptr;
     }
 
-    void renderLoop(std::stop_token stop)
-    {
+    void renderLoop(std::stop_token stop) {
         auto queue = graphicsContext->renderQueue();
         auto swapchain = queue->makeSwapChain(window);
         if (swapchain == nullptr)
@@ -80,8 +72,7 @@ public:
         double delta = 0.0;
         Transform modelTransform = Transform();
 
-        while (stop.stop_requested() == false)
-        {
+        while (stop.stop_requested() == false) {
             auto rp = swapchain->currentRenderPassDescriptor();
 
             auto& frontAttachment = rp.colorAttachments.front();
@@ -92,8 +83,7 @@ public:
 
             if (depthTexture == nullptr ||
                 depthTexture->width() != width ||
-                depthTexture->height() != height)
-            {
+                depthTexture->height() != height) {
                 depthTexture = device->makeTransientRenderTarget(TextureType2D, depthFormat, width, height, 1);
             }
             rp.depthStencilAttachment.renderTarget = depthTexture;
@@ -114,12 +104,9 @@ public:
             delta = d.count();
 
             auto interval = std::max(frameInterval - delta, 0.0);
-            if (interval > 0.0)
-            {
+            if (interval > 0.0) {
                 std::this_thread::sleep_for(std::chrono::duration<double>(interval));
-            }
-            else
-            {
+            } else {
                 std::this_thread::yield();
             }
         }
@@ -127,9 +114,8 @@ public:
 };
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
-                     _In_opt_ HINSTANCE hPrevInstance,
-                     _In_ LPWSTR    lpCmdLine,
-                     _In_ int       nCmdShow)
-{
+                      _In_opt_ HINSTANCE hPrevInstance,
+                      _In_ LPWSTR    lpCmdLine,
+                      _In_ int       nCmdShow) {
     return EditorApp().run();
 }

@@ -5,11 +5,9 @@
 #include <vulkan/vulkan.h>
 #include "Image.h"
 
-namespace FV::Vulkan
-{
+namespace FV::Vulkan {
     class GraphicsDevice;
-    class ImageView : public FV::Texture
-    {
+    class ImageView : public FV::Texture {
     public:
         ImageView(std::shared_ptr<Image>, VkImageView, const VkImageViewCreateInfo&);
         ImageView(std::shared_ptr<GraphicsDevice>, VkImageView);
@@ -22,32 +20,25 @@ namespace FV::Vulkan
         std::shared_ptr<Image> image;
         std::shared_ptr<GraphicsDevice> gdevice;
 
-        uint32_t width() const override
-        {
+        uint32_t width() const override {
             return image->width();
         }
-        uint32_t height() const override
-        {
+        uint32_t height() const override {
             return image->height();
         }
-        uint32_t depth() const override
-        {
+        uint32_t depth() const override {
             return image->depth();
         }
-        uint32_t mipmapCount() const override
-        {
+        uint32_t mipmapCount() const override {
             return image->mipmapCount();
         }
-        uint32_t arrayLength() const override
-        {
+        uint32_t arrayLength() const override {
             return image->arrayLength();
         }
-        TextureType type() const override
-        {
+        TextureType type() const override {
             return image->type();
         }
-        PixelFormat pixelFormat() const override
-        {
+        PixelFormat pixelFormat() const override {
             return image->pixelFormat();
         }
 

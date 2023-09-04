@@ -5,18 +5,15 @@
 #include <filesystem>
 #include "ShaderResource.h"
 
-namespace FV
-{
-    struct ShaderAttribute
-    {
+namespace FV {
+    struct ShaderAttribute {
         std::string name;
         uint32_t location;
         ShaderDataType type;
         bool enabled;
     };
 
-    enum class ShaderDescriptorType
-    {
+    enum class ShaderDescriptorType {
         UniformBuffer,
         StorageBuffer,
         StorageTexture,
@@ -27,16 +24,14 @@ namespace FV
         Sampler,
     };
 
-    struct ShaderDescriptor
-    {
+    struct ShaderDescriptor {
         uint32_t set;
         uint32_t binding;
         uint32_t count; // array size
         ShaderDescriptorType type;
     };
 
-    class FVCORE_API Shader
-    {
+    class FVCORE_API Shader {
     public:
         Shader();
         Shader(const std::filesystem::path& path);
@@ -47,7 +42,7 @@ namespace FV
         bool validate();
         bool isValid() const;
 
-        ShaderStage stage() const { return _stage;  }
+        ShaderStage stage() const { return _stage; }
         const std::vector<uint32_t>& data() const { return _data; }
 
         // entry point functions

@@ -5,14 +5,11 @@
 #include <map>
 #include <vector>
 
-namespace FV
-{
+namespace FV {
     class AudioSource;
-    class FVCORE_API AudioDevice: public std::enable_shared_from_this<AudioDevice>
-    {
+    class FVCORE_API AudioDevice : public std::enable_shared_from_this<AudioDevice> {
     public:
-        struct DeviceInfo
-        {
+        struct DeviceInfo {
             std::string name;
             int majorVersion;
             int minorVersion;
@@ -26,8 +23,7 @@ namespace FV
         std::shared_ptr<AudioSource> makeSource();
         static std::vector<DeviceInfo> availableDevices();
     private:
-        union BitsChannels
-        {
+        union BitsChannels {
             struct {
                 uint16_t bits;
                 uint16_t channels;

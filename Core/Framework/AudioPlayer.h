@@ -3,19 +3,17 @@
 #include "AudioSource.h"
 #include "AudioStream.h"
 
-namespace FV
-{
-    class FVCORE_API AudioPlayer
-    {
+namespace FV {
+    class FVCORE_API AudioPlayer {
     public:
         AudioPlayer(std::shared_ptr<AudioSource>, std::shared_ptr<AudioStream>);
         virtual ~AudioPlayer();
 
         uint32_t sampleRate() const { stream->sampleRate(); }
-        uint32_t channels() const   { stream->channels(); }
-        uint32_t bits() const       { stream->bits(); }
-        double duration() const     { stream->timeTotal(); }
-        double position() const     { stream->timePosition(); }
+        uint32_t channels() const { stream->channels(); }
+        uint32_t bits() const { stream->bits(); }
+        double duration() const { stream->timeTotal(); }
+        double position() const { stream->timePosition(); }
 
         bool retainedWhilePlaying = false;
 

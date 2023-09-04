@@ -10,10 +10,8 @@
 #include "AudioPlayer.h"
 #include "AudioStream.h"
 
-namespace FV
-{
-    class FVCORE_API AudioDeviceContext
-    {
+namespace FV {
+    class FVCORE_API AudioDeviceContext {
     public:
         AudioDeviceContext(std::shared_ptr<AudioDevice>);
         ~AudioDeviceContext();
@@ -27,7 +25,7 @@ namespace FV
     private:
         std::vector<std::weak_ptr<AudioPlayer>> players;
         std::mutex lock;
-        std::jthread thread;    
+        std::jthread thread;
 
         int maxBufferCount;
         double minBufferTime;

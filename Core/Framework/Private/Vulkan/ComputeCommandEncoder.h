@@ -11,21 +11,17 @@
 #include "Semaphore.h"
 #include "TimelineSemaphore.h"
 
-namespace FV::Vulkan
-{
-	class ComputeCommandEncoder : public FV::ComputeCommandEncoder
-	{
+namespace FV::Vulkan {
+    class ComputeCommandEncoder : public FV::ComputeCommandEncoder {
         class Encoder;
-        struct EncodingState
-        {
+        struct EncodingState {
             Encoder* encoder;
             ComputePipelineState* pipelineState;
             DescriptorSet::ImageLayoutMap imageLayoutMap;
             DescriptorSet::ImageViewLayoutMap imageViewLayoutMap;
         };
         using EncoderCommand = std::function<void(VkCommandBuffer, EncodingState&)>;
-        class Encoder : public Vulkan::CommandEncoder
-        {
+        class Encoder : public Vulkan::CommandEncoder {
         public:
             Encoder(CommandBuffer*);
             ~Encoder();
@@ -45,8 +41,8 @@ namespace FV::Vulkan
         };
         std::shared_ptr<Encoder> encoder;
 
-	public:
-		ComputeCommandEncoder(std::shared_ptr<CommandBuffer>);
+    public:
+        ComputeCommandEncoder(std::shared_ptr<CommandBuffer>);
 
         void endEncoding() override;
         bool isCompleted() const override { return encoder == nullptr; }
@@ -64,7 +60,7 @@ namespace FV::Vulkan
 
         void dispatch(uint32_t, uint32_t, uint32_t) override;
 
-		std::shared_ptr<CommandBuffer> cbuffer;
-	};
+        std::shared_ptr<CommandBuffer> cbuffer;
+    };
 }
 #endif //#if FVCORE_ENABLE_VULKAN

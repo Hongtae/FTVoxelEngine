@@ -11,13 +11,10 @@
 #include "Logger.h"
 #include "GraphicsDevice.h"
 
-namespace
-{
-    std::vector<uint8_t> ifstreamVector(const std::filesystem::path& path)
-    {
+namespace {
+    std::vector<uint8_t> ifstreamVector(const std::filesystem::path& path) {
         std::ifstream fs(path, std::ifstream::binary | std::ifstream::in);
-        if (fs.good())
-        {
+        if (fs.good()) {
             return std::vector<uint8_t>((std::istreambuf_iterator<char>(fs)),
                                         std::istreambuf_iterator<char>());
         }
@@ -28,60 +25,50 @@ namespace
     template <typename T> using enable_if_arithmetic_t = std::enable_if_t<std::is_arithmetic_v<T>>;
     // T = stored pixel component type, Q = quantization constant
     template <typename T, double Q = std::numeric_limits<T>::max(), typename = enable_if_arithmetic_t<T>>
-    void writePixelR(uint8_t* data, size_t offset, const RawColorValue& value)
-    {
+    void writePixelR(uint8_t* data, size_t offset, const RawColorValue& value) {
         T color[] = { T(value.r * Q) };
         memcpy(&data[offset], color, sizeof(color));
     }
     template <typename T, double Q = std::numeric_limits<T>::max(), typename = enable_if_arithmetic_t<T>>
-    void writePixelRG(uint8_t* data, size_t offset, const RawColorValue& value)
-    {
+    void writePixelRG(uint8_t* data, size_t offset, const RawColorValue& value) {
         T color[] = { T(value.r * Q), T(value.g * Q) };
         memcpy(&data[offset], color, sizeof(color));
     }
     template <typename T, double Q = std::numeric_limits<T>::max(), typename = enable_if_arithmetic_t<T>>
-    void writePixelRGB(uint8_t* data, size_t offset, const RawColorValue& value)
-    {
+    void writePixelRGB(uint8_t* data, size_t offset, const RawColorValue& value) {
         T color[] = { T(value.r * Q), T(value.g * Q), T(value.b * Q) };
         memcpy(&data[offset], color, sizeof(color));
     }
     template <typename T, double Q = std::numeric_limits<T>::max(), typename = enable_if_arithmetic_t<T>>
-    void writePixelRGBA(uint8_t* data, size_t offset, const RawColorValue& value)
-    {
+    void writePixelRGBA(uint8_t* data, size_t offset, const RawColorValue& value) {
         T color[] = { T(value.r * Q), T(value.g * Q), T(value.b * Q), T(value.a * Q) };
         memcpy(&data[offset], color, sizeof(color));
     }
     // T = stored pixel component type, N = normalization constant
     template <typename T, double N = 1.0 / double(std::numeric_limits<T>::max()), typename = enable_if_arithmetic_t<T>>
-    RawColorValue readPixelR(const uint8_t* data, size_t offset)
-    {
+    RawColorValue readPixelR(const uint8_t* data, size_t offset) {
         const T* color = (const T*)&data[offset];
         return { color[0] * N, 0.0, 0.0, 1.0 };
     }
     template <typename T, double N = 1.0 / double(std::numeric_limits<T>::max()), typename = enable_if_arithmetic_t<T>>
-    RawColorValue readPixelRG(const uint8_t* data, size_t offset)
-    {
+    RawColorValue readPixelRG(const uint8_t* data, size_t offset) {
         const T* color = (const T*)&data[offset];
-        return { color[0] * N, color[1] * N, 0.0, 1.0};
+        return { color[0] * N, color[1] * N, 0.0, 1.0 };
     }
     template <typename T, double N = 1.0 / double(std::numeric_limits<T>::max()), typename = enable_if_arithmetic_t<T>>
-    RawColorValue readPixelRGB(const uint8_t* data, size_t offset)
-    {
+    RawColorValue readPixelRGB(const uint8_t* data, size_t offset) {
         const T* color = (const T*)&data[offset];
-        return { color[0] * N, color[1] * N, color[2] * N, 1.0};
+        return { color[0] * N, color[1] * N, color[2] * N, 1.0 };
     }
     template <typename T, double N = 1.0 / double(std::numeric_limits<T>::max()), typename = enable_if_arithmetic_t<T>>
-    RawColorValue readPixelRGBA(const uint8_t* data, size_t offset)
-    {
+    RawColorValue readPixelRGBA(const uint8_t* data, size_t offset) {
         const T* color = (const T*)&data[offset];
         return { color[0] * N, color[1] * N, color[2] * N, color[3] * N };
     }
 }
 
-namespace FV
-{
-    struct Image::_DecodeContext
-    {
+namespace FV {
+    struct Image::_DecodeContext {
         DKImageDecodeContext decoder;
     };
 }
@@ -89,21 +76,15 @@ namespace FV
 using namespace FV;
 
 Image::Image(uint32_t w, uint32_t h, ImagePixelFormat format, const void* p)
-    : width(w), height(h), pixelFormat(format)
-{
-    if (format != ImagePixelFormat::Invalid)
-    {
+    : width(w), height(h), pixelFormat(format) {
+    if (format != ImagePixelFormat::Invalid) {
         size_t dataSize = bytesPerPixel() * width * height;
 
-        if (dataSize > 0)
-        {
-            if (p)
-            {
+        if (dataSize > 0) {
+            if (p) {
                 const uint8_t* ptr = reinterpret_cast<const uint8_t*>(p);
                 data = std::vector<uint8_t>(&ptr[0], &ptr[dataSize]);
-            }
-            else
-            {
+            } else {
                 data = std::vector<uint8_t>(dataSize, uint8_t(0));
             }
         }
@@ -111,28 +92,23 @@ Image::Image(uint32_t w, uint32_t h, ImagePixelFormat format, const void* p)
 }
 
 Image::Image(const std::vector<uint8_t>& encodedData)
-    : Image(data.data(), data.size())
-{
+    : Image(data.data(), data.size()) {
 }
 
 Image::Image(const std::filesystem::path& path)
-    : Image(ifstreamVector(path))
-{
+    : Image(ifstreamVector(path)) {
 }
 
 Image::Image(const void* encoded, size_t length)
-    : Image(_DecodeContext{ DKImageDecodeFromMemory(encoded, length) })
-{
+    : Image(_DecodeContext{ DKImageDecodeFromMemory(encoded, length) }) {
 }
 
 Image::Image(_DecodeContext ctxt)
     : width(ctxt.decoder.width)
     , height(ctxt.decoder.height)
-    , pixelFormat((ImagePixelFormat)ctxt.decoder.pixelFormat)
-{
+    , pixelFormat((ImagePixelFormat)ctxt.decoder.pixelFormat) {
     auto& decoder = ctxt.decoder;
-    if (decoder.error != DKImageDecodeError_Success)
-    {
+    if (decoder.error != DKImageDecodeError_Success) {
         auto mesg = std::format("Image decode error: {}",
                                 decoder.errorDescription);
 
@@ -151,25 +127,21 @@ Image::Image(_DecodeContext ctxt)
     DKImageReleaseDecodeContext(&decoder);
 }
 
-Image::~Image()
-{
+Image::~Image() {
 }
 
-uint32_t Image::bytesPerPixel() const
-{
-   return DKImagePixelFormatBytesPerPixel(static_cast<DKImagePixelFormat>(pixelFormat));
+uint32_t Image::bytesPerPixel() const {
+    return DKImagePixelFormatBytesPerPixel(static_cast<DKImagePixelFormat>(pixelFormat));
 }
 
-bool Image::canEncode(ImageFormat imageFormat) const
-{
+bool Image::canEncode(ImageFormat imageFormat) const {
     auto supportFormat = DKImagePixelFormatEncodingSupported(static_cast<DKImageFormat>(imageFormat),
                                                              static_cast<DKImagePixelFormat>(pixelFormat));
     return static_cast<ImagePixelFormat>(supportFormat) == this->pixelFormat
         && this->pixelFormat != ImagePixelFormat::Invalid;
 }
 
-bool Image::encode(ImageFormat imageFormat, std::function<void(const void*, size_t)> fn) const
-{
+bool Image::encode(ImageFormat imageFormat, std::function<void(const void*, size_t)> fn) const {
     uint32_t byteCount = bytesPerPixel() * width * height;
     FVASSERT_DEBUG(byteCount == data.size());
 
@@ -177,8 +149,7 @@ bool Image::encode(ImageFormat imageFormat, std::function<void(const void*, size
                                            static_cast<DKImagePixelFormat>(pixelFormat),
                                            data.data(), data.size());
     bool result = false;
-    if (context.error == DKImageEncodeError_Success)
-    {
+    if (context.error == DKImageEncodeError_Success) {
         fn(context.encodedData, context.encodedDataLength);
         result = true;
     }
@@ -186,17 +157,14 @@ bool Image::encode(ImageFormat imageFormat, std::function<void(const void*, size
     return result;
 }
 
-std::shared_ptr<Image> Image::resample(ImagePixelFormat format) const
-{
+std::shared_ptr<Image> Image::resample(ImagePixelFormat format) const {
     return resample(width, height, format, ImageInterpolation::Nearest);
 }
 
-std::shared_ptr<Image> Image::resample(uint32_t width, uint32_t height, ImagePixelFormat format, ImageInterpolation interpolation) const
-{
+std::shared_ptr<Image> Image::resample(uint32_t width, uint32_t height, ImagePixelFormat format, ImageInterpolation interpolation) const {
     if (width == 0 || height == 0 || format == ImagePixelFormat::Invalid)
         return nullptr;
-    if (width == this->width && height == this->height && format == this->pixelFormat)
-    {
+    if (width == this->width && height == this->height && format == this->pixelFormat) {
         if (auto p = const_cast<Image*>(this)->shared_from_this(); p)
             return p;
         // copy
@@ -204,10 +172,9 @@ std::shared_ptr<Image> Image::resample(uint32_t width, uint32_t height, ImagePix
     }
 
     void (*writePixel)(uint8_t*, size_t, const RawColorValue&) = nullptr;
-    RawColorValue (*readPixel)(const uint8_t*, size_t) = nullptr;
+    RawColorValue(*readPixel)(const uint8_t*, size_t) = nullptr;
 
-    switch (format)
-    {
+    switch (format) {
     case ImagePixelFormat::R8:      writePixel = writePixelR<uint8_t>;      break;
     case ImagePixelFormat::RG8:     writePixel = writePixelRG<uint8_t>;     break;
     case ImagePixelFormat::RGB8:    writePixel = writePixelRGB<uint8_t>;    break;
@@ -223,11 +190,10 @@ std::shared_ptr<Image> Image::resample(uint32_t width, uint32_t height, ImagePix
     case ImagePixelFormat::R32F:    writePixel = writePixelR<float, 1.0>;   break;
     case ImagePixelFormat::RG32F:   writePixel = writePixelRG<float, 1.0>;  break;
     case ImagePixelFormat::RGB32F:  writePixel = writePixelRGB<float, 1.0>; break;
-    case ImagePixelFormat::RGBA32F: writePixel = writePixelRGBA<float, 1.0>;break;
+    case ImagePixelFormat::RGBA32F: writePixel = writePixelRGBA<float, 1.0>; break;
     }
 
-    switch (this->pixelFormat)
-    {
+    switch (this->pixelFormat) {
     case ImagePixelFormat::R8:      readPixel = readPixelR<uint8_t>;        break;
     case ImagePixelFormat::RG8:     readPixel = readPixelRG<uint8_t>;       break;
     case ImagePixelFormat::RGB8:    readPixel = readPixelRGB<uint8_t>;      break;
@@ -246,13 +212,11 @@ std::shared_ptr<Image> Image::resample(uint32_t width, uint32_t height, ImagePix
     case ImagePixelFormat::RGBA32F: readPixel = readPixelRGBA<float, 1.0>;  break;
     }
 
-    if (writePixel == nullptr)
-    {
+    if (writePixel == nullptr) {
         Log::error("Invalid output format!");
         return nullptr;
     }
-    if (readPixel == nullptr)
-    {
+    if (readPixel == nullptr) {
         Log::error("Invalid input format!");
         return nullptr;
     }
@@ -269,16 +233,14 @@ std::shared_ptr<Image> Image::resample(uint32_t width, uint32_t height, ImagePix
     const uint32_t sourceBpp = this->bytesPerPixel();
     const uint8_t* sourceData = this->data.data();
 
-    auto getPixel = [&](float x, float y)->RawColorValue
-    {
+    auto getPixel = [&](float x, float y)->RawColorValue {
         int nx = std::clamp(int(x), 0, int(this->width) - 1);
         int ny = std::clamp(int(y), 0, int(this->height) - 1);
         size_t offset = size_t(ny * this->width + nx) * sourceBpp;
         return readPixel(sourceData, offset);
     };
 
-    auto interpKernel = [&getPixel](double (*kernel)(float), float x, float y) -> RawColorValue
-    {
+    auto interpKernel = [&getPixel](double (*kernel)(float), float x, float y) -> RawColorValue {
         float fx = floor(x);
         float fy = floor(y);
         float px[4] = { fx - 1.0f, fx, fx + 1.0f, fx + 2.0f };
@@ -287,10 +249,8 @@ std::shared_ptr<Image> Image::resample(uint32_t width, uint32_t height, ImagePix
         double ky[4] = { kernel(py[0] - y), kernel(py[1] - y), kernel(py[2] - y), kernel(py[3] - y) };
 
         RawColorValue color = { 0, 0, 0, 0 };
-        for (int yIndex = 0; yIndex < 4; ++yIndex)
-        {
-            for (int xIndex = 0; xIndex < 4; ++xIndex)
-            {
+        for (int yIndex = 0; yIndex < 4; ++yIndex) {
+            for (int xIndex = 0; xIndex < 4; ++xIndex) {
                 double k = kx[xIndex] * ky[yIndex];
                 auto c = getPixel(px[xIndex], py[yIndex]);
                 color = { color.r + c.r * k, color.g + c.g * k, color.b + c.b * k, color.a + c.a * k };
@@ -300,17 +260,14 @@ std::shared_ptr<Image> Image::resample(uint32_t width, uint32_t height, ImagePix
     };
 
     std::function<RawColorValue(float, float)> interpolatePoint;
-    switch (interpolation)
-    {
+    switch (interpolation) {
     case ImageInterpolation::Nearest:
-        interpolatePoint = [&](float x, float y)->RawColorValue
-        {
+        interpolatePoint = [&](float x, float y)->RawColorValue {
             return getPixel(std::round(x), std::round(y));
         };
         break;
     case ImageInterpolation::Bilinear:
-        interpolatePoint = [&](float x, float y)->RawColorValue
-        {
+        interpolatePoint = [&](float x, float y)->RawColorValue {
             auto x1 = floor(x);
             auto x2 = floor(x + 1);
             auto y1 = floor(y);
@@ -332,10 +289,8 @@ std::shared_ptr<Image> Image::resample(uint32_t width, uint32_t height, ImagePix
         };
         break;
     case ImageInterpolation::Bicubic:
-        interpolatePoint = [&](float x, float y)->RawColorValue
-        {
-            auto kernelCubic = [](float t)->double
-            {
+        interpolatePoint = [&](float x, float y)->RawColorValue {
+            auto kernelCubic = [](float t)->double {
                 auto t1 = abs(t);
                 auto t2 = t1 * t1;
                 if (t1 < 1) { return double(1 - 2 * t2 + t2 * t1); }
@@ -345,11 +300,9 @@ std::shared_ptr<Image> Image::resample(uint32_t width, uint32_t height, ImagePix
             return interpKernel(kernelCubic, x, y);
         };
         break;
-    case ImageInterpolation::Spline: 
-        interpolatePoint = [&](float x, float y)->RawColorValue
-        {
-            auto kernelSpline = [](float _t)->double
-            {
+    case ImageInterpolation::Spline:
+        interpolatePoint = [&](float x, float y)->RawColorValue {
+            auto kernelSpline = [](float _t)->double {
                 auto t = double(_t);
                 if (t < -2.0) { return 0.0; }
                 if (t < -1.0) { return (2.0 + t) * (2.0 + t) * (2.0 + t) * 0.16666666666666666667; }
@@ -362,20 +315,16 @@ std::shared_ptr<Image> Image::resample(uint32_t width, uint32_t height, ImagePix
         };
         break;
     case ImageInterpolation::Gaussian:
-        interpolatePoint = [&](float x, float y)->RawColorValue
-        {
-            auto kernelGaussian = [](float t)->double
-            {
+        interpolatePoint = [&](float x, float y)->RawColorValue {
+            auto kernelGaussian = [](float t)->double {
                 return exp(-2.0 * double(t * t)) * 0.79788456080287;
             };
             return interpKernel(kernelGaussian, x, y);
         };
         break;
-    case ImageInterpolation::Quadratic: 
-        interpolatePoint = [&](float x, float y)->RawColorValue
-        {
-            auto kernelQuadratic = [](float t)->double
-            {
+    case ImageInterpolation::Quadratic:
+        interpolatePoint = [&](float x, float y)->RawColorValue {
+            auto kernelQuadratic = [](float t)->double {
                 if (t < -1.5) { return 0; }
                 if (t < -0.5) { return double(0.5 * (t + 1.5) * (t + 1.5)); }
                 if (t < 0.5) { return double(0.75 - t * t); }
@@ -387,18 +336,15 @@ std::shared_ptr<Image> Image::resample(uint32_t width, uint32_t height, ImagePix
         break;
     }
 
-    auto interpolateBox = [&](float x, float y)->RawColorValue
-    {
+    auto interpolateBox = [&](float x, float y)->RawColorValue {
         auto x1 = x - scaleX * 0.5f;
         auto x2 = x + scaleX * 0.5f;
         auto y1 = y - scaleY * 0.5f;
         auto y2 = y + scaleY * 0.5f;
 
         RawColorValue color = { 0, 0, 0, 0 };
-        for (auto ny = std::lround(y1), ny2 = std::lround(y2); ny <= ny2; ++ny)
-        {
-            for (auto nx = std::lround(x1), nx2 = std::lround(x2); nx <= nx2; ++nx)
-            {
+        for (auto ny = std::lround(y1), ny2 = std::lround(y2); ny <= ny2; ++ny) {
+            for (auto nx = std::lround(x1), nx2 = std::lround(x2); nx <= nx2; ++nx) {
                 auto xMin = std::max(float(nx) - 0.5f, x1);
                 auto xMax = std::min(float(nx) + 0.5f, x2);
                 auto yMin = std::max(float(ny) - 0.5f, y1);
@@ -414,25 +360,19 @@ std::shared_ptr<Image> Image::resample(uint32_t width, uint32_t height, ImagePix
         return { color.r * area, color.g * area, color.b * area, color.a * area };
     };
     std::function<RawColorValue(float, float)> sample;
-    if (this->width != width || this->height != height)
-    {
+    if (this->width != width || this->height != height) {
         if (scaleX <= 1.0f && scaleY <= 1.0f)
             sample = interpolatePoint;
         else
             sample = interpolateBox;
-    }
-    else
-    {
-        sample = [&](float x, float y)
-        {
+    } else {
+        sample = [&](float x, float y) {
             return getPixel(x, y);
         };
     }
 
-    for (uint32_t ny = 0; ny < height; ++ny)
-    {
-        for (uint32_t nx = 0; nx < width; ++nx)
-        {
+    for (uint32_t ny = 0; ny < height; ++ny) {
+        for (uint32_t nx = 0; nx < width; ++nx) {
             // convert source location
             auto x = (float(nx) + 0.5f) * scaleX - 0.5f;
             auto y = (float(ny) + 0.5f) * scaleY - 0.5f;
@@ -449,16 +389,14 @@ std::shared_ptr<Image> Image::resample(uint32_t width, uint32_t height, ImagePix
     return image;
 }
 
-std::shared_ptr<Texture> Image::makeTexture(CommandQueue* queue) const
-{
+std::shared_ptr<Texture> Image::makeTexture(CommandQueue* queue) const {
     if (queue == nullptr)
         return nullptr;
 
     PixelFormat textureFormat = PixelFormat::Invalid;
     ImagePixelFormat imageFormat = this->pixelFormat;
 
-    switch (this->pixelFormat)
-    {
+    switch (this->pixelFormat) {
     case ImagePixelFormat::R8:
         textureFormat = PixelFormat::R8Unorm;
         break;
@@ -538,15 +476,13 @@ std::shared_ptr<Texture> Image::makeTexture(CommandQueue* queue) const
     auto stgBuffer = device->makeBuffer(data.size(),
                                         GPUBuffer::StorageModeShared,
                                         CPUCacheModeWriteCombined);
-    if (stgBuffer == nullptr)
-    {
+    if (stgBuffer == nullptr) {
         Log::error("Failed to make buffer object.");
         return nullptr;
     }
 
     auto p = stgBuffer->contents();
-    if (p == nullptr)
-    {
+    if (p == nullptr) {
         Log::error("Buffer memory mapping failed.");
         return nullptr;
     }
@@ -555,15 +491,13 @@ std::shared_ptr<Texture> Image::makeTexture(CommandQueue* queue) const
     stgBuffer->flush();
 
     auto commandBuffer = queue->makeCommandBuffer();
-    if (commandBuffer == nullptr)
-    {
+    if (commandBuffer == nullptr) {
         Log::error("Failed to make command buffer.");
         return nullptr;
     }
 
     auto encoder = commandBuffer->makeCopyCommandEncoder();
-    if (encoder == nullptr)
-    {
+    if (encoder == nullptr) {
         Log::error("Failed to make copy command encoder.");
         return nullptr;
     }

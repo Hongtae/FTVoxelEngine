@@ -7,12 +7,9 @@
 #if FVCORE_ENABLE_VULKAN
 #include <vulkan/vulkan.h>
 
-namespace FV::Vulkan
-{
-    inline ShaderDescriptorType getDescriptorType(VkDescriptorType type)
-    {
-        switch (type)
-        {
+namespace FV::Vulkan {
+    inline ShaderDescriptorType getDescriptorType(VkDescriptorType type) {
+        switch (type) {
         case VK_DESCRIPTOR_TYPE_SAMPLER:
             return ShaderDescriptorType::Sampler;
         case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
@@ -40,10 +37,8 @@ namespace FV::Vulkan
         }
         return {};
     }
-    inline VkDescriptorType getDescriptorType(ShaderDescriptorType type)
-    {
-        switch (type)
-        {
+    inline VkDescriptorType getDescriptorType(ShaderDescriptorType type) {
+        switch (type) {
         case ShaderDescriptorType::UniformBuffer:
             return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         case ShaderDescriptorType::StorageBuffer:
@@ -67,8 +62,7 @@ namespace FV::Vulkan
         return {};
     }
 
-    inline VkFormat getVertexFormat(VertexFormat fmt)
-    {
+    inline VkFormat getVertexFormat(VertexFormat fmt) {
         switch (fmt) {
         case VertexFormat::UChar2:				    return VK_FORMAT_R8G8_UINT;
         case VertexFormat::UChar3: 				    return VK_FORMAT_R8G8B8_UINT;
@@ -116,10 +110,8 @@ namespace FV::Vulkan
         return VK_FORMAT_UNDEFINED;
     }
 
-    inline VkFormat getPixelFormat(PixelFormat fmt)
-    {
-        switch (fmt)
-        {
+    inline VkFormat getPixelFormat(PixelFormat fmt) {
+        switch (fmt) {
         case PixelFormat::R8Unorm:			return VK_FORMAT_R8_UNORM;
         case PixelFormat::R8Snorm:			return VK_FORMAT_R8_SNORM;
         case PixelFormat::R8Uint:			return VK_FORMAT_R8_UINT;
@@ -183,10 +175,8 @@ namespace FV::Vulkan
         return VK_FORMAT_UNDEFINED;
     }
 
-    inline PixelFormat getPixelFormat(VkFormat fmt)
-    {
-        switch (fmt)
-        {
+    inline PixelFormat getPixelFormat(VkFormat fmt) {
+        switch (fmt) {
         case VK_FORMAT_R8_UNORM:					return PixelFormat::R8Unorm;
         case VK_FORMAT_R8_SNORM:					return PixelFormat::R8Snorm;
         case VK_FORMAT_R8_UINT:						return PixelFormat::R8Uint;
@@ -251,21 +241,17 @@ namespace FV::Vulkan
         return PixelFormat::Invalid;
     }
 
-    inline void appendNextChain(void* target, void* next)
-    {
+    inline void appendNextChain(void* target, void* next) {
         VkBaseOutStructure* p = (VkBaseOutStructure*)target;
-        while (p->pNext != nullptr)
-        {
+        while (p->pNext != nullptr) {
             p = p->pNext;
         }
         p->pNext = (VkBaseOutStructure*)next;
     }
 
     template <typename T>
-    inline void enumerateNextChain(const void* target, T&& callback)
-    {
-        for (auto p = (const VkBaseInStructure*)target; p; p = p->pNext)
-        {
+    inline void enumerateNextChain(const void* target, T&& callback) {
+        for (auto p = (const VkBaseInStructure*)target; p; p = p->pNext) {
             callback(p->sType, (const void*)p);
             p = p->pNext;
         }

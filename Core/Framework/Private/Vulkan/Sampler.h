@@ -5,11 +5,9 @@
 #if FVCORE_ENABLE_VULKAN
 #include <vulkan/vulkan.h>
 
-namespace FV::Vulkan
-{
+namespace FV::Vulkan {
     class GraphicsDevice;
-    class Sampler : public FV::SamplerState
-    {
+    class Sampler : public FV::SamplerState {
     public:
         Sampler(std::shared_ptr<GraphicsDevice>, VkSampler);
         ~Sampler();

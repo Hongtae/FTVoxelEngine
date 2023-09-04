@@ -6,13 +6,10 @@
 #include <string>
 #include <format>
 
-namespace FV
-{
-    class Logger : public std::enable_shared_from_this<Logger>
-    {
+namespace FV {
+    class Logger : public std::enable_shared_from_this<Logger> {
     public:
-        enum class Level
-        {
+        enum class Level {
             Debug, Verbose, Info, Warning, Error
         };
 
@@ -22,7 +19,7 @@ namespace FV
         void bind(bool retain);
         void unbind();
         bool isBound() const;
-        
+
         static std::vector<std::shared_ptr<Logger>> categorized(const std::string&);
         virtual void log(Level level, const std::string& mesg) const;
         static void broadcast(Level level, const std::string& mesg);
@@ -33,28 +30,24 @@ namespace FV
         const std::string category;
     };
 
-    struct Log
-    {
+    struct Log {
         using Level = Logger::Level;
 
-        static void log(const std::string& category, Level level, const std::string& mesg)
-        {
-            for (auto logger : Logger::categorized(category))
-            {
+        static void log(const std::string& category, Level level, const std::string& mesg) {
+            for (auto logger : Logger::categorized(category)) {
                 logger->log(level, mesg);
             }
         }
 
-        static void log(Level level, const std::string& mesg)
-        {
+        static void log(Level level, const std::string& mesg) {
             Logger* d = Logger::defaultLogger();
             Logger::broadcast(level, mesg);
         }
 
-        static void debug(const std::string& mesg)     { log(Level::Debug, mesg); }
-        static void verbose(const std::string& mesg)   { log(Level::Verbose, mesg); }
-        static void info(const std::string& mesg)      { log(Level::Info, mesg); }
-        static void warning(const std::string& mesg)   { log(Level::Warning, mesg); }
-        static void error(const std::string& mesg)     { log(Level::Error, mesg); }
+        static void debug(const std::string& mesg) { log(Level::Debug, mesg); }
+        static void verbose(const std::string& mesg) { log(Level::Verbose, mesg); }
+        static void info(const std::string& mesg) { log(Level::Info, mesg); }
+        static void warning(const std::string& mesg) { log(Level::Warning, mesg); }
+        static void error(const std::string& mesg) { log(Level::Error, mesg); }
     };
 }

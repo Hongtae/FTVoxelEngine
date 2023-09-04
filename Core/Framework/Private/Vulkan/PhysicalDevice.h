@@ -7,16 +7,13 @@
 #if FVCORE_ENABLE_VULKAN
 #include "Extensions.h"
 
-namespace FV::Vulkan
-{
-    class PhysicalDeviceDescription
-    {
+namespace FV::Vulkan {
+    class PhysicalDeviceDescription {
     public:
         PhysicalDeviceDescription(VkPhysicalDevice);
         ~PhysicalDeviceDescription();
 
-        enum class DeviceType
-        {
+        enum class DeviceType {
             IntegratedGPU,
             DiscreteGPU,
             VirtualGPU,
@@ -51,8 +48,7 @@ namespace FV::Vulkan
         std::vector<VkQueueFamilyProperties> queueFamilies;
         std::map<std::string, uint32_t> extensions;
 
-        bool hasExtension(const std::string& ext)
-        {
+        bool hasExtension(const std::string& ext) {
             return extensions.contains(ext);
         }
     };

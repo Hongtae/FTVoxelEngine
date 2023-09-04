@@ -2,18 +2,15 @@
 #include "../include.h"
 #include "ShaderFunction.h"
 
-namespace FV
-{
-    struct ShaderSpecialization
-    {
+namespace FV {
+    struct ShaderSpecialization {
         ShaderDataType type;
         const void* data;
         uint32_t index;
         size_t size;
     };
 
-    class ShaderModule
-    {
+    class ShaderModule {
     public:
         virtual ~ShaderModule() {}
 

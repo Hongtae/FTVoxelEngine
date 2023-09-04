@@ -5,18 +5,14 @@
 #include "Matrix4.h"
 #include "Quaternion.h"
 
-namespace FV
-{
-    struct FVCORE_API Transform
-    {
+namespace FV {
+    struct FVCORE_API Transform {
         Transform(const Quaternion& q = Quaternion::identity,
                   const Vector3& p = Vector3::zero)
-            : orientation(q), position(p)
-        {
+            : orientation(q), position(p) {
         }
         Transform(const Vector3& p)
-            : orientation(Quaternion::identity), position(p)
-        {
+            : orientation(Quaternion::identity), position(p) {
         }
 
         Quaternion orientation;

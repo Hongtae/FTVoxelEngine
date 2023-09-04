@@ -7,12 +7,10 @@ using namespace FV::Vulkan;
 
 TimelineSemaphore::TimelineSemaphore(std::shared_ptr<GraphicsDevice> dev, VkSemaphore s)
     : device(dev)
-    , semaphore(s)
-{
+    , semaphore(s) {
 }
 
-TimelineSemaphore::~TimelineSemaphore()
-{
+TimelineSemaphore::~TimelineSemaphore() {
     vkDestroySemaphore(device->device, semaphore, device->allocationCallbacks());
 }
 

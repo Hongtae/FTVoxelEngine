@@ -6,27 +6,22 @@
 #include <vulkan/vulkan.h>
 #include "Buffer.h"
 
-namespace FV::Vulkan
-{
+namespace FV::Vulkan {
     class GraphicsDevice;
-    class BufferView : public FV::GPUBuffer
-    {
+    class BufferView : public FV::GPUBuffer {
     public:
         BufferView(std::shared_ptr<Buffer>);
         BufferView(std::shared_ptr<Buffer>, VkBufferView, const VkBufferViewCreateInfo&);
         BufferView(std::shared_ptr<GraphicsDevice>, VkBufferView);
         ~BufferView();
 
-        void* contents() override
-        {
+        void* contents() override {
             return buffer->contents();
         }
-        void flush() override
-        {
+        void flush() override {
             buffer->flush(0, VK_WHOLE_SIZE);
         }
-        size_t length() const override
-        {
+        size_t length() const override {
             return buffer->length();
         }
 
