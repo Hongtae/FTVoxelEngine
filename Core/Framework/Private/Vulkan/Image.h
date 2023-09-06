@@ -47,15 +47,15 @@ namespace FV::Vulkan {
         }
 
         VkImageLayout setLayout(VkImageLayout layout,
-                                VkAccessFlags accessMask,
-                                VkPipelineStageFlags stageBegin,
-                                VkPipelineStageFlags stageEnd,
+                                VkAccessFlags2 accessMask,
+                                VkPipelineStageFlags2 stageBegin,
+                                VkPipelineStageFlags2 stageEnd,
                                 uint32_t queueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                                 VkCommandBuffer commandBuffer = VK_NULL_HANDLE) const;
 
         VkImageLayout layout() const;
 
-        static VkAccessFlags commonLayoutAccessMask(VkImageLayout);
+        static VkAccessFlags2 commonLayoutAccessMask(VkImageLayout);
 
         VkImage					image;
         VkImageType				imageType;
@@ -71,9 +71,9 @@ namespace FV::Vulkan {
     private:
         struct LayoutAccessInfo {
             VkImageLayout layout;
-            VkAccessFlags accessMask;
-            VkPipelineStageFlags stageMaskBegin;
-            VkPipelineStageFlags stageMaskEnd;
+            VkAccessFlags2 accessMask;
+            VkPipelineStageFlags2 stageMaskBegin;
+            VkPipelineStageFlags2 stageMaskEnd;
             uint32_t queueFamilyIndex;
         };
         mutable std::mutex layoutLock;

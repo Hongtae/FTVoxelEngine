@@ -48,7 +48,7 @@ namespace FV::Vulkan {
         void releaseDescriptorSets(DescriptorPool*, VkDescriptorSet*, uint32_t);
 
         void addFenceCompletionHandler(VkFence, std::function<void()>);
-        VkFence getFence();
+        VkFence fence();
 
         void loadPipelineCache();
         void savePipelineCache();

@@ -61,6 +61,7 @@ GraphicsDevice::GraphicsDevice(std::shared_ptr<VulkanInstance> ins,
     requiredExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     requiredExtensions.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
     requiredExtensions.push_back(VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME);
+    requiredExtensions.push_back(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
     requiredExtensions.push_back(VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME);
     requiredExtensions.push_back(VK_EXT_EXTENDED_DYNAMIC_STATE_2_EXTENSION_NAME);
     //requiredExtensions.push_back(VK_EXT_EXTENDED_DYNAMIC_STATE_3_EXTENSION_NAME);
@@ -110,6 +111,9 @@ GraphicsDevice::GraphicsDevice(std::shared_ptr<VulkanInstance> ins,
                             }) != deviceExtensions.end();
     };
 
+    VkPhysicalDeviceSynchronization2Features synchronization2Features = {
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES
+    };
     VkPhysicalDeviceExtendedDynamicStateFeaturesEXT extDynamicFeatures = {
         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT
     };
@@ -122,7 +126,10 @@ GraphicsDevice::GraphicsDevice(std::shared_ptr<VulkanInstance> ins,
     VkPhysicalDeviceMaintenance4Features maintenance4Features = {
         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_4_FEATURES
     };
-
+    if (deviceExtensionContains(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME)) {
+        synchronization2Features.synchronization2 = VK_TRUE;
+        appendNextChain(&deviceCreateInfo, &synchronization2Features);
+    }
     if (deviceExtensionContains(VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME)) {
         extDynamicFeatures.extendedDynamicState = VK_TRUE;
         appendNextChain(&deviceCreateInfo, &extDynamicFeatures);
@@ -999,7 +1006,7 @@ std::shared_ptr<FV::SamplerState> GraphicsDevice::makeSamplerState(const Sampler
     createInfo.anisotropyEnable = VK_TRUE;
     createInfo.maxAnisotropy = float(desc.maxAnisotropy);
     createInfo.compareOp = compareOp(desc.compareFunction);
-    createInfo.compareEnable = createInfo.compareOp != VK_COMPARE_OP_NEVER;
+    createInfo.compareEnable = desc.compareFunction == CompareFunctionAlways ? VK_FALSE : VK_TRUE;
     createInfo.minLod = desc.lodMinClamp;
     createInfo.maxLod = desc.lodMaxClamp;
 
@@ -1968,7 +1975,7 @@ void GraphicsDevice::addFenceCompletionHandler(VkFence fence, std::function<void
     }
 }
 
-VkFence GraphicsDevice::getFence() {
+VkFence GraphicsDevice::fence() {
     VkFence fence = VK_NULL_HANDLE;
 
     if (fence == VK_NULL_HANDLE) {

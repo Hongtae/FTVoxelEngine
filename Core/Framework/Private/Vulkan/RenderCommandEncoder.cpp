@@ -25,15 +25,15 @@ RenderCommandEncoder::Encoder::Encoder(class CommandBuffer* cb, const RenderPass
     for (const auto& colorAttachment : renderPassDescriptor.colorAttachments) {
         if (auto rt = std::dynamic_pointer_cast<ImageView>(colorAttachment.renderTarget);
             rt && rt->image) {
-            this->addWaitSemaphore(rt->waitSemaphore, 0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-            this->addSignalSemaphore(rt->signalSemaphore, 0);
+            this->addWaitSemaphore(rt->waitSemaphore, 0, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT);
+            this->addSignalSemaphore(rt->signalSemaphore, 0, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT);
         }
     }
     if (renderPassDescriptor.depthStencilAttachment.renderTarget) {
         const auto& depthStencilAttachment = renderPassDescriptor.depthStencilAttachment;
         if (auto rt = std::dynamic_pointer_cast<ImageView>(depthStencilAttachment.renderTarget); rt && rt->image) {
-            this->addWaitSemaphore(rt->waitSemaphore, 0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-            this->addSignalSemaphore(rt->signalSemaphore, 0);
+            this->addWaitSemaphore(rt->waitSemaphore, 0, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT);
+            this->addSignalSemaphore(rt->signalSemaphore, 0, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT);
         }
     }
 }
@@ -96,10 +96,12 @@ bool RenderCommandEncoder::Encoder::encode(VkCommandBuffer commandBuffer) {
             attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
             attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-            VkImageLayout currentLayout = rt->image->setLayout(attachment.finalLayout,
-                                                               VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-                                                               VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                                                               VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+            VkImageLayout currentLayout = rt->image->setLayout(
+                attachment.finalLayout,
+                VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT);
+
             if (attachment.loadOp == VK_ATTACHMENT_LOAD_OP_LOAD)
                 attachment.initialLayout = currentLayout;
 
@@ -154,10 +156,11 @@ bool RenderCommandEncoder::Encoder::encode(VkCommandBuffer commandBuffer) {
             attachment.stencilStoreOp = attachment.storeOp;
             attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-            VkImageLayout currentLayout = rt->image->setLayout(attachment.finalLayout,
-                                                               VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-                                                               VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                                                               VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+            VkImageLayout currentLayout = rt->image->setLayout(
+                attachment.finalLayout,
+                VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+                VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT);
 
             if (attachment.loadOp == VK_ATTACHMENT_LOAD_OP_LOAD)
                 attachment.initialLayout = currentLayout;
@@ -230,12 +233,12 @@ bool RenderCommandEncoder::Encoder::encode(VkCommandBuffer commandBuffer) {
     for (auto& pair : state.imageLayoutMap) {
         Image* image = pair.first;
         VkImageLayout layout = pair.second;
-        VkAccessFlags accessMask = Image::commonLayoutAccessMask(layout);
+        VkAccessFlags2 accessMask = Image::commonLayoutAccessMask(layout);
 
         image->setLayout(layout,
                          accessMask,
-                         VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
-                         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                         VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
+                         VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
                          state.encoder->cbuffer->queueFamily()->familyIndex,
                          commandBuffer);
     }
@@ -322,7 +325,7 @@ void RenderCommandEncoder::waitEvent(std::shared_ptr<FV::GPUEvent> event) {
     auto semaphore = std::dynamic_pointer_cast<Semaphore>(event);
     FVASSERT_DEBUG(semaphore);
 
-    VkPipelineStageFlags pipelineStages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    VkPipelineStageFlags2 pipelineStages = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
 
     encoder->addWaitSemaphore(semaphore->semaphore, semaphore->nextWaitValue(), pipelineStages);
     encoder->events.push_back(semaphore);
@@ -332,7 +335,9 @@ void RenderCommandEncoder::signalEvent(std::shared_ptr<FV::GPUEvent> event) {
     auto semaphore = std::dynamic_pointer_cast<Semaphore>(event);
     FVASSERT_DEBUG(semaphore);
 
-    encoder->addSignalSemaphore(semaphore->semaphore, semaphore->nextSignalValue());
+    VkPipelineStageFlags2 pipelineStages = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
+
+    encoder->addSignalSemaphore(semaphore->semaphore, semaphore->nextSignalValue(), pipelineStages);
     encoder->events.push_back(semaphore);
 }
 
@@ -340,7 +345,7 @@ void RenderCommandEncoder::waitSemaphoreValue(std::shared_ptr<FV::GPUSemaphore> 
     auto semaphore = std::dynamic_pointer_cast<TimelineSemaphore>(sema);
     FVASSERT_DEBUG(semaphore);
 
-    VkPipelineStageFlags pipelineStages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    VkPipelineStageFlags2 pipelineStages = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
 
     encoder->addWaitSemaphore(semaphore->semaphore, value, pipelineStages);
     encoder->semaphores.push_back(semaphore);
@@ -350,7 +355,9 @@ void RenderCommandEncoder::signalSemaphoreValue(std::shared_ptr<FV::GPUSemaphore
     auto semaphore = std::dynamic_pointer_cast<TimelineSemaphore>(sema);
     FVASSERT_DEBUG(semaphore);
 
-    encoder->addSignalSemaphore(semaphore->semaphore, value);
+    VkPipelineStageFlags2 pipelineStages = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
+
+    encoder->addSignalSemaphore(semaphore->semaphore, value, pipelineStages);
     encoder->semaphores.push_back(semaphore);
 }
 

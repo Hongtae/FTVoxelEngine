@@ -15,33 +15,33 @@ namespace FV::Vulkan {
     public:
         enum { InitialNumberOfCommands = 128 };
 
-        struct WaitTimelineSemaphoreStageValue {
-            VkPipelineStageFlags stages;
+        struct TimelineSemaphoreStageValue {
+            VkPipelineStageFlags2 stages;
             uint64_t value; // 0 for non-timeline semaphore (binary semaphore)
         };
-        std::map<VkSemaphore, WaitTimelineSemaphoreStageValue> waitSemaphores;
-        std::map<VkSemaphore, uint64_t> signalSemaphores;
+        std::map<VkSemaphore, TimelineSemaphoreStageValue> waitSemaphores;
+        std::map<VkSemaphore, TimelineSemaphoreStageValue> signalSemaphores;
 
         virtual ~CommandEncoder() {}
         virtual bool encode(VkCommandBuffer) = 0;
 
-        void addWaitSemaphore(VkSemaphore semaphore, uint64_t value, VkPipelineStageFlags flags) {
+        void addWaitSemaphore(VkSemaphore semaphore, uint64_t value, VkPipelineStageFlags2 flags) {
             if (semaphore != VK_NULL_HANDLE) {
-                if (auto pair = waitSemaphores.emplace(semaphore, WaitTimelineSemaphoreStageValue{ flags, value });
-                    pair.second == false) // semaphore already exists.
-                {
+                if (auto pair = waitSemaphores.emplace(semaphore, TimelineSemaphoreStageValue{ flags, value });
+                    pair.second == false) { // semaphore already exists.
                     if (value > pair.first->second.value)
                         pair.first->second.value = value;
                     pair.first->second.stages |= flags;
                 }
             }
         }
-        void addSignalSemaphore(VkSemaphore semaphore, uint64_t value) {
+        void addSignalSemaphore(VkSemaphore semaphore, uint64_t value, VkPipelineStageFlags2 flags) {
             if (semaphore != VK_NULL_HANDLE) {
-                if (auto pair = signalSemaphores.emplace(semaphore, value);
+                if (auto pair = signalSemaphores.emplace(semaphore, TimelineSemaphoreStageValue{ flags, value });
                     pair.second == false) {
-                    if (value > pair.first->second)
-                        pair.first->second = value;
+                    if (value > pair.first->second.value)
+                        pair.first->second.value = value;
+                    pair.first->second.stages |= flags;
                 }
             }
         }
@@ -70,17 +70,14 @@ namespace FV::Vulkan {
         std::shared_ptr<CommandQueue> cqueue;
         std::vector<std::shared_ptr<CommandEncoder>> encoders;
 
-        std::vector<VkSubmitInfo>           submitInfos;
-        std::vector<VkCommandBuffer>        submitCommandBuffers;
-        std::vector<VkSemaphore>            submitWaitSemaphores;
-        std::vector<VkPipelineStageFlags>   submitWaitStageMasks;
-        std::vector<VkSemaphore>            submitSignalSemaphores;
-
-        std::vector<uint64_t>               submitWaitTimelineSemaphoreValues;
-        std::vector<uint64_t>               submitSignalTimelineSemaphoreValues;
-        std::vector<VkTimelineSemaphoreSubmitInfoKHR> submitTimelineSemaphoreInfos;
+        std::vector<VkSubmitInfo2>              submitInfos;
+        std::vector<VkCommandBufferSubmitInfo>  commandBufferSubmitInfos;
+        std::vector<VkSemaphoreSubmitInfo>      waitSemaphores;
+        std::vector<VkSemaphoreSubmitInfo>      signalSemaphores;
 
         std::vector<std::function<void()>> completedHandlers;
+
+        std::mutex lock;
     };
 }
 #endif //#if FVCORE_ENABLE_VULKAN

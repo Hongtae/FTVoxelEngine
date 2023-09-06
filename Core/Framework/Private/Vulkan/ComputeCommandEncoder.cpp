@@ -32,12 +32,12 @@ bool ComputeCommandEncoder::Encoder::encode(VkCommandBuffer commandBuffer) {
     for (auto& pair : state.imageLayoutMap) {
         Image* image = pair.first;
         VkImageLayout layout = pair.second;
-        VkAccessFlags accessMask = Image::commonLayoutAccessMask(layout);
+        VkAccessFlags2 accessMask = Image::commonLayoutAccessMask(layout);
 
         image->setLayout(layout,
                          accessMask,
-                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                         VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                         VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                          state.encoder->cbuffer->queueFamily()->familyIndex,
                          commandBuffer);
     }
@@ -64,7 +64,7 @@ void ComputeCommandEncoder::waitEvent(std::shared_ptr<FV::GPUEvent> event) {
     auto semaphore = std::dynamic_pointer_cast<Semaphore>(event);
     FVASSERT_DEBUG(semaphore);
 
-    VkPipelineStageFlags pipelineStages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    VkPipelineStageFlags2 pipelineStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
 
     encoder->addWaitSemaphore(semaphore->semaphore, semaphore->nextWaitValue(), pipelineStages);
     encoder->events.push_back(semaphore);
@@ -74,7 +74,9 @@ void ComputeCommandEncoder::signalEvent(std::shared_ptr<FV::GPUEvent> event) {
     auto semaphore = std::dynamic_pointer_cast<Semaphore>(event);
     FVASSERT_DEBUG(semaphore);
 
-    encoder->addSignalSemaphore(semaphore->semaphore, semaphore->nextSignalValue());
+    VkPipelineStageFlags2 pipelineStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+
+    encoder->addSignalSemaphore(semaphore->semaphore, semaphore->nextSignalValue(), pipelineStages);
     encoder->events.push_back(semaphore);
 }
 
@@ -82,7 +84,7 @@ void ComputeCommandEncoder::waitSemaphoreValue(std::shared_ptr<FV::GPUSemaphore>
     auto semaphore = std::dynamic_pointer_cast<TimelineSemaphore>(sema);
     FVASSERT_DEBUG(semaphore);
 
-    VkPipelineStageFlags pipelineStages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    VkPipelineStageFlags2 pipelineStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
 
     encoder->addWaitSemaphore(semaphore->semaphore, value, pipelineStages);
     encoder->semaphores.push_back(semaphore);
@@ -92,7 +94,9 @@ void ComputeCommandEncoder::signalSemaphoreValue(std::shared_ptr<FV::GPUSemaphor
     auto semaphore = std::dynamic_pointer_cast<TimelineSemaphore>(sema);
     FVASSERT_DEBUG(semaphore);
 
-    encoder->addSignalSemaphore(semaphore->semaphore, value);
+    VkPipelineStageFlags2 pipelineStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+
+    encoder->addSignalSemaphore(semaphore->semaphore, value, pipelineStages);
     encoder->semaphores.push_back(semaphore);
 }
 

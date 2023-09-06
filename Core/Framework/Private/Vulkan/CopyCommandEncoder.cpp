@@ -47,7 +47,7 @@ void CopyCommandEncoder::waitEvent(std::shared_ptr<FV::GPUEvent> event) {
     auto semaphore = std::dynamic_pointer_cast<Semaphore>(event);
     FVASSERT_DEBUG(semaphore);
 
-    VkPipelineStageFlags pipelineStages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    VkPipelineStageFlags2 pipelineStages = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT;
 
     encoder->addWaitSemaphore(semaphore->semaphore, semaphore->nextWaitValue(), pipelineStages);
     encoder->events.push_back(semaphore);
@@ -57,7 +57,9 @@ void CopyCommandEncoder::signalEvent(std::shared_ptr<FV::GPUEvent> event) {
     auto semaphore = std::dynamic_pointer_cast<Semaphore>(event);
     FVASSERT_DEBUG(semaphore);
 
-    encoder->addSignalSemaphore(semaphore->semaphore, semaphore->nextSignalValue());
+    VkPipelineStageFlags2 pipelineStages = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT;
+
+    encoder->addSignalSemaphore(semaphore->semaphore, semaphore->nextSignalValue(), pipelineStages);
     encoder->events.push_back(semaphore);
 }
 
@@ -65,7 +67,7 @@ void CopyCommandEncoder::waitSemaphoreValue(std::shared_ptr<FV::GPUSemaphore> se
     auto semaphore = std::dynamic_pointer_cast<TimelineSemaphore>(sema);
     FVASSERT_DEBUG(semaphore);
 
-    VkPipelineStageFlags pipelineStages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    VkPipelineStageFlags2 pipelineStages = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT;
 
     encoder->addWaitSemaphore(semaphore->semaphore, value, pipelineStages);
     encoder->semaphores.push_back(semaphore);
@@ -75,7 +77,9 @@ void CopyCommandEncoder::signalSemaphoreValue(std::shared_ptr<FV::GPUSemaphore> 
     auto semaphore = std::dynamic_pointer_cast<TimelineSemaphore>(sema);
     FVASSERT_DEBUG(semaphore);
 
-    encoder->addSignalSemaphore(semaphore->semaphore, value);
+    VkPipelineStageFlags2 pipelineStages = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT;
+
+    encoder->addSignalSemaphore(semaphore->semaphore, value, pipelineStages);
     encoder->semaphores.push_back(semaphore);
 }
 
@@ -169,9 +173,9 @@ void CopyCommandEncoder::copy(
 
     EncoderCommand command = [=](VkCommandBuffer cbuffer, EncodingState& state) mutable {
         image->setLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                         VK_ACCESS_TRANSFER_WRITE_BIT,
-                         VK_PIPELINE_STAGE_TRANSFER_BIT,
-                         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                         VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                         VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                         VK_PIPELINE_STAGE_2_TRANSFER_BIT,
                          state.encoder->cbuffer->queueFamily()->familyIndex,
                          cbuffer);
 
@@ -242,9 +246,9 @@ void CopyCommandEncoder::copy(std::shared_ptr<FV::Texture> src,
 
     EncoderCommand command = [=](VkCommandBuffer cbuffer, EncodingState& state) mutable {
         image->setLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                         VK_ACCESS_TRANSFER_READ_BIT,
-                         VK_PIPELINE_STAGE_TRANSFER_BIT,
-                         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                         VK_ACCESS_2_TRANSFER_READ_BIT,
+                         VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                         VK_PIPELINE_STAGE_2_TRANSFER_BIT,
                          state.encoder->cbuffer->queueFamily()->familyIndex,
                          cbuffer);
 
@@ -339,16 +343,16 @@ void CopyCommandEncoder::copy(std::shared_ptr<FV::Texture> src,
 
     EncoderCommand command = [=](VkCommandBuffer cbuffer, EncodingState& state) mutable {
         srcImage->setLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                            VK_ACCESS_TRANSFER_READ_BIT,
-                            VK_PIPELINE_STAGE_TRANSFER_BIT,
-                            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                            VK_ACCESS_2_TRANSFER_READ_BIT,
+                            VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                            VK_PIPELINE_STAGE_2_TRANSFER_BIT,
                             state.encoder->cbuffer->queueFamily()->familyIndex,
                             cbuffer);
 
         dstImage->setLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                            VK_ACCESS_TRANSFER_WRITE_BIT,
-                            VK_PIPELINE_STAGE_TRANSFER_BIT,
-                            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                            VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                            VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                            VK_PIPELINE_STAGE_2_TRANSFER_BIT,
                             state.encoder->cbuffer->queueFamily()->familyIndex,
                             cbuffer);
 

@@ -17,8 +17,13 @@ CommandBuffer::CommandBuffer(std::shared_ptr<CommandQueue> q, VkCommandPool p)
 CommandBuffer::~CommandBuffer() {
     auto gdevice = std::dynamic_pointer_cast<GraphicsDevice>(cqueue->device());
 
-    if (submitCommandBuffers.empty() == false) {
-        vkFreeCommandBuffers(gdevice->device, cpool, (uint32_t)submitCommandBuffers.size(), submitCommandBuffers.data());
+    if (commandBufferSubmitInfos.empty() == false) {
+        std::vector<VkCommandBuffer> commandBuffers;
+        commandBuffers.reserve(commandBufferSubmitInfos.size());
+        for (auto& info : commandBufferSubmitInfos)
+            commandBuffers.push_back(info.commandBuffer);
+
+        vkFreeCommandBuffers(gdevice->device, cpool, (uint32_t)commandBuffers.size(), commandBuffers.data());
     }
     vkDestroyCommandPool(gdevice->device, cpool, gdevice->allocationCallbacks());
 }
@@ -51,19 +56,22 @@ bool CommandBuffer::commit() {
     auto gdevice = std::dynamic_pointer_cast<GraphicsDevice>(cqueue->device());
     VkDevice device = gdevice->device;
 
+    std::scoped_lock guard(lock);
+
     auto cleanup = [this, device](bool result) {
-        if (submitCommandBuffers.empty() == false)
-            vkFreeCommandBuffers(device, cpool, (uint32_t)submitCommandBuffers.size(), submitCommandBuffers.data());
+        if (commandBufferSubmitInfos.empty() == false) {
+            std::vector<VkCommandBuffer> commandBuffers;
+            commandBuffers.reserve(commandBufferSubmitInfos.size());
+            for (auto& info : commandBufferSubmitInfos)
+                commandBuffers.push_back(info.commandBuffer);
+
+            vkFreeCommandBuffers(device, cpool, (uint32_t)commandBuffers.size(), commandBuffers.data());
+        }
 
         submitInfos.clear();
-        submitCommandBuffers.clear();
-        submitWaitSemaphores.clear();
-        submitWaitStageMasks.clear();
-        submitSignalSemaphores.clear();
-
-        submitWaitTimelineSemaphoreValues.clear();
-        submitSignalTimelineSemaphoreValues.clear();
-        submitTimelineSemaphoreInfos.clear();
+        commandBufferSubmitInfos.clear();
+        waitSemaphores.clear();
+        signalSemaphores.clear();
         return result;
     };
 
@@ -77,25 +85,16 @@ bool CommandBuffer::commit() {
             numWaitSemaphores += encoder->waitSemaphores.size();
             numSignalSemaphores += encoder->signalSemaphores.size();
         }
-        submitWaitSemaphores.reserve(numWaitSemaphores);
-        submitWaitStageMasks.reserve(numWaitSemaphores);
-        submitSignalSemaphores.reserve(numSignalSemaphores);
+        waitSemaphores.reserve(numWaitSemaphores);
+        signalSemaphores.reserve(numSignalSemaphores);
 
-        submitWaitTimelineSemaphoreValues.reserve(numWaitSemaphores);
-        submitSignalTimelineSemaphoreValues.reserve(numSignalSemaphores);
-
-        submitCommandBuffers.reserve(encoders.size());
+        commandBufferSubmitInfos.reserve(encoders.size());
         submitInfos.reserve(encoders.size());
-        submitTimelineSemaphoreInfos.reserve(encoders.size());
 
         for (auto& encoder : encoders) {
-            size_t commandBuffersOffset = submitCommandBuffers.size();
-            size_t waitSemaphoresOffset = submitWaitSemaphores.size();
-            size_t signalSemaphoresOffset = submitSignalSemaphores.size();
-
-            FVASSERT_DEBUG(submitWaitStageMasks.size() == waitSemaphoresOffset);
-            FVASSERT_DEBUG(submitWaitTimelineSemaphoreValues.size() == waitSemaphoresOffset);
-            FVASSERT_DEBUG(submitSignalTimelineSemaphoreValues.size() == signalSemaphoresOffset);
+            size_t commandBuffersOffset = commandBufferSubmitInfos.size();
+            size_t waitSemaphoresOffset = waitSemaphores.size();
+            size_t signalSemaphoresOffset = signalSemaphores.size();
 
             VkCommandBufferAllocateInfo  bufferInfo = {
                 VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO
@@ -110,34 +109,30 @@ bool CommandBuffer::commit() {
                 Log::error(std::format("vkAllocateCommandBuffers failed: {}", err));
                 return cleanup(false);
             }
-            submitCommandBuffers.push_back(commandBuffer);
+            VkCommandBufferSubmitInfo cbufferSubmitInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO };
+            cbufferSubmitInfo.commandBuffer = commandBuffer;
+            cbufferSubmitInfo.deviceMask = 0;
+            commandBufferSubmitInfos.push_back(cbufferSubmitInfo);
 
-            for (auto& pair : encoder->waitSemaphores) {
-                VkSemaphore semaphore = pair.first;
-                VkPipelineStageFlags stages = pair.second.stages;
-                uint64_t value = pair.second.value;
+            auto appendSemaphores = [](const std::map<VkSemaphore, CommandEncoder::TimelineSemaphoreStageValue>& semaphores, std::vector<VkSemaphoreSubmitInfo>& container) {
+                for (auto& pair : semaphores) {
+                    VkSemaphore semaphore = pair.first;
+                    VkPipelineStageFlags2 stages = pair.second.stages;
+                    uint64_t value = pair.second.value;
 
-                FVASSERT_DEBUG(semaphore);
-                FVASSERT_DEBUG((stages & VK_PIPELINE_STAGE_HOST_BIT) == 0);
+                    FVASSERT_DEBUG(semaphore);
+                    FVASSERT_DEBUG((stages & VK_PIPELINE_STAGE_2_HOST_BIT) == 0);
 
-                submitWaitSemaphores.push_back(semaphore);
-                submitWaitStageMasks.push_back(stages);
-                submitWaitTimelineSemaphoreValues.push_back(value);
-            }
-            FVASSERT_DEBUG(submitWaitSemaphores.size() <= numWaitSemaphores);
-            FVASSERT_DEBUG(submitWaitStageMasks.size() <= numWaitSemaphores);
-            FVASSERT_DEBUG(submitWaitTimelineSemaphoreValues.size() <= numWaitSemaphores);
-
-            for (auto& pair : encoder->signalSemaphores) {
-                VkSemaphore semaphore = pair.first;
-                uint64_t value = pair.second;
-
-                FVASSERT_DEBUG(semaphore);
-                submitSignalSemaphores.push_back(semaphore);
-                submitSignalTimelineSemaphoreValues.push_back(value);
-            }
-            FVASSERT_DEBUG(submitSignalSemaphores.size() <= numSignalSemaphores);
-            FVASSERT_DEBUG(submitSignalTimelineSemaphoreValues.size() <= numSignalSemaphores);
+                    VkSemaphoreSubmitInfo semaphoreSubmitInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO };
+                    semaphoreSubmitInfo.semaphore = semaphore;
+                    semaphoreSubmitInfo.value = value;
+                    semaphoreSubmitInfo.stageMask = stages;
+                    semaphoreSubmitInfo.deviceIndex = 0;
+                    container.push_back(semaphoreSubmitInfo);
+                }
+            };
+            appendSemaphores(encoder->waitSemaphores, waitSemaphores);
+            appendSemaphores(encoder->signalSemaphores, signalSemaphores);
 
             VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
             vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
@@ -148,52 +143,35 @@ bool CommandBuffer::commit() {
                 return cleanup(false);
             }
 
-            FVASSERT_DEBUG(submitWaitSemaphores.size() == submitWaitStageMasks.size());
+            VkSubmitInfo2 submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO_2 };
 
-            VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-            VkTimelineSemaphoreSubmitInfoKHR timelineSemaphoreSubmitInfo = { VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO_KHR };
+            if (commandBufferSubmitInfos.size() > commandBuffersOffset) {
+                uint32_t count = uint32_t(commandBufferSubmitInfos.size() - commandBuffersOffset);
+                VkCommandBufferSubmitInfo* cbufferSubmitInfos = commandBufferSubmitInfos.data();
 
-            if (submitCommandBuffers.size() > commandBuffersOffset) {
-                uint32_t count = uint32_t(submitCommandBuffers.size() - commandBuffersOffset);
-                VkCommandBuffer* commandBuffers = submitCommandBuffers.data();
-                submitInfo.commandBufferCount = count;
-                submitInfo.pCommandBuffers = &commandBuffers[commandBuffersOffset];
+                submitInfo.commandBufferInfoCount = count;
+                submitInfo.pCommandBufferInfos = &cbufferSubmitInfos[commandBuffersOffset];
             }
-            if (submitWaitSemaphores.size() > waitSemaphoresOffset) {
-                uint32_t count = uint32_t(submitWaitSemaphores.size() - waitSemaphoresOffset);
-                VkSemaphore* semaphores = submitWaitSemaphores.data();
-                VkPipelineStageFlags* stages = submitWaitStageMasks.data();
-                const uint64_t* timelineValues = submitWaitTimelineSemaphoreValues.data();
+            if (waitSemaphores.size() > waitSemaphoresOffset) {
+                uint32_t count = uint32_t(waitSemaphores.size() - waitSemaphoresOffset);
+                VkSemaphoreSubmitInfo* semaphoreInfos = waitSemaphores.data();
 
-                submitInfo.waitSemaphoreCount = count;
-                submitInfo.pWaitSemaphores = &semaphores[waitSemaphoresOffset];
-                submitInfo.pWaitDstStageMask = &stages[waitSemaphoresOffset];
-
-                timelineSemaphoreSubmitInfo.pWaitSemaphoreValues = &timelineValues[waitSemaphoresOffset];
-                timelineSemaphoreSubmitInfo.waitSemaphoreValueCount = count;
+                submitInfo.waitSemaphoreInfoCount = count;
+                submitInfo.pWaitSemaphoreInfos = &semaphoreInfos[waitSemaphoresOffset];
             }
-            if (submitSignalSemaphores.size() > signalSemaphoresOffset) {
-                uint32_t count = uint32_t(submitSignalSemaphores.size() - signalSemaphoresOffset);
-                VkSemaphore* semaphores = submitSignalSemaphores.data();
-                const uint64_t* timelineValue = submitSignalTimelineSemaphoreValues.data();
+            if (signalSemaphores.size() > signalSemaphoresOffset) {
+                uint32_t count = uint32_t(signalSemaphores.size() - signalSemaphoresOffset);
+                VkSemaphoreSubmitInfo* semaphoreInfos = signalSemaphores.data();
 
-                submitInfo.signalSemaphoreCount = count;
-                submitInfo.pSignalSemaphores = &semaphores[signalSemaphoresOffset];
-
-                timelineSemaphoreSubmitInfo.pSignalSemaphoreValues = &timelineValue[signalSemaphoresOffset];
-                timelineSemaphoreSubmitInfo.signalSemaphoreValueCount = count;
+                submitInfo.signalSemaphoreInfoCount = count;
+                submitInfo.pSignalSemaphoreInfos = &semaphoreInfos[signalSemaphoresOffset];
             }
-            auto index = submitTimelineSemaphoreInfos.size();
-            submitTimelineSemaphoreInfos.push_back(timelineSemaphoreSubmitInfo);
-            VkTimelineSemaphoreSubmitInfoKHR& semaphoreInfo = submitTimelineSemaphoreInfos.at(index);
-            submitInfo.pNext = &semaphoreInfo;
             submitInfos.push_back(submitInfo);
         }
     }
 
-    if (submitInfos.size() > 0) {
-        FVASSERT_DEBUG(submitTimelineSemaphoreInfos.size() == encoders.size());
-        FVASSERT_DEBUG(submitTimelineSemaphoreInfos.size() == submitInfos.size());
+    if (submitInfos.empty() == false) {
+        FVASSERT_DEBUG(submitInfos.size() == encoders.size());
 
         auto cb = this->shared_from_this();
         FVASSERT_DEBUG(cb);

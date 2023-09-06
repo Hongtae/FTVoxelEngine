@@ -59,14 +59,17 @@ std::shared_ptr<FV::SwapChain> CommandQueue::makeSwapChain(std::shared_ptr<Windo
     return nullptr;
 }
 
-bool CommandQueue::submit(const VkSubmitInfo* submits, uint32_t submitCount, std::function<void()> callback) {
+bool CommandQueue::submit(const VkSubmitInfo2* submits, uint32_t submitCount, std::function<void()> callback) {
     VkFence fence = VK_NULL_HANDLE;
     if (callback)
-        fence = gdevice->getFence();
+        fence = gdevice->fence();
 
-    VkResult err = vkQueueSubmit(queue, submitCount, submits, fence);
+    std::unique_lock guard(lock);
+    VkResult err = vkQueueSubmit2(queue, submitCount, submits, fence);
+    guard.unlock();
+
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkQueueSubmit failed: {}", err));
+        Log::error(std::format("vkQueueSubmit2 failed: {}", err));
         FVASSERT(err == VK_SUCCESS);
     }
     if (fence)
@@ -76,6 +79,7 @@ bool CommandQueue::submit(const VkSubmitInfo* submits, uint32_t submitCount, std
 }
 
 bool CommandQueue::waitIdle() {
+    std::unique_lock guard(lock);
     return vkQueueWaitIdle(queue) == VK_SUCCESS;
 }
 

@@ -23,14 +23,14 @@ Image::Image(std::shared_ptr<DeviceMemory> m, VkImage i, const VkImageCreateInfo
     arrayLayers = ci.arrayLayers;
     usage = ci.usage;
 
-    layoutInfo.accessMask = 0;
-    layoutInfo.stageMaskBegin = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-    layoutInfo.stageMaskEnd = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    layoutInfo.accessMask = VK_ACCESS_2_NONE;
+    layoutInfo.stageMaskBegin = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+    layoutInfo.stageMaskEnd = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
     layoutInfo.queueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
     if (layoutInfo.layout == VK_IMAGE_LAYOUT_UNDEFINED ||
         layoutInfo.layout == VK_IMAGE_LAYOUT_PREINITIALIZED)
-        layoutInfo.stageMaskEnd = VK_PIPELINE_STAGE_HOST_BIT;
+        layoutInfo.stageMaskEnd = VK_PIPELINE_STAGE_2_HOST_BIT;
 
     FVASSERT_DEBUG(deviceMemory);
     FVASSERT_DEBUG(extent.width > 0);
@@ -53,8 +53,8 @@ Image::Image(std::shared_ptr<GraphicsDevice> dev, VkImage img)
     , usage(0)
     , layoutInfo{ VK_IMAGE_LAYOUT_UNDEFINED } {
     layoutInfo.accessMask = 0;
-    layoutInfo.stageMaskBegin = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-    layoutInfo.stageMaskEnd = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    layoutInfo.stageMaskBegin = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+    layoutInfo.stageMaskEnd = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
     layoutInfo.queueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 }
 
@@ -66,9 +66,9 @@ Image::~Image() {
 }
 
 VkImageLayout Image::setLayout(VkImageLayout layout,
-                               VkAccessFlags accessMask,
-                               VkPipelineStageFlags stageBegin,
-                               VkPipelineStageFlags stageEnd,
+                               VkAccessFlags2 accessMask,
+                               VkPipelineStageFlags2 stageBegin,
+                               VkPipelineStageFlags2 stageEnd,
                                uint32_t queueFamilyIndex,
                                VkCommandBuffer commandBuffer) const {
     FVASSERT_DEBUG(layout != VK_IMAGE_LAYOUT_UNDEFINED);
@@ -76,7 +76,7 @@ VkImageLayout Image::setLayout(VkImageLayout layout,
 
     std::scoped_lock guard(layoutLock);
     if (commandBuffer) {
-        VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+        VkImageMemoryBarrier2 barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
         barrier.srcAccessMask = layoutInfo.accessMask;
         barrier.dstAccessMask = accessMask;
         barrier.oldLayout = layoutInfo.layout;
@@ -99,24 +99,26 @@ VkImageLayout Image::setLayout(VkImageLayout layout,
         barrier.subresourceRange.baseArrayLayer = 0;
         barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 
-        VkPipelineStageFlags srcStageMask = layoutInfo.stageMaskEnd;
+        barrier.srcStageMask = layoutInfo.stageMaskEnd;
 
         if (layoutInfo.queueFamilyIndex != queueFamilyIndex) {
-            srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            barrier.srcAccessMask = 0;
+            if (layoutInfo.queueFamilyIndex == VK_QUEUE_FAMILY_IGNORED || queueFamilyIndex == VK_QUEUE_FAMILY_IGNORED)                 {
+                barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+            } else {
+                barrier.srcQueueFamilyIndex = layoutInfo.queueFamilyIndex;
+                    barrier.dstQueueFamilyIndex = queueFamilyIndex;
+            }
         }
-        if (srcStageMask == VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT) {
-            srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            barrier.srcAccessMask = 0;
+        if (barrier.srcStageMask == VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT) {
+            barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
         }
+        barrier.dstStageMask = stageBegin;
 
-        vkCmdPipelineBarrier(commandBuffer,
-                             srcStageMask,
-                             stageBegin,
-                             0,             //dependencyFlags
-                             0, nullptr,    //pMemoryBarriers
-                             0, nullptr,    //pBufferMemoryBarriers
-                             1, &barrier);
+        VkDependencyInfo dependencyInfo = { VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+        dependencyInfo.imageMemoryBarrierCount = 1;
+        dependencyInfo.pImageMemoryBarriers = &barrier;
+
+        vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
     }
 
     VkImageLayout oldLayout = layoutInfo.layout;
@@ -133,43 +135,43 @@ VkImageLayout Image::layout() const {
     return layoutInfo.layout;
 }
 
-VkAccessFlags Image::commonLayoutAccessMask(VkImageLayout layout) {
-    VkAccessFlags accessMask = 0;
+VkAccessFlags2 Image::commonLayoutAccessMask(VkImageLayout layout) {
+    VkAccessFlags2 accessMask = VK_ACCESS_2_NONE;
     switch (layout) {
     case VK_IMAGE_LAYOUT_UNDEFINED:
-        accessMask = 0;
+        accessMask = VK_ACCESS_2_NONE;
         break;
     case VK_IMAGE_LAYOUT_GENERAL:
-        accessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+        accessMask = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
         break;
     case VK_IMAGE_LAYOUT_PREINITIALIZED:
-        accessMask = VK_ACCESS_HOST_WRITE_BIT;
+        accessMask = VK_ACCESS_2_HOST_WRITE_BIT;
         break;
     case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-        accessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        accessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
         break;
     case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-        accessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        accessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
         break;
     case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
     case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL:
     case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL:
-        accessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+        accessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
         break;
     case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-        accessMask = VK_ACCESS_SHADER_READ_BIT;
+        accessMask = VK_ACCESS_2_SHADER_READ_BIT;
         break;
     case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-        accessMask = VK_ACCESS_TRANSFER_READ_BIT;
+        accessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
         break;
     case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-        accessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        accessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
         break;
     case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
-        accessMask = 0;
+        accessMask = VK_ACCESS_2_NONE;
         break;
     default:
-        accessMask = 0;
+        accessMask = VK_ACCESS_2_NONE;
         break;
     }
     return accessMask;

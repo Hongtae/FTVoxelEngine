@@ -16,7 +16,7 @@ namespace FV::Vulkan {
         std::shared_ptr<FV::CommandBuffer> makeCommandBuffer() override;
         std::shared_ptr<FV::SwapChain> makeSwapChain(std::shared_ptr<Window>) override;
 
-        bool submit(const VkSubmitInfo* submits, uint32_t submitCount, std::function<void()> callback);
+        bool submit(const VkSubmitInfo2* submits, uint32_t submitCount, std::function<void()> callback);
 
         bool waitIdle();
 
@@ -27,6 +27,7 @@ namespace FV::Vulkan {
         VkQueue queue;
 
         std::shared_ptr<GraphicsDevice> gdevice;
+        std::mutex lock;
     };
 }
 #endif //#if FVCORE_ENABLE_VULKAN
