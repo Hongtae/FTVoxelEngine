@@ -100,6 +100,10 @@ public:
         ImGui::DestroyContext();
     }
 
+    void uiLoop() {
+
+    }
+
     void renderLoop(std::stop_token stop) {
 
         auto queue = graphicsContext->renderQueue();
@@ -300,6 +304,8 @@ public:
                 ImGui::NewFrame();
                 static bool show_demo_window = true;
                 ImGui::ShowDemoWindow(&show_demo_window);
+
+                this->uiLoop();
 
                 ImGui::Render();
                 ImDrawData* draw_data = ImGui::GetDrawData();

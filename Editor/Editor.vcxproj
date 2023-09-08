@@ -90,7 +90,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>FVCORE_STATIC;NOMINMAX;WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>FVCORE_STATIC;NOMINMAX;__STDC_LIB_EXT1__;WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
       <LanguageStandard>stdcpp20</LanguageStandard>
@@ -108,7 +108,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>FVCORE_STATIC;NOMINMAX;WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>FVCORE_STATIC;NOMINMAX;__STDC_LIB_EXT1__;WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
       <LanguageStandard>stdcpp20</LanguageStandard>
@@ -126,7 +126,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>FVCORE_STATIC;NOMINMAX;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>FVCORE_STATIC;NOMINMAX;__STDC_LIB_EXT1__;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
       <LanguageStandard>stdcpp20</LanguageStandard>
@@ -144,7 +144,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>FVCORE_STATIC;NOMINMAX;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>FVCORE_STATIC;NOMINMAX;__STDC_LIB_EXT1__;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
       <LanguageStandard>stdcpp20</LanguageStandard>
@@ -164,9 +164,15 @@
     <ClInclude Include="..\Utils\imgui\imconfig.h" />
     <ClInclude Include="..\Utils\imgui\imgui.h" />
     <ClInclude Include="..\Utils\imgui\imgui_internal.h" />
+    <ClInclude Include="..\Utils\tinygltf\json.hpp" />
+    <ClInclude Include="..\Utils\tinygltf\stb_image.h" />
+    <ClInclude Include="..\Utils\tinygltf\stb_image_write.h" />
+    <ClInclude Include="..\Utils\tinygltf\tiny_gltf.h" />
     <ClInclude Include="Editor.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="Model.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="ShaderReflection.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
@@ -177,7 +183,9 @@
     <ClCompile Include="..\Utils\imgui\imgui_draw.cpp" />
     <ClCompile Include="..\Utils\imgui\imgui_tables.cpp" />
     <ClCompile Include="..\Utils\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="..\Utils\tinygltf\tiny_gltf.cc" />
     <ClCompile Include="Editor.cpp" />
+    <ClCompile Include="Model.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Editor.rc" />

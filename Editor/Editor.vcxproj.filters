@@ -16,6 +16,9 @@
     <Filter Include="imgui">
       <UniqueIdentifier>{a4ad23b3-ea14-46b6-8a32-859a44b349f9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="tinygltf">
+      <UniqueIdentifier>{898ad921-e971-468f-9d5e-6ab051f8dc2c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -45,6 +48,24 @@
     <ClInclude Include="..\Utils\imgui\backends\imgui_impl_win32.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\Utils\tinygltf\json.hpp">
+      <Filter>tinygltf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utils\tinygltf\stb_image.h">
+      <Filter>tinygltf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utils\tinygltf\stb_image_write.h">
+      <Filter>tinygltf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utils\tinygltf\tiny_gltf.h">
+      <Filter>tinygltf</Filter>
+    </ClInclude>
+    <ClInclude Include="Model.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ShaderReflection.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Editor.cpp">
@@ -69,6 +90,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\Utils\imgui\backends\imgui_impl_win32.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utils\tinygltf\tiny_gltf.cc">
+      <Filter>tinygltf</Filter>
+    </ClCompile>
+    <ClCompile Include="Model.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
