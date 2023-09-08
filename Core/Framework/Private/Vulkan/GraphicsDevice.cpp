@@ -59,16 +59,16 @@ GraphicsDevice::GraphicsDevice(std::shared_ptr<VulkanInstance> ins,
     }
 
     requiredExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-    requiredExtensions.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
-    requiredExtensions.push_back(VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME);
-    requiredExtensions.push_back(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
-    requiredExtensions.push_back(VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME);
-    requiredExtensions.push_back(VK_EXT_EXTENDED_DYNAMIC_STATE_2_EXTENSION_NAME);
+    //requiredExtensions.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);             // promoted 1.1
+    //requiredExtensions.push_back(VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME);       // promoted 1.2
+    //requiredExtensions.push_back(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);        // promoted 1.3
+    //requiredExtensions.push_back(VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME);   // promoted 1.3
+    //requiredExtensions.push_back(VK_EXT_EXTENDED_DYNAMIC_STATE_2_EXTENSION_NAME); // promoted 1.3
     //requiredExtensions.push_back(VK_EXT_EXTENDED_DYNAMIC_STATE_3_EXTENSION_NAME);
 
-    optionalExtensions.push_back(VK_KHR_MAINTENANCE_2_EXTENSION_NAME);
-    optionalExtensions.push_back(VK_KHR_MAINTENANCE_3_EXTENSION_NAME);
-    optionalExtensions.push_back(VK_KHR_MAINTENANCE_4_EXTENSION_NAME);
+    //optionalExtensions.push_back(VK_KHR_MAINTENANCE_2_EXTENSION_NAME);    // promoted 1.1
+    //optionalExtensions.push_back(VK_KHR_MAINTENANCE_3_EXTENSION_NAME);    // promoted 1.1
+    //optionalExtensions.push_back(VK_KHR_MAINTENANCE_4_EXTENSION_NAME);    // promoted 1.1
 
     // setup extensions
     std::vector<const char*> deviceExtensions;
@@ -111,42 +111,22 @@ GraphicsDevice::GraphicsDevice(std::shared_ptr<VulkanInstance> ins,
                             }) != deviceExtensions.end();
     };
 
-    VkPhysicalDeviceSynchronization2Features synchronization2Features = {
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES
-    };
-    VkPhysicalDeviceExtendedDynamicStateFeaturesEXT extDynamicFeatures = {
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT
-    };
-    VkPhysicalDeviceExtendedDynamicState2FeaturesEXT extDynamic2Features = {
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_2_FEATURES_EXT
-    };
+    VkPhysicalDeviceVulkan11Features v11Features = physicalDevice.v11Features;
+    VkPhysicalDeviceVulkan12Features v12Features = physicalDevice.v12Features;
+    VkPhysicalDeviceVulkan13Features v13Features = physicalDevice.v13Features;
+    appendNextChain(&deviceCreateInfo, &v11Features);
+    appendNextChain(&deviceCreateInfo, &v12Features);
+    appendNextChain(&deviceCreateInfo, &v13Features);
+
     VkPhysicalDeviceExtendedDynamicState3FeaturesEXT extDynamic3Features = {
         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_3_FEATURES_EXT
     };
-    VkPhysicalDeviceMaintenance4Features maintenance4Features = {
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_4_FEATURES
-    };
-    if (deviceExtensionContains(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME)) {
-        synchronization2Features.synchronization2 = VK_TRUE;
-        appendNextChain(&deviceCreateInfo, &synchronization2Features);
-    }
-    if (deviceExtensionContains(VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME)) {
-        extDynamicFeatures.extendedDynamicState = VK_TRUE;
-        appendNextChain(&deviceCreateInfo, &extDynamicFeatures);
-    }
-    if (deviceExtensionContains(VK_EXT_EXTENDED_DYNAMIC_STATE_2_EXTENSION_NAME)) {
-        extDynamic2Features.extendedDynamicState2 = VK_TRUE;
-        appendNextChain(&deviceCreateInfo, &extDynamic2Features);
-    }
+
     if (deviceExtensionContains(VK_EXT_EXTENDED_DYNAMIC_STATE_3_EXTENSION_NAME)) {
         extDynamic3Features.extendedDynamicState3DepthClampEnable = VK_TRUE;
         extDynamic3Features.extendedDynamicState3PolygonMode = VK_TRUE;
         extDynamic3Features.extendedDynamicState3DepthClipEnable = VK_TRUE;
         appendNextChain(&deviceCreateInfo, &extDynamic3Features);
-    }
-    if (deviceExtensionContains(VK_KHR_MAINTENANCE_4_EXTENSION_NAME)) {
-        maintenance4Features.maintenance4 = VK_TRUE;
-        appendNextChain(&deviceCreateInfo, &maintenance4Features);
     }
 
     VkDevice device = VK_NULL_HANDLE;
