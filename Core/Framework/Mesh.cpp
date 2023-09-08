@@ -12,7 +12,7 @@
 
 using namespace FV;
 
-VertexDescriptor Submesh::vertexDescriptor() const {
+VertexDescriptor Mesh::vertexDescriptor() const {
     if (material == nullptr)
         return {};
 
@@ -103,7 +103,7 @@ VertexDescriptor Submesh::vertexDescriptor() const {
     return { attributes, layouts };
 }
 
-bool Submesh::initResources(GraphicsDevice* device, BufferUsagePolicy policy) {
+bool Mesh::initResources(GraphicsDevice* device, BufferUsagePolicy policy) {
     if (material == nullptr)
         return false;
     if (pipelineState == nullptr)
@@ -280,7 +280,7 @@ bool Submesh::initResources(GraphicsDevice* device, BufferUsagePolicy policy) {
     return true;
 }
 
-bool Submesh::buildPipelineState(GraphicsDevice* device, PipelineReflection* rep) {
+bool Mesh::buildPipelineState(GraphicsDevice* device, PipelineReflection* rep) {
     if (material == nullptr) {
         Log::error("Mesh(submesh) has no material.");
         return false;
@@ -423,13 +423,13 @@ bool Submesh::buildPipelineState(GraphicsDevice* device, PipelineReflection* rep
     return true;
 }
 
-void Submesh::updateShadingProperties(const SceneState* sceneState) {
+void Mesh::updateShadingProperties(const SceneState* sceneState) {
     if (material == nullptr)
         return;
 
     struct StructMemberBind {
         const SceneState* sceneState;
-        const Submesh* mesh;
+        const Mesh* mesh;
         const ShaderResourceStructMember& member;
         const std::string parentPath;
         uint32_t structArrayIndex;
@@ -504,76 +504,78 @@ void Submesh::updateShadingProperties(const SceneState* sceneState) {
             return copied;
         }
     };
-    auto copyStructProperty = [&](ShaderDataType type, uint32_t set, uint32_t binding,
-                                  uint32_t offset, uint32_t size,
-                                  uint32_t stride, uint32_t arrayIndex,
-                                  const std::vector<ShaderResourceStructMember>& members,
-                                  const std::string& name,
-                                  uint8_t* buffer, size_t bufferLength) -> size_t {
-                                      auto location = ShaderBindingLocation{ set, binding, offset };
-                                      size_t copied = 0;
-                                      if (type == ShaderDataType::Struct) {
-                                          for (const ShaderResourceStructMember& member : members) {
-                                              if (member.offset < offset)
-                                                  continue;
-                                              if (member.offset >= (offset + size))
-                                                  break;
-                                              if (member.offset + member.size > offset + size)
-                                                  break;
 
-                                              std::string path;
-                                              if (strlen(name.c_str()) > 0 && strlen(member.name.c_str()) > 0)
-                                                  path = std::format("{}.{}", name, member.name);
-                                              else
-                                                  path = member.name;
+    auto copyStructProperty = [&](
+        ShaderDataType type, uint32_t set, uint32_t binding,
+        uint32_t offset, uint32_t size,
+        uint32_t stride, uint32_t arrayIndex,
+        const std::vector<ShaderResourceStructMember>& members,
+        const std::string& name,
+        uint8_t* buffer, size_t bufferLength) -> size_t {
+            auto location = ShaderBindingLocation{ set, binding, offset };
+            size_t copied = 0;
+            if (type == ShaderDataType::Struct) {
+                for (const ShaderResourceStructMember& member : members) {
+                    if (member.offset < offset)
+                        continue;
+                    if (member.offset >= (offset + size))
+                        break;
+                    if (member.offset + member.size > offset + size)
+                        break;
 
-                                              if (member.offset + member.size - offset > bufferLength) {
-                                                  Log::error(std::format(
-                                                      "Insufficient buffer for shader uniform struct {}, size:{}, name:\"{}\"",
-                                                      ShaderBindingLocation{ set, binding, member.offset }, size, path));
-                                                  break;
-                                              }
+                    std::string path;
+                    if (strlen(name.c_str()) > 0 && strlen(member.name.c_str()) > 0)
+                        path = std::format("{}.{}", name, member.name);
+                    else
+                        path = member.name;
 
-                                              auto d = member.offset - offset;
-                                              auto s = StructMemberBind(sceneState, this, member, name,
-                                                                        arrayIndex,
-                                                                        set, binding, 0)
-                                                  .bind(buffer + d, bufferLength - d);
+                    if (member.offset + member.size - offset > bufferLength) {
+                        Log::error(std::format(
+                            "Insufficient buffer for shader uniform struct {}, size:{}, name:\"{}\"",
+                            ShaderBindingLocation{ set, binding, member.offset }, size, path));
+                        break;
+                    }
 
-                                              if (s > 0) {
-                                                  copied += s;
-                                              } else {
-                                                  Log::warning(std::format(
-                                                      "Unable to bind shader uniform struct {}, size:{}, name:\"{}\"",
-                                                      ShaderBindingLocation{ set, binding, member.offset }, size, path));
-                                              }
-                                          }
-                                      } else {
-                                          MaterialShaderMap::Semantic semantic = MaterialSemantic::UserDefined;
-                                          if (auto it = material->shader.resourceSemantics.find(location);
-                                              it != material->shader.resourceSemantics.end())
-                                              semantic = it->second;
+                    auto d = member.offset - offset;
+                    auto s = StructMemberBind(sceneState, this, member, name,
+                                              arrayIndex,
+                                              set, binding, 0)
+                        .bind(buffer + d, bufferLength - d);
 
-                                          if (ShaderUniformSemantic* ss = std::get_if<ShaderUniformSemantic>(&semantic); ss) {
-                                              if (sceneState)
-                                                  copied = bindShaderUniformBuffer(*ss, type, name, *sceneState, buffer, bufferLength);
-                                          }
-                                          if (copied == 0) {
-                                              MaterialSemantic ms = MaterialSemantic::UserDefined;
-                                              if (auto p = std::get_if<MaterialSemantic>(&semantic); p)
-                                                  ms = *p;
-                                              auto offset = arrayIndex * stride;
-                                              copied = bindMaterialProperty(ms, location, type,
-                                                                            name, offset, buffer, bufferLength);
-                                          }
-                                          if (copied == 0) {
-                                              Log::warning(std::format(
-                                                  "Unable to bind shader uniform struct ({}), arrayIndex:{}, name:\"{}\"",
-                                                  location, arrayIndex, name));
-                                          }
-                                      }
+                    if (s > 0) {
+                        copied += s;
+                    } else {
+                        Log::warning(std::format(
+                            "Unable to bind shader uniform struct {}, size:{}, name:\"{}\"",
+                            ShaderBindingLocation{ set, binding, member.offset }, size, path));
+                    }
+                }
+            } else {
+                MaterialShaderMap::Semantic semantic = MaterialSemantic::UserDefined;
+                if (auto it = material->shader.resourceSemantics.find(location);
+                    it != material->shader.resourceSemantics.end())
+                    semantic = it->second;
 
-                                      return copied;
+                if (ShaderUniformSemantic* ss = std::get_if<ShaderUniformSemantic>(&semantic); ss) {
+                    if (sceneState)
+                        copied = bindShaderUniformBuffer(*ss, type, name, *sceneState, buffer, bufferLength);
+                }
+                if (copied == 0) {
+                    MaterialSemantic ms = MaterialSemantic::UserDefined;
+                    if (auto p = std::get_if<MaterialSemantic>(&semantic); p)
+                        ms = *p;
+                    auto offset = arrayIndex * stride;
+                    copied = bindMaterialProperty(ms, location, type,
+                                                  name, offset, buffer, bufferLength);
+                }
+                if (copied == 0) {
+                    Log::warning(std::format(
+                        "Unable to bind shader uniform struct ({}), arrayIndex:{}, name:\"{}\"",
+                        location, arrayIndex, name));
+                }
+            }
+
+            return copied;
     };
 
     for (ResourceBindingSet& rbs : resourceBindings) {
@@ -703,7 +705,7 @@ void Submesh::updateShadingProperties(const SceneState* sceneState) {
     }
 }
 
-uint32_t Submesh::bindMaterialTextures(MaterialSemantic semantic, const ShaderResource& resource, ShaderBindingSet* bindingSet) const {
+uint32_t Mesh::bindMaterialTextures(MaterialSemantic semantic, const ShaderResource& resource, ShaderBindingSet* bindingSet) const {
     MaterialProperty::TextureArray textures;
 
     if (semantic != MaterialSemantic::UserDefined) {
@@ -747,7 +749,7 @@ uint32_t Submesh::bindMaterialTextures(MaterialSemantic semantic, const ShaderRe
     return 0;
 }
 
-uint32_t Submesh::bindMaterialSamplers(MaterialSemantic semantic, const ShaderResource& resource, ShaderBindingSet* bindingSet) const {
+uint32_t Mesh::bindMaterialSamplers(MaterialSemantic semantic, const ShaderResource& resource, ShaderBindingSet* bindingSet) const {
     MaterialProperty::SamplerArray samplers;
 
     if (semantic != MaterialSemantic::UserDefined) {
@@ -791,7 +793,7 @@ uint32_t Submesh::bindMaterialSamplers(MaterialSemantic semantic, const ShaderRe
     return 0;
 }
 
-uint32_t Submesh::bindMaterialProperty(MaterialSemantic semantic,
+uint32_t Mesh::bindMaterialProperty(MaterialSemantic semantic,
                                        ShaderBindingLocation location,
                                        ShaderDataType dataType,
                                        const std::string& name,
@@ -863,7 +865,7 @@ uint32_t Submesh::bindMaterialProperty(MaterialSemantic semantic,
     return 0;
 }
 
-uint32_t Submesh::bindShaderUniformTextures(ShaderUniformSemantic semantic,
+uint32_t Mesh::bindShaderUniformTextures(ShaderUniformSemantic semantic,
                                             const std::string& name,
                                             const SceneState& sceneState,
                                             ShaderBindingSet* bindingSet) const {
@@ -873,7 +875,7 @@ uint32_t Submesh::bindShaderUniformTextures(ShaderUniformSemantic semantic,
     return 0;
 }
 
-uint32_t Submesh::bindShaderUniformSamplers(ShaderUniformSemantic semantic,
+uint32_t Mesh::bindShaderUniformSamplers(ShaderUniformSemantic semantic,
                                             const std::string& name,
                                             const SceneState& sceneState,
                                             ShaderBindingSet* bindingSet) const {
@@ -883,7 +885,7 @@ uint32_t Submesh::bindShaderUniformSamplers(ShaderUniformSemantic semantic,
     return 0;
 }
 
-uint32_t Submesh::bindShaderUniformBuffer(ShaderUniformSemantic semantic,
+uint32_t Mesh::bindShaderUniformBuffer(ShaderUniformSemantic semantic,
                                           ShaderDataType dataType,
                                           const std::string& name,
                                           const SceneState& sceneState,
@@ -927,7 +929,7 @@ uint32_t Submesh::bindShaderUniformBuffer(ShaderUniformSemantic semantic,
     return 0;
 }
 
-bool Submesh::encodeRenderCommand(RenderCommandEncoder* encoder,
+bool Mesh::encodeRenderCommand(RenderCommandEncoder* encoder,
                                   uint32_t numInstances,
                                   uint32_t baseInstance) const {
     if (pipelineState && vertexBuffers.empty() == false && material) {
@@ -992,7 +994,7 @@ bool Submesh::encodeRenderCommand(RenderCommandEncoder* encoder,
     return false;
 }
 
-bool Submesh::enumerateVertexBufferContent(VertexAttributeSemantic semantic,
+bool Mesh::enumerateVertexBufferContent(VertexAttributeSemantic semantic,
                                            CommandQueue* queue,
                                            std::function<bool(const void*, VertexFormat, uint32_t)> handler) const {
     // find semantic
@@ -1066,21 +1068,4 @@ bool Submesh::enumerateVertexBufferContent(VertexAttributeSemantic semantic,
         }
     }
     return false;
-}
-
-void Mesh::updateShadingProperties(const SceneState* sceneState) {
-    for (auto& mesh : submeshes) {
-        mesh.updateShadingProperties(sceneState);
-    }
-}
-
-uint32_t Mesh::encodeRenderCommand(RenderCommandEncoder* encoder,
-                                   uint32_t numInstances,
-                                   uint32_t baseInstance) const {
-    uint32_t encoded = 0;
-    for (auto& mesh : submeshes) {
-        if (mesh.encodeRenderCommand(encoder, numInstances, baseInstance))
-            encoded++;
-    }
-    return encoded;
 }

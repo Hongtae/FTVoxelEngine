@@ -129,18 +129,14 @@ public:
         };
 
         std::vector<Mesh*> meshes;
-        std::vector<Material*> materials;
 
         for (auto& scene : model->scenes)
             for (auto& node : scene.nodes)
                 ForEachNode{ node }(
                     [&](auto& node) {
                         if (node.mesh.has_value()) {
-                            Mesh& mesh = node.mesh.value();
+                            auto& mesh = node.mesh.value();
                             meshes.push_back(&mesh);
-                            for (auto& submesh : mesh.submeshes)
-                                if (submesh.material)
-                                    materials.push_back(submesh.material.get());
                         }
                     });
 
@@ -148,29 +144,27 @@ public:
         std::shared_ptr<Texture> depthTexture = nullptr;
 
         // set user-defined property values
-        for (auto& material : materials) {
-            material->attachments.front().format = swapchain->pixelFormat();
-            material->depthFormat = depthFormat;
-            material->setProperty(ShaderBindingLocation::pushConstant(64), Vector3(1, -1, 1));
-            material->setProperty(ShaderBindingLocation::pushConstant(80), Vector3(1, 1, 1));
-            material->setProperty(ShaderBindingLocation::pushConstant(96), Vector3(0.3, 0.3, 0.3));
+        for (auto mesh : meshes) {
+            if (auto material = mesh->material.get(); material) {
+                material->attachments.front().format = swapchain->pixelFormat();
+                material->depthFormat = depthFormat;
+                material->setProperty(ShaderBindingLocation::pushConstant(64), Vector3(1, -1, 1));
+                material->setProperty(ShaderBindingLocation::pushConstant(80), Vector3(1, 1, 1));
+                material->setProperty(ShaderBindingLocation::pushConstant(96), Vector3(0.3, 0.3, 0.3));
+            }
         }
 
-        for (auto& mesh : meshes) {
-            for (int index = 0; index < mesh->submeshes.size(); ++index) {
-                auto& submesh = mesh->submeshes.at(index);
-                PipelineReflection reflection = {};
-                if (submesh.buildPipelineState(device, &reflection)) {
-                    printPipelineReflection(reflection, Log::Level::Debug);
-                    submesh.initResources(device, Submesh::BufferUsagePolicy::SingleBuffer);
-                } else {
-                    Log::error(std::format(
-                        "Failed to make pipeline descriptor for mesh:{}, submesh[{:d}]",
-                        mesh->name, index));
-                }
+        for (auto mesh : meshes) {
+            PipelineReflection reflection = {};
+            if (mesh->buildPipelineState(device, &reflection)) {
+                printPipelineReflection(reflection, Log::Level::Debug);
+                mesh->initResources(device, Mesh::BufferUsagePolicy::SingleBuffer);
+            } else {
+                Log::error("Failed to make pipeline descriptor");
             }
             mesh->updateShadingProperties(&sceneState);
         }
+
 
         auto depthStencilState = device->makeDepthStencilState(
             {

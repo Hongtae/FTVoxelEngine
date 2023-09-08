@@ -15,7 +15,7 @@ struct LoaderContext {
     std::vector<std::shared_ptr<Texture>> images;
     std::vector<std::shared_ptr<Material>> materials;
 
-    std::vector<Mesh> meshes;
+    std::vector<SceneNode> meshes;
     std::vector<SamplerDescriptor> samplerDescriptors;
 };
 
@@ -280,12 +280,12 @@ void loadMeshes(LoaderContext& context) {
     for (int index = 0; index < model.meshes.size(); ++index) {
         auto& glTFMesh = model.meshes.at(index);
 
-        Mesh mesh = {};
-        mesh.name = glTFMesh.name;
+        SceneNode node = {};
+        node.name = glTFMesh.name;
 
         for (auto& glTFPrimitive : glTFMesh.primitives) {
-            Submesh submesh = {};
-            std::unordered_map<int, Submesh::VertexBuffer> vertexBuffers;
+            Mesh mesh = {};
+            std::unordered_map<int, Mesh::VertexBuffer> vertexBuffers;
 
             for (auto& [attributeName, accessorIndex] : glTFPrimitive.attributes) {
                 auto& glTFAccessor = model.accessors[accessorIndex];
@@ -302,7 +302,7 @@ void loadMeshes(LoaderContext& context) {
                     bufferOffset += glTFAccessor.byteOffset;
                 }
 
-                Submesh::VertexBuffer buffer =
+                Mesh::VertexBuffer buffer =
                 {
                     .byteOffset = bufferOffset,
                     .byteStride = vertexStride,
@@ -310,7 +310,7 @@ void loadMeshes(LoaderContext& context) {
                     .buffer = context.buffers.at(glTFBufferView.buffer)
                 };
 
-                Submesh::VertexAttribute attribute = {};
+                Mesh::VertexAttribute attribute = {};
                 attribute.name = attributeName;
                 attribute.offset = attribOffset;
                 attribute.semantic = VertexAttributeSemantic::UserDefined;
@@ -349,24 +349,24 @@ void loadMeshes(LoaderContext& context) {
                 }
                 buffer.attributes.push_back(attribute);
 
-                submesh.vertexBuffers.push_back(buffer);
+                mesh.vertexBuffers.push_back(buffer);
             }
 
             switch (glTFPrimitive.mode) {
             case TINYGLTF_MODE_POINTS:
-                submesh.primitiveType = PrimitiveType::Point;
+                mesh.primitiveType = PrimitiveType::Point;
                 break;
             case TINYGLTF_MODE_LINE:
-                submesh.primitiveType = PrimitiveType::Line;
+                mesh.primitiveType = PrimitiveType::Line;
                 break;
             case TINYGLTF_MODE_LINE_STRIP:
-                submesh.primitiveType = PrimitiveType::LineStrip;
+                mesh.primitiveType = PrimitiveType::LineStrip;
                 break;
             case TINYGLTF_MODE_TRIANGLES:
-                submesh.primitiveType = PrimitiveType::Triangle;
+                mesh.primitiveType = PrimitiveType::Triangle;
                 break;
             case TINYGLTF_MODE_TRIANGLE_STRIP:
-                submesh.primitiveType = PrimitiveType::TriangleStrip;
+                mesh.primitiveType = PrimitiveType::TriangleStrip;
                 break;
             default:
                 throw std::runtime_error("Unknown primitive type");
@@ -377,10 +377,10 @@ void loadMeshes(LoaderContext& context) {
                 auto& glTFBufferView = model.bufferViews[glTFAccessor.bufferView];
                 auto& glTFBuffer = model.buffers[glTFBufferView.buffer];
 
-                submesh.indexBufferByteOffset = uint32_t(glTFBufferView.byteOffset + glTFAccessor.byteOffset);
-                submesh.indexCount = glTFAccessor.count;
-                submesh.indexBuffer = context.buffers[glTFBufferView.buffer];
-                submesh.indexBufferBaseVertexIndex = 0;
+                mesh.indexBufferByteOffset = uint32_t(glTFBufferView.byteOffset + glTFAccessor.byteOffset);
+                mesh.indexCount = glTFAccessor.count;
+                mesh.indexBuffer = context.buffers[glTFBufferView.buffer];
+                mesh.indexBufferBaseVertexIndex = 0;
 
                 switch (glTFAccessor.componentType) {
                 case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: // convert to uint16
@@ -398,31 +398,37 @@ void loadMeshes(LoaderContext& context) {
                         auto buffer = makeBuffer(cbuffer.get(), indexData.size() * 2,
                                                  indexData.data());
                         FVASSERT(buffer);
-                        submesh.indexBuffer = buffer;
-                        submesh.indexType = IndexType::UInt16;
+                        mesh.indexBuffer = buffer;
+                        mesh.indexType = IndexType::UInt16;
                     } while (0);
                     break;
                 case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-                    submesh.indexType = IndexType::UInt16;
+                    mesh.indexType = IndexType::UInt16;
                     break;
                 case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-                    submesh.indexType = IndexType::UInt32;
+                    mesh.indexType = IndexType::UInt32;
                     break;
                 }
             }
 
             if (glTFPrimitive.material >= 0) {
-                submesh.material = context.materials[glTFPrimitive.material];
+                mesh.material = context.materials[glTFPrimitive.material];
             } else {
-                submesh.material = std::make_shared<Material>("default");
-                submesh.material->shader = context.shader;
+                mesh.material = std::make_shared<Material>("default");
+                mesh.material->shader = context.shader;
             }
 
-            mesh.submeshes.push_back(submesh);
+            SceneNode meshNode = {};
+            meshNode.mesh = mesh;
+            node.children.push_back(meshNode);
         }
         cbuffer->commit();
 
-        context.meshes.at(index) = mesh;
+        while (node.mesh.has_value() == false && node.children.size() == 1) {
+            node = node.children.front();
+        }
+
+        context.meshes.at(index) = node;
     }
 }
 
@@ -431,7 +437,14 @@ SceneNode loadNode(const tinygltf::Node& node, LoaderContext& context) {
     SceneNode output = {};
     output.name = node.name;
     if (node.mesh >= 0) {
-        output.mesh = context.meshes.at(node.mesh);
+        auto mesh = context.meshes.at(node.mesh);
+        while (mesh.mesh.has_value() == false && mesh.children.size() == 1) {
+            mesh = mesh.children.front();
+        }
+        if (mesh.mesh.has_value() && mesh.children.empty())
+            output.mesh = mesh.mesh;
+        else
+            output.children.push_back(mesh);
     }
     if (node.matrix.size() == 16) {
         Matrix4 mat;

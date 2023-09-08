@@ -12,7 +12,7 @@
 namespace FV {
     struct SceneState;
 
-    struct FVCORE_API Submesh {
+    struct FVCORE_API Mesh {
         std::shared_ptr<Material> material;
 
         struct VertexAttribute {
@@ -95,13 +95,5 @@ namespace FV {
         uint32_t bindShaderUniformTextures(ShaderUniformSemantic semantic, const std::string& name, const SceneState& sceneState, ShaderBindingSet* bindingSet) const;
         uint32_t bindShaderUniformSamplers(ShaderUniformSemantic semantic, const std::string& name, const SceneState& sceneState, ShaderBindingSet* bindingSet) const;
         uint32_t bindShaderUniformBuffer(ShaderUniformSemantic semantic, ShaderDataType type, const std::string& name, const SceneState&, uint8_t* buffer, size_t length) const;
-    };
-
-    struct FVCORE_API Mesh {
-        std::string name;
-        std::vector<Submesh> submeshes; // primitives
-
-        void updateShadingProperties(const SceneState*);
-        uint32_t encodeRenderCommand(RenderCommandEncoder* encoder, uint32_t numInstances, uint32_t baseInstance) const;
     };
 }
