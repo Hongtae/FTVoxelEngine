@@ -170,6 +170,7 @@ namespace FV::Vulkan {
         case PixelFormat::Depth32Float:     return VK_FORMAT_D32_SFLOAT;
         case PixelFormat::Stencil8:         return VK_FORMAT_S8_UINT;
 
+        case PixelFormat::Depth24Unorm_stencil8:    return VK_FORMAT_D24_UNORM_S8_UINT;
         case PixelFormat::Depth32Float_stencil8:    return VK_FORMAT_D32_SFLOAT_S8_UINT;
         }
         return VK_FORMAT_UNDEFINED;
@@ -235,6 +236,7 @@ namespace FV::Vulkan {
         case VK_FORMAT_D32_SFLOAT:					return PixelFormat::Depth32Float;
         case VK_FORMAT_S8_UINT:                     return PixelFormat::Stencil8;
 
+        case VK_FORMAT_D24_UNORM_S8_UINT:           return PixelFormat::Depth24Unorm_stencil8;
         case VK_FORMAT_D32_SFLOAT_S8_UINT:			return PixelFormat::Depth32Float_stencil8;
 
         }

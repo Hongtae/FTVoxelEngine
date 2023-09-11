@@ -397,6 +397,13 @@ void CopyCommandEncoder::fill(std::shared_ptr<FV::GPUBuffer> buffer,
     encoder->buffers.push_back(bufferView);
 }
 
+void CopyCommandEncoder::callback(std::function<void(VkCommandBuffer)> fn) {
+    EncoderCommand command = [=](VkCommandBuffer cbuffer, EncodingState& state) mutable {
+        fn(cbuffer);
+    };
+    encoder->commands.push_back(command);
+}
+
 void CopyCommandEncoder::setupSubresource(const TextureOrigin& origin,
                                           uint32_t layerCount,
                                           PixelFormat pixelFormat,

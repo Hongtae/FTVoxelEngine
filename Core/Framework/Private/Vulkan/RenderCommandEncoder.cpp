@@ -52,175 +52,6 @@ RenderCommandEncoder::Encoder::~Encoder() {
 bool RenderCommandEncoder::Encoder::encode(VkCommandBuffer commandBuffer) {
     EncodingState state = { this };
 
-    // initialize render pass
-    uint32_t frameWidth = 0;
-    uint32_t frameHeight = 0;
-
-    std::vector<VkAttachmentDescription> attachments;
-    attachments.reserve(renderPassDescriptor.colorAttachments.size() + 1);
-
-    std::vector<VkAttachmentReference> colorReferences;
-    colorReferences.reserve(renderPassDescriptor.colorAttachments.size());
-
-    std::vector<VkImageView> framebufferImageViews;
-    framebufferImageViews.reserve(renderPassDescriptor.colorAttachments.size() + 1);
-
-    std::vector<VkClearValue> attachmentClearValues;
-    attachmentClearValues.reserve(renderPassDescriptor.colorAttachments.size() + 1);
-
-    for (const auto& colorAttachment : renderPassDescriptor.colorAttachments) {
-        if (const auto& rt = std::dynamic_pointer_cast<ImageView>(colorAttachment.renderTarget); rt && rt->image) {
-            VkAttachmentDescription attachment = {};
-            attachment.format = rt->image->format;
-            attachment.samples = VK_SAMPLE_COUNT_1_BIT; // 1 sample per pixel
-            switch (colorAttachment.loadAction) {
-            case RenderPassAttachmentDescriptor::LoadActionLoad:
-                attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-                break;
-            case RenderPassAttachmentDescriptor::LoadActionClear:
-                attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-                break;
-            default:
-                attachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-                break;
-            }
-            switch (colorAttachment.storeAction) {
-            case RenderPassAttachmentDescriptor::StoreActionDontCare:
-                attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-                break;
-            case RenderPassAttachmentDescriptor::StoreActionStore:
-                attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-                break;
-            }
-            attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-            VkImageLayout currentLayout = rt->image->setLayout(
-                attachment.finalLayout,
-                VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT);
-
-            if (attachment.loadOp == VK_ATTACHMENT_LOAD_OP_LOAD)
-                attachment.initialLayout = currentLayout;
-
-            VkAttachmentReference attachmentReference = {};
-            attachmentReference.attachment = static_cast<uint32_t>(attachments.size());
-            attachmentReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-            attachments.push_back(attachment);
-            colorReferences.push_back(attachmentReference);
-
-            framebufferImageViews.push_back(rt->imageView);
-
-            VkClearValue clearValue = {};
-            clearValue.color = { colorAttachment.clearColor.r, colorAttachment.clearColor.g, colorAttachment.clearColor.b, colorAttachment.clearColor.a };
-            attachmentClearValues.push_back(clearValue);
-
-            frameWidth = (frameWidth > 0) ? std::min(frameWidth, rt->width()) : rt->width();
-            frameHeight = (frameHeight > 0) ? std::min(frameHeight, rt->height()) : rt->height();
-        }
-    }
-
-    VkAttachmentReference depthStencilReference = {};
-    depthStencilReference.attachment = VK_ATTACHMENT_UNUSED;
-    depthStencilReference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-    if (renderPassDescriptor.depthStencilAttachment.renderTarget) {
-        const auto& depthStencilAttachment = renderPassDescriptor.depthStencilAttachment;
-        if (const auto& rt = std::dynamic_pointer_cast<ImageView>(depthStencilAttachment.renderTarget); rt && rt->image) {
-            VkAttachmentDescription attachment = {};
-            attachment.format = rt->image->format;
-            attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-            switch (depthStencilAttachment.loadAction) {
-            case RenderPassAttachmentDescriptor::LoadActionLoad:
-                attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-                break;
-            case RenderPassAttachmentDescriptor::LoadActionClear:
-                attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-                break;
-            default:
-                attachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-                break;
-            }
-            switch (depthStencilAttachment.storeAction) {
-            case RenderPassAttachmentDescriptor::StoreActionStore:
-                attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-                break;
-            default:
-                attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-                break;
-            }
-            attachment.stencilLoadOp = attachment.loadOp;
-            attachment.stencilStoreOp = attachment.storeOp;
-            attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-            VkImageLayout currentLayout = rt->image->setLayout(
-                attachment.finalLayout,
-                VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-                VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
-                VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT);
-
-            if (attachment.loadOp == VK_ATTACHMENT_LOAD_OP_LOAD)
-                attachment.initialLayout = currentLayout;
-
-            depthStencilReference.attachment = static_cast<uint32_t>(attachments.size());
-            attachments.push_back(attachment);
-
-            framebufferImageViews.push_back(rt->imageView);
-
-            VkClearValue clearValue = {};
-            clearValue.depthStencil.depth = depthStencilAttachment.clearDepth;
-            clearValue.depthStencil.stencil = depthStencilAttachment.clearStencil;
-            attachmentClearValues.push_back(clearValue);
-
-            frameWidth = (frameWidth > 0) ? std::min(frameWidth, rt->width()) : rt->width();
-            frameHeight = (frameHeight > 0) ? std::min(frameHeight, rt->height()) : rt->height();
-        }
-    }
-
-    VkSubpassDescription subpassDescription = {};
-    subpassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpassDescription.colorAttachmentCount = (uint32_t)colorReferences.size();
-    subpassDescription.pColorAttachments = colorReferences.data();
-    subpassDescription.pDepthStencilAttachment = &depthStencilReference;
-    subpassDescription.inputAttachmentCount = 0;
-    subpassDescription.pInputAttachments = nullptr;
-    subpassDescription.preserveAttachmentCount = 0;
-    subpassDescription.pPreserveAttachments = nullptr;
-    subpassDescription.pResolveAttachments = nullptr;
-
-
-    VkRenderPassCreateInfo  renderPassCreateInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
-    renderPassCreateInfo.attachmentCount = (uint32_t)attachments.size();
-    renderPassCreateInfo.pAttachments = attachments.data();
-    renderPassCreateInfo.subpassCount = 1;
-    renderPassCreateInfo.pSubpasses = &subpassDescription;
-
-    auto gdevice = std::dynamic_pointer_cast<GraphicsDevice>(cbuffer->device());
-    VkDevice device = gdevice->device;
-
-    VkResult err = vkCreateRenderPass(device, &renderPassCreateInfo, gdevice->allocationCallbacks(), &this->renderPass);
-    if (err != VK_SUCCESS) {
-        Log::error(std::format("vkCreateRenderPass failed: {}", err));
-        return false;
-    }
-
-    VkFramebufferCreateInfo frameBufferCreateInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
-    frameBufferCreateInfo.renderPass = this->renderPass;
-    frameBufferCreateInfo.attachmentCount = (uint32_t)framebufferImageViews.size();
-    frameBufferCreateInfo.pAttachments = framebufferImageViews.data();
-    frameBufferCreateInfo.width = frameWidth;
-    frameBufferCreateInfo.height = frameHeight;
-    frameBufferCreateInfo.layers = 1;
-    err = vkCreateFramebuffer(device, &frameBufferCreateInfo, gdevice->allocationCallbacks(), &this->framebuffer);
-    if (err != VK_SUCCESS) {
-        Log::error(std::format("vkCreateFramebuffer failed: {}", err));
-        return false;
-    }
-
-
     // collect image layout transition
     for (auto& ds : descriptorSets) {
         ds->collectImageViewLayouts(state.imageLayoutMap, state.imageViewLayoutMap);
@@ -243,17 +74,136 @@ bool RenderCommandEncoder::Encoder::encode(VkCommandBuffer commandBuffer) {
                          commandBuffer);
     }
 
-    // begin render pass
-    VkRenderPassBeginInfo renderPassBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
-    renderPassBeginInfo.renderPass = this->renderPass;
-    renderPassBeginInfo.clearValueCount = (uint32_t)attachmentClearValues.size();
-    renderPassBeginInfo.pClearValues = attachmentClearValues.data();
-    renderPassBeginInfo.renderArea.offset.x = 0;
-    renderPassBeginInfo.renderArea.offset.y = 0;
-    renderPassBeginInfo.renderArea.extent.width = frameWidth;
-    renderPassBeginInfo.renderArea.extent.height = frameHeight;
-    renderPassBeginInfo.framebuffer = this->framebuffer;
-    vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+    // initialize render pass
+    VkRenderingInfo renderingInfo = { VK_STRUCTURE_TYPE_RENDERING_INFO };
+    renderingInfo.flags = 0;
+    renderingInfo.layerCount = 1;
+
+    uint32_t frameWidth = 0;
+    uint32_t frameHeight = 0;
+
+    std::vector<VkRenderingAttachmentInfo> colorAttachments;
+    colorAttachments.reserve(renderPassDescriptor.colorAttachments.size());
+    
+    for (const auto& colorAttachment : renderPassDescriptor.colorAttachments) {
+        VkRenderingAttachmentInfo attachment = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
+        attachment.imageView = VK_NULL_HANDLE;
+        attachment.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        attachment.resolveMode = VK_RESOLVE_MODE_NONE;
+        attachment.resolveImageView = nullptr;
+        attachment.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+        switch (colorAttachment.loadAction) {
+        case RenderPassAttachmentDescriptor::LoadActionLoad:
+            attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+            break;
+        case RenderPassAttachmentDescriptor::LoadActionClear:
+            attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            break;
+        default:
+            attachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            break;
+        }
+        switch (colorAttachment.storeAction) {
+        case RenderPassAttachmentDescriptor::StoreActionDontCare:
+            attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            break;
+        case RenderPassAttachmentDescriptor::StoreActionStore:
+            attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+            break;
+        }
+        attachment.clearValue.color = {
+            colorAttachment.clearColor.r,
+            colorAttachment.clearColor.g,
+            colorAttachment.clearColor.b,
+            colorAttachment.clearColor.a
+        };
+
+        if (auto renderTarget = colorAttachment.renderTarget.get(); renderTarget) {
+            ImageView* imageView = dynamic_cast<ImageView*>(renderTarget);
+            FVASSERT_DEBUG(imageView);
+
+            attachment.imageView = imageView->imageView;
+            attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+            if (Image* image = imageView->image.get(); image) {
+                FVASSERT_DEBUG(isColorFormat(image->pixelFormat()));
+
+                frameWidth = (frameWidth > 0) ? std::min(frameWidth, imageView->width()) : imageView->width();
+                frameHeight = (frameHeight > 0) ? std::min(frameHeight, imageView->height()) : imageView->height();
+
+                imageView->image->setLayout(
+                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    state.encoder->cbuffer->queueFamily()->familyIndex,
+                    commandBuffer);
+            }
+        }
+        colorAttachments.push_back(attachment);
+    }
+    if (colorAttachments.empty() == false) {
+        renderingInfo.colorAttachmentCount = uint32_t(colorAttachments.size());
+        renderingInfo.pColorAttachments = colorAttachments.data();
+    }
+    VkRenderingAttachmentInfo depthStencilAttachment = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
+
+    if (auto imageView = dynamic_cast<const ImageView*>(renderPassDescriptor.depthStencilAttachment.renderTarget.get());
+        imageView != nullptr && imageView->image != nullptr) {
+
+        // VUID-VkRenderingInfo-pDepthAttachment-06085
+        depthStencilAttachment.imageView = imageView->imageView;
+        depthStencilAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        depthStencilAttachment.resolveMode = VK_RESOLVE_MODE_NONE;
+        depthStencilAttachment.resolveImageView = VK_NULL_HANDLE;
+        depthStencilAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+        switch (renderPassDescriptor.depthStencilAttachment.loadAction) {
+        case RenderPassAttachmentDescriptor::LoadActionLoad:
+            depthStencilAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+            break;
+        case RenderPassAttachmentDescriptor::LoadActionClear:
+            depthStencilAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            break;
+        default:
+            depthStencilAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            break;
+        }
+        switch (renderPassDescriptor.depthStencilAttachment.storeAction) {
+        case RenderPassAttachmentDescriptor::StoreActionStore:
+            depthStencilAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+            break;
+        default:
+            depthStencilAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            break;
+        }
+        depthStencilAttachment.clearValue.depthStencil.depth = renderPassDescriptor.depthStencilAttachment.clearDepth;
+        depthStencilAttachment.clearValue.depthStencil.stencil = renderPassDescriptor.depthStencilAttachment.clearStencil;
+
+        if (isDepthFormat(imageView->pixelFormat())) {
+            renderingInfo.pDepthAttachment = &depthStencilAttachment;
+        }
+        if (isStencilFormat(imageView->pixelFormat())) {
+            renderingInfo.pStencilAttachment = &depthStencilAttachment;
+        }
+
+        frameWidth = (frameWidth > 0) ? std::min(frameWidth, imageView->width()) : imageView->width();
+        frameHeight = (frameHeight > 0) ? std::min(frameHeight, imageView->height()) : imageView->height();
+
+        imageView->image->setLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                                    VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                                    VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+                                    VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
+                                    state.encoder->cbuffer->queueFamily()->familyIndex,
+                                    commandBuffer);
+    }
+
+    renderingInfo.renderArea.offset.x = 0;
+    renderingInfo.renderArea.offset.y = 0;
+    renderingInfo.renderArea.extent.width = frameWidth;
+    renderingInfo.renderArea.extent.height = frameHeight;
+    vkCmdBeginRendering(commandBuffer, &renderingInfo);
 
     // setup viewport
     bool flipY = FLIP_VIEWPORT_Y;
@@ -302,7 +252,7 @@ bool RenderCommandEncoder::Encoder::encode(VkCommandBuffer commandBuffer) {
     for (EncoderCommand& cmd : commands)
         cmd(commandBuffer, state);
     // end render pass
-    vkCmdEndRenderPass(commandBuffer);
+    vkCmdEndRendering(commandBuffer);
 
     // process post-renderpass commands
     for (EncoderCommand& cmd : cleanupCommands)

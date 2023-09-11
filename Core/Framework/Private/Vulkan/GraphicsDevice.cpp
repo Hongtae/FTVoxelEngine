@@ -59,15 +59,8 @@ GraphicsDevice::GraphicsDevice(std::shared_ptr<VulkanInstance> ins,
     }
 
     requiredExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-    //requiredExtensions.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);             // promoted 1.1
-    //requiredExtensions.push_back(VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME);       // promoted 1.2
-    //requiredExtensions.push_back(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);        // promoted 1.3
-    //requiredExtensions.push_back(VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME);   // promoted 1.3
-    //requiredExtensions.push_back(VK_EXT_EXTENDED_DYNAMIC_STATE_2_EXTENSION_NAME); // promoted 1.3
     //requiredExtensions.push_back(VK_EXT_EXTENDED_DYNAMIC_STATE_3_EXTENSION_NAME);
 
-    //optionalExtensions.push_back(VK_KHR_MAINTENANCE_2_EXTENSION_NAME);    // promoted 1.1
-    //optionalExtensions.push_back(VK_KHR_MAINTENANCE_3_EXTENSION_NAME);    // promoted 1.1
     //optionalExtensions.push_back(VK_KHR_MAINTENANCE_4_EXTENSION_NAME);    // promoted 1.1
 
     // setup extensions
@@ -1062,7 +1055,6 @@ std::shared_ptr<FV::RenderPipelineState> GraphicsDevice::makeRenderPipeline(cons
     VkResult err = VK_SUCCESS;
 
     VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
-    VkRenderPass renderPass = VK_NULL_HANDLE;
     VkPipeline pipeline = VK_NULL_HANDLE;
 
     _ScopeExit _scope_exit = {
@@ -1070,12 +1062,30 @@ std::shared_ptr<FV::RenderPipelineState> GraphicsDevice::makeRenderPipeline(cons
         {
             if (pipelineLayout != VK_NULL_HANDLE)
                 vkDestroyPipelineLayout(device, pipelineLayout, allocationCallbacks());
-            if (renderPass != VK_NULL_HANDLE)
-                vkDestroyRenderPass(device, renderPass, allocationCallbacks());
             if (pipeline != VK_NULL_HANDLE)
                 vkDestroyPipeline(device, pipeline, allocationCallbacks());
         }
     };
+
+    for (auto& attachment : desc.colorAttachments) {
+        if (isColorFormat(attachment.pixelFormat) == false) {
+            Log::error(std::format("Invalid attachment pixel format: {}", int(attachment.pixelFormat)));
+            return nullptr;
+        }
+    }
+
+    const uint32_t colorAttachmentCount = std::reduce(
+        desc.colorAttachments.begin(),
+        desc.colorAttachments.end(),
+        uint32_t(0), [](uint32_t result, auto& item) {
+            return std::max(result, item.index + 1);
+        });
+    if (colorAttachmentCount > this->properties().limits.maxColorAttachments) {
+        Log::error(std::format("The number of colors attached exceeds the device limit. {} > {}",
+                               colorAttachmentCount,
+                               this->properties().limits.maxColorAttachments));
+        return nullptr;
+    }
 
     if (desc.vertexFunction) {
         FVASSERT_DEBUG(desc.vertexFunction->stage() == ShaderStage::Vertex);
@@ -1083,6 +1093,7 @@ std::shared_ptr<FV::RenderPipelineState> GraphicsDevice::makeRenderPipeline(cons
     if (desc.fragmentFunction) {
         FVASSERT_DEBUG(desc.fragmentFunction->stage() == ShaderStage::Fragment);
     }
+
 
     VkGraphicsPipelineCreateInfo pipelineCreateInfo = {
         VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO
@@ -1283,22 +1294,31 @@ std::shared_ptr<FV::RenderPipelineState> GraphicsDevice::makeRenderPipeline(cons
     dynamicState.dynamicStateCount = (uint32_t)std::size(dynamicStateEnables);
     pipelineCreateInfo.pDynamicState = &dynamicState;
 
-    // render pass
-    VkRenderPassCreateInfo  renderPassCreateInfo = {
-        VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO
-    };
-    VkSubpassDescription subpassDesc = { 0, VK_PIPELINE_BIND_POINT_GRAPHICS };
-    std::vector<VkAttachmentDescription> attachmentDescriptions;
-    std::vector<VkAttachmentReference> subpassInputAttachmentRefs;
-    std::vector<VkAttachmentReference> subpassColorAttachmentRefs;
-    std::vector<VkAttachmentReference> subpassResolveAttachmentRefs;
+    // VK_KHR_dynamic_rendering
+    VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
+    std::vector<VkFormat> colorAttachmentFormats;
+    std::transform(desc.colorAttachments.begin(), desc.colorAttachments.end(),
+                   std::back_inserter(colorAttachmentFormats),
+                   [](auto& attachment) {
+                       return getPixelFormat(attachment.pixelFormat);
+                   });
+    if (colorAttachmentFormats.empty() == false) {
+        pipelineRenderingCreateInfo.colorAttachmentCount = uint32_t(colorAttachmentFormats.size());
+        pipelineRenderingCreateInfo.pColorAttachmentFormats = colorAttachmentFormats.data();
+    }
+    pipelineRenderingCreateInfo.depthAttachmentFormat = VK_FORMAT_UNDEFINED;
+    pipelineRenderingCreateInfo.stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
+    // VUID-VkGraphicsPipelineCreateInfo-renderPass-06589
+    if (isDepthFormat(desc.depthStencilAttachmentPixelFormat)) {
+        pipelineRenderingCreateInfo.depthAttachmentFormat = getPixelFormat(desc.depthStencilAttachmentPixelFormat);
+    }
+    if (isStencilFormat(desc.depthStencilAttachmentPixelFormat)) {
+        pipelineRenderingCreateInfo.stencilAttachmentFormat = getPixelFormat(desc.depthStencilAttachmentPixelFormat);
+    }
+    appendNextChain(&pipelineCreateInfo, &pipelineRenderingCreateInfo);
+
     std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachmentStates;
-    VkAttachmentReference subpassDepthStencilAttachment = { VK_ATTACHMENT_UNUSED };
-
-    attachmentDescriptions.reserve(desc.colorAttachments.size() + 1);
-    subpassColorAttachmentRefs.reserve(desc.colorAttachments.size());
     colorBlendAttachmentStates.reserve(desc.colorAttachments.size());
-
 
     auto blendOperation = [](BlendOperation o)->VkBlendOp {
         switch (o) {
@@ -1333,33 +1353,7 @@ std::shared_ptr<FV::RenderPipelineState> GraphicsDevice::makeRenderPipeline(cons
         return VK_BLEND_FACTOR_ZERO;
     };
 
-    uint32_t colorAttachmentRefCount = 0;
-    for (const RenderPipelineColorAttachmentDescriptor& attachment : desc.colorAttachments) {
-        FVASSERT_DEBUG(FV::isColorFormat(attachment.pixelFormat));
-        colorAttachmentRefCount = std::max(colorAttachmentRefCount, attachment.index + 1);
-    }
-    if (colorAttachmentRefCount > this->properties().limits.maxColorAttachments) {
-        Log::error(std::format(
-            "The number of colors attached exceeds the device limit. ({:d} > {:d})",
-            colorAttachmentRefCount,
-            this->properties().limits.maxColorAttachments));
-        return nullptr;
-    }
-    subpassColorAttachmentRefs.insert(subpassColorAttachmentRefs.end(),
-                                      colorAttachmentRefCount,
-                                      { VK_ATTACHMENT_UNUSED, VK_IMAGE_LAYOUT_GENERAL });
-    for (uint32_t index = 0; index < desc.colorAttachments.size(); ++index) {
-        const RenderPipelineColorAttachmentDescriptor& attachment = desc.colorAttachments.at(index);
-
-        VkAttachmentDescription attachmentDesc = {};
-        attachmentDesc.format = getPixelFormat(attachment.pixelFormat);
-        attachmentDesc.samples = VK_SAMPLE_COUNT_1_BIT;
-        attachmentDesc.loadOp = attachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachmentDesc.storeOp = attachmentDesc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachmentDesc.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        attachmentDescriptions.push_back(attachmentDesc);
-
+    for (auto& attachment : desc.colorAttachments) {
         VkPipelineColorBlendAttachmentState blendState = {};
         blendState.blendEnable = attachment.blendState.enabled;
         blendState.srcColorBlendFactor = blendFactor(attachment.blendState.sourceRGBBlendFactor);
@@ -1379,44 +1373,7 @@ std::shared_ptr<FV::RenderPipelineState> GraphicsDevice::makeRenderPipeline(cons
         if (attachment.blendState.writeMask & ColorWriteMaskAlpha)
             blendState.colorWriteMask |= VK_COLOR_COMPONENT_A_BIT;
         colorBlendAttachmentStates.push_back(blendState);
-
-        FVASSERT_DEBUG(subpassColorAttachmentRefs.size() > attachment.index);
-        VkAttachmentReference& attachmentRef = subpassColorAttachmentRefs.at(attachment.index);
-        attachmentRef.attachment = index; // index of render-pass-attachment 
-        attachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     }
-    subpassDesc.colorAttachmentCount = (uint32_t)subpassColorAttachmentRefs.size();
-    subpassDesc.pColorAttachments = subpassColorAttachmentRefs.data();
-    subpassDesc.pResolveAttachments = subpassResolveAttachmentRefs.data();
-    subpassDesc.inputAttachmentCount = (uint32_t)subpassInputAttachmentRefs.size();
-    subpassDesc.pInputAttachments = subpassInputAttachmentRefs.data();
-    if (FV::isDepthFormat(desc.depthStencilAttachmentPixelFormat) ||
-        FV::isStencilFormat(desc.depthStencilAttachmentPixelFormat)) {
-        subpassDepthStencilAttachment.attachment = (uint32_t)attachmentDescriptions.size(); // attachment index
-        subpassDepthStencilAttachment.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        // add depth-stencil attachment description
-        VkAttachmentDescription attachmentDesc = {};
-        attachmentDesc.format = getPixelFormat(desc.depthStencilAttachmentPixelFormat);
-        attachmentDesc.samples = VK_SAMPLE_COUNT_1_BIT;
-        attachmentDesc.loadOp = attachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachmentDesc.storeOp = attachmentDesc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachmentDesc.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        attachmentDescriptions.push_back(attachmentDesc);
-        subpassDesc.pDepthStencilAttachment = &subpassDepthStencilAttachment;
-    }
-
-    renderPassCreateInfo.attachmentCount = (uint32_t)attachmentDescriptions.size();
-    renderPassCreateInfo.pAttachments = attachmentDescriptions.data();
-    renderPassCreateInfo.subpassCount = 1;
-    renderPassCreateInfo.pSubpasses = &subpassDesc;
-
-    err = vkCreateRenderPass(device, &renderPassCreateInfo, allocationCallbacks(), &renderPass);
-    if (err != VK_SUCCESS) {
-        Log::error(std::format("vkCreateRenderPass failed: {}", err));
-        return nullptr;
-    }
-    pipelineCreateInfo.renderPass = renderPass;
 
     // color blending
     VkPipelineColorBlendStateCreateInfo colorBlendState = {
@@ -1509,10 +1466,9 @@ std::shared_ptr<FV::RenderPipelineState> GraphicsDevice::makeRenderPipeline(cons
         reflection->pushConstantLayouts.shrink_to_fit();
     }
 
-    auto pipelineState = std::make_shared<RenderPipelineState>(shared_from_this(), pipeline, pipelineLayout, renderPass);
+    auto pipelineState = std::make_shared<RenderPipelineState>(shared_from_this(), pipeline, pipelineLayout);
 
     pipelineLayout = VK_NULL_HANDLE;
-    renderPass = VK_NULL_HANDLE;
     pipeline = VK_NULL_HANDLE;
 
     return pipelineState;
