@@ -65,9 +65,7 @@ public:
         appResourcesRoot = environmentPath(EnvironmentPath::AppRoot) / "RenderTest.Resources";
         Log::debug(std::format("App-Resources: \"{}\"", appResourcesRoot.generic_u8string()));
 
-        graphicsContext = GraphicsDeviceContext::makeDefault();
-
-        window = Window::makeWindow(u8"RenderTest",
+        window = Window::makeWindow(u8"FV-Editor",
                                     Window::StyleGenericWindow,
                                     Window::WindowCallback {
             .contentMinSize {
@@ -106,6 +104,8 @@ public:
 
     void renderLoop(std::stop_token stop) {
 
+        graphicsContext = GraphicsDeviceContext::makeDefault();
+
         auto queue = graphicsContext->renderQueue();
         auto device = queue->device().get();
 
@@ -115,11 +115,9 @@ public:
 
 #if FVCORE_ENABLE_VULKAN
         struct UIContext {
-            VkFramebuffer framebuffer = VK_NULL_HANDLE;
             VkFence fence = VK_NULL_HANDLE;
             VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
             VkCommandPool commandPool = VK_NULL_HANDLE;
-            VkRenderPass renderPass = VK_NULL_HANDLE;
             VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
         };
         UIContext uiContext = {};
@@ -153,42 +151,6 @@ public:
             if (err != VK_SUCCESS)
                 throw std::runtime_error("vkCreateDescriptorPool error!");
 
-            VkAttachmentDescription attachment = {};
-            attachment.format = swapchain2->surfaceFormat.format;
-            attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-            attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-            attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-            attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachment.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-            attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-            VkAttachmentReference color_attachment = {};
-            color_attachment.attachment = 0;
-            color_attachment.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            VkSubpassDescription subpass = {};
-            subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-            subpass.colorAttachmentCount = 1;
-            subpass.pColorAttachments = &color_attachment;
-            VkSubpassDependency dependency = {};
-            dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-            dependency.dstSubpass = 0;
-            dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-            dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-            dependency.srcAccessMask = 0;
-            dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-            VkRenderPassCreateInfo renderPassCreateInfo = {};
-            renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-            renderPassCreateInfo.attachmentCount = 1;
-            renderPassCreateInfo.pAttachments = &attachment;
-            renderPassCreateInfo.subpassCount = 1;
-            renderPassCreateInfo.pSubpasses = &subpass;
-            renderPassCreateInfo.dependencyCount = 1;
-            renderPassCreateInfo.pDependencies = &dependency;
-
-            err = vkCreateRenderPass(gdevice->device, &renderPassCreateInfo, nullptr, &uiContext.renderPass);
-            if (err != VK_SUCCESS)
-                throw std::runtime_error("vkCreateRenderPass failed!");
-
             VkCommandPoolCreateInfo cmdPoolCreateInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
             cmdPoolCreateInfo.queueFamilyIndex = cqueue->family->familyIndex;
             cmdPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
@@ -212,10 +174,12 @@ public:
             init_info.Queue = cqueue->queue;
             init_info.QueueFamily = cqueue->family->familyIndex;
             init_info.MinImageCount = 2;
-            init_info.ImageCount = swapchain->maximumBufferCount();
-            init_info.UseDynamicRendering = false;
+            init_info.ImageCount = uint32_t(swapchain->maximumBufferCount());
+            init_info.UseDynamicRendering = true;
             init_info.DescriptorPool = uiContext.descriptorPool;
-            ImGui_ImplVulkan_Init(&init_info, uiContext.renderPass);
+            init_info.ColorAttachmentFormat = FV::Vulkan::getPixelFormat(swapchain->pixelFormat());
+
+            ImGui_ImplVulkan_Init(&init_info, nullptr);
 
             err = vkResetCommandPool(gdevice->device, uiContext.commandPool, 0);
             if (err != VK_SUCCESS)
@@ -324,47 +288,30 @@ public:
                     if (err != VK_SUCCESS)
                         throw std::runtime_error("vkResetCommandPool failed.");
 
-                    if (uiContext.framebuffer)
-                        vkDestroyFramebuffer(gdevice->device, uiContext.framebuffer, gdevice->allocationCallbacks());
-                    uiContext.framebuffer = VK_NULL_HANDLE;
-
-                    std::vector<VkImageView> framebufferImageViews;
-                    framebufferImageViews.reserve(rp.colorAttachments.size() + 1);
-                    for (auto& attachment : rp.colorAttachments) {
-                        auto imageView = dynamic_cast<FV::Vulkan::ImageView*>(attachment.renderTarget.get());
-                        if (imageView == nullptr)
-                            throw std::runtime_error("Unable to get vulkan image view");
-                        framebufferImageViews.push_back(imageView->imageView);
-                    }
-
-                    VkFramebufferCreateInfo frameBufferCreateInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
-                    frameBufferCreateInfo.renderPass = uiContext.renderPass;
-                    frameBufferCreateInfo.attachmentCount = (uint32_t)framebufferImageViews.size();
-                    frameBufferCreateInfo.pAttachments = framebufferImageViews.data();
-                    frameBufferCreateInfo.width = width;
-                    frameBufferCreateInfo.height = height;
-                    frameBufferCreateInfo.layers = 1;
-                    
-                    err = vkCreateFramebuffer(gdevice->device, &frameBufferCreateInfo, gdevice->allocationCallbacks(), &uiContext.framebuffer);
-                    if (err != VK_SUCCESS)
-                        throw std::runtime_error("vkCreateFramebuffer failed");
-
                     VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
                     commandBufferBeginInfo.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
                     vkBeginCommandBuffer(uiContext.commandBuffer, &commandBufferBeginInfo);
 
-                    VkRenderPassBeginInfo renderPassBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
-                    renderPassBeginInfo.renderPass = uiContext.renderPass;
-                    renderPassBeginInfo.framebuffer = uiContext.framebuffer;
-                    renderPassBeginInfo.renderArea.extent.width = width;
-                    renderPassBeginInfo.renderArea.extent.height = height;
-                    renderPassBeginInfo.clearValueCount = 0;
-                    renderPassBeginInfo.pClearValues = nullptr;
-                    vkCmdBeginRenderPass(uiContext.commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+                    VkRenderingAttachmentInfo colorAttachment = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
+                    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+                    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+                    if (auto imageView = dynamic_cast<FV::Vulkan::ImageView*>(rp.colorAttachments.front().renderTarget.get());
+                        imageView) {
+                        colorAttachment.imageView = imageView->imageView;
+                        colorAttachment.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+                    }
 
+                    VkRenderingInfo renderingInfo = { VK_STRUCTURE_TYPE_RENDERING_INFO };
+                    renderingInfo.flags = 0;
+                    renderingInfo.layerCount = 1;
+                    renderingInfo.renderArea = { 0, 0, width, height };
+                    renderingInfo.colorAttachmentCount = 1;
+                    renderingInfo.pColorAttachments = &colorAttachment;
+
+                    vkCmdBeginRendering(uiContext.commandBuffer, &renderingInfo);
                     ImGui_ImplVulkan_RenderDrawData(draw_data, uiContext.commandBuffer);
+                    vkCmdEndRendering(uiContext.commandBuffer);
 
-                    vkCmdEndRenderPass(uiContext.commandBuffer);
                     vkEndCommandBuffer(uiContext.commandBuffer);
 
                     VkCommandBufferSubmitInfo cbufferSubmitInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO };
@@ -406,10 +353,6 @@ public:
         vkDestroyFence(gdevice->device, uiContext.fence, gdevice->allocationCallbacks());
         vkFreeCommandBuffers(gdevice->device, uiContext.commandPool, 1, &uiContext.commandBuffer);
         vkDestroyCommandPool(gdevice->device, uiContext.commandPool, gdevice->allocationCallbacks());
-
-        vkDestroyRenderPass(gdevice->device, uiContext.renderPass, gdevice->allocationCallbacks());
-        if (uiContext.framebuffer)
-            vkDestroyFramebuffer(gdevice->device, uiContext.framebuffer, gdevice->allocationCallbacks());
         vkDestroyDescriptorPool(gdevice->device, uiContext.descriptorPool, gdevice->allocationCallbacks());
 #endif
     }
