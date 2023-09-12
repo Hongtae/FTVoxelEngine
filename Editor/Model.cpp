@@ -10,6 +10,7 @@ struct LoaderContext {
     tinygltf::Model model;
     CommandQueue* queue;
     MaterialShaderMap shader;
+    std::shared_ptr<SamplerState> defaultSampler;
 
     std::vector<std::shared_ptr<GPUBuffer>> buffers;
     std::vector<std::shared_ptr<Texture>> images;
@@ -243,20 +244,28 @@ void loadMaterials(LoaderContext& context) {
                     auto samplerDesc = context.samplerDescriptors.at(texture.sampler);
                     sampler = context.queue->device()->makeSamplerState(samplerDesc);
                 }
+                if (sampler == nullptr)
+                    sampler = context.defaultSampler;
                 return { image, sampler };
             }
             return {};
         };
 
-        material->setProperty(MaterialSemantic::BaseColorTexture,
-                              textureSampler(glTFMaterial.pbrMetallicRoughness.baseColorTexture.index));
-        material->setProperty(MaterialSemantic::MetallicRoughnessTexture,
-                              textureSampler(glTFMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index));
+        if (auto ts = textureSampler(glTFMaterial.pbrMetallicRoughness.baseColorTexture.index); ts.texture) {
+            material->setProperty(MaterialSemantic::BaseColorTexture, ts);
+        }
+        if (auto ts = textureSampler(glTFMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index); ts.texture) {
+            material->setProperty(MaterialSemantic::MetallicRoughnessTexture, ts);
+        }
         material->setProperty(MaterialSemantic::Metallic, float(glTFMaterial.pbrMetallicRoughness.metallicFactor));
         material->setProperty(MaterialSemantic::Roughness, float(glTFMaterial.pbrMetallicRoughness.roughnessFactor));
-        material->setProperty(MaterialSemantic::NormalTexture, textureSampler(glTFMaterial.normalTexture.index));
+        if (auto ts = textureSampler(glTFMaterial.normalTexture.index); ts.texture) {
+            material->setProperty(MaterialSemantic::NormalTexture, ts);
+        }
         material->setProperty(MaterialSemantic::NormalScaleFactor, float(glTFMaterial.normalTexture.scale));
-        material->setProperty(MaterialSemantic::OcclusionTexture, textureSampler(glTFMaterial.occlusionTexture.index));
+        if (auto ts = textureSampler(glTFMaterial.occlusionTexture.index); ts.texture) {
+            material->setProperty(MaterialSemantic::OcclusionTexture, ts);
+        }
         material->setProperty(MaterialSemantic::OcclusionScale, float(glTFMaterial.occlusionTexture.strength));
 
         material->setProperty(MaterialSemantic::EmissiveFactor, Vector3(
@@ -264,7 +273,9 @@ void loadMaterials(LoaderContext& context) {
             float(glTFMaterial.emissiveFactor[1]),
             float(glTFMaterial.emissiveFactor[2])
         ));
-        material->setProperty(MaterialSemantic::EmissiveTexture, textureSampler(glTFMaterial.emissiveTexture.index));
+        if (auto ts = textureSampler(glTFMaterial.emissiveTexture.index); ts.texture) {
+            material->setProperty(MaterialSemantic::EmissiveTexture, ts);
+        }
         material->shader = context.shader;
         context.materials.at(index) = material;
     }
@@ -526,7 +537,15 @@ std::shared_ptr<Model> loadModel(std::filesystem::path path, MaterialShaderMap s
     LoaderContext context = { .queue = queue, .shader = shader };
     tinygltf::TinyGLTF loader;
     std::string err, warn;
-    bool result = loader.LoadBinaryFromFile(&context.model, &err, &warn, path.generic_string());
+    std::string lowercasedPath = path.string();
+    std::transform(lowercasedPath.begin(), lowercasedPath.end(), lowercasedPath.begin(),
+                   [](auto c) { return std::tolower(c); });
+    bool result = false;
+    if (lowercasedPath.ends_with(".gltf")) {
+        result = loader.LoadASCIIFromFile(&context.model, &err, &warn, path.generic_string());
+    } else {
+        result = loader.LoadBinaryFromFile(&context.model, &err, &warn, path.generic_string());
+    }
     if (warn.empty() == false)
         Log::warning(std::format("glTF warning: {}", warn));
     if (err.empty() == false)
@@ -534,6 +553,13 @@ std::shared_ptr<Model> loadModel(std::filesystem::path path, MaterialShaderMap s
 
     if (result) {
         tinygltf::Model& model = context.model;
+
+        context.defaultSampler = queue->device()->makeSamplerState(
+            {
+                SamplerAddressMode::Repeat,
+                SamplerAddressMode::Repeat,
+                SamplerAddressMode::Repeat,
+            });
 
         loadBuffers(context);
         loadImages(context);

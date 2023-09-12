@@ -8,6 +8,7 @@
 #ifdef _WIN32
 #include <backends/imgui_impl_win32.h>
 #include <backends/imgui_impl_vulkan.h>
+#include "../Utils/ImGuiFileDialog/ImGuiFileDialog.h"
 #define FVCORE_ENABLE_VULKAN 1
 #include <Framework/Private/Vulkan/GraphicsDevice.h>
 #include <Framework/Private/Vulkan/CommandQueue.h>
@@ -15,6 +16,8 @@
 #include <Framework/Private/Vulkan/RenderCommandEncoder.h>
 #include <Framework/Private/Vulkan/ImageView.h>
 #endif
+#include "Model.h"
+#include "ShaderReflection.h"
 
 
 #ifdef _WIN32
@@ -35,12 +38,29 @@ LRESULT forwardImGuiWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
 using namespace FV;
 
+struct ForEachNode {
+    SceneNode& node;
+    void operator()(std::function<void(SceneNode&)> fn) {
+        fn(node);
+        for (auto& child : node.children)
+            ForEachNode{ child }(fn);
+    }
+};
+
 class EditorApp : public Application {
 public:
+    std::shared_ptr<Model> model;
     std::shared_ptr<Window> window;
     std::jthread renderThread;
 
     std::shared_ptr<GraphicsDeviceContext> graphicsContext;
+    std::shared_ptr<CommandQueue> renderQueue;
+    MaterialShaderMap shader = {};
+    PixelFormat colorFormat;
+    PixelFormat depthFormat;
+
+    std::string popupMessage;
+
     std::filesystem::path appResourcesRoot;
 
     void initUI() {
@@ -62,7 +82,7 @@ public:
     }
 
     void initialize() override {
-        appResourcesRoot = environmentPath(EnvironmentPath::AppRoot) / "RenderTest.Resources";
+        appResourcesRoot = environmentPath(EnvironmentPath::AppRoot) / "Editor.Resources";
         Log::debug(std::format("App-Resources: \"{}\"", appResourcesRoot.generic_u8string()));
 
         window = Window::makeWindow(u8"FV-Editor",
@@ -84,36 +104,209 @@ public:
 
         this->initUI();
 
+        graphicsContext = GraphicsDeviceContext::makeDefault();
+        renderQueue = graphicsContext->renderQueue();
+
         renderThread = std::jthread([this](auto stop) { renderLoop(stop); });
     }
 
     void finalize() override {
         renderThread.join();
         window = nullptr;
-        graphicsContext = nullptr;
 
 #ifdef _WIN32
         ImGui_ImplWin32_Shutdown();
 #endif
         ImGui::DestroyContext();
+
+        renderQueue = nullptr;
+        graphicsContext = nullptr;
+    }
+
+    void loadModel(std::string path) {
+        auto model = ::loadModel(path, shader, renderQueue.get());
+        if (model) {
+            auto device = renderQueue->device().get();
+
+            // set user-defined property values (lighting)
+            Vector3 lightDir = { 1, -1, 1 };
+            Vector3 lightColor = { 1, 1, 1 };
+            Vector3 ambientColor = { 0.3, 0.3, 0.3 };
+
+            for (auto& scene : model->scenes) {
+                for (auto& node : scene.nodes)
+                    ForEachNode{ node }(
+                        [&](auto& node) {
+                            if (node.mesh.has_value()) {
+                                auto& mesh = node.mesh.value();
+                                if (auto material = mesh.material.get(); material) {
+                                    material->attachments.front().format = colorFormat;
+                                    material->depthFormat = depthFormat;
+                                    material->setProperty(ShaderBindingLocation::pushConstant(64), lightDir);
+                                    material->setProperty(ShaderBindingLocation::pushConstant(80), lightColor);
+                                    material->setProperty(ShaderBindingLocation::pushConstant(96), ambientColor);
+                                }
+
+                                PipelineReflection reflection = {};
+                                if (mesh.buildPipelineState(device, &reflection)) {
+                                    printPipelineReflection(reflection, Log::Level::Debug);
+                                    mesh.initResources(device, Mesh::BufferUsagePolicy::SingleBuffer);
+                                } else {
+                                    Log::error("Failed to make pipeline descriptor");
+                                }
+                            }
+                        });
+            }
+
+            this->model = model;
+        }
+        else
+            messageBox("failed to load glTF");
+    }
+
+    void messageBox(const std::string& mesg) {
+        popupMessage = mesg;
+        ImGui::OpenPopup("Error");
     }
 
     void uiLoop() {
+        if (ImGui::BeginMainMenuBar()) {
+            if (ImGui::BeginMenu("File")) {
+                if (ImGui::MenuItem("Open", "Ctrl+O")) {
+                    ImGuiFileDialog::Instance()->OpenDialog("FVEditor_Open3DAsset", "Choose File", ".glb,.gltf", ".");
+                }
+                
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("Edit")) {
+                if (ImGui::MenuItem("Undo", "CTRL+Z")) {}
+                if (ImGui::MenuItem("Redo", "CTRL+Y", false, false)) {}  // Disabled item
+                ImGui::Separator();
+                if (ImGui::MenuItem("Cut", "CTRL+X")) {}
+                if (ImGui::MenuItem("Copy", "CTRL+C")) {}
+                if (ImGui::MenuItem("Paste", "CTRL+V")) {}
+                ImGui::EndMenu();
+            }
+            ImGui::EndMainMenuBar();
+        }
 
+        // viewport
+        if (ImGui::Begin("Viewport")) {
+            ImGui::SeparatorText("Camera");
+            static float distance = 100.0f;
+            ImGui::SliderFloat("Distance", &distance, 0.01f, 100.0f, "%.2f");
+            static float nearZ = 0.1f;
+            static float farZ = 10.0f;
+            ImGui::DragFloatRange2("Frustum", &nearZ, &farZ, 0.1f, 0.01f, 400.0f,
+                                   "Near: %.2f", "Far: %.2f", ImGuiSliderFlags_AlwaysClamp);
+        }
+        ImGui::End();
+
+        // file dialog 
+        if (ImGuiFileDialog::Instance()->Display("FVEditor_Open3DAsset")) {
+            // action if OK
+            if (ImGuiFileDialog::Instance()->IsOk()) {
+                std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
+                std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+                std::string fileName = ImGuiFileDialog::Instance()->GetCurrentFileName();
+
+                loadModel(filePathName);
+            }
+            // close
+            ImGuiFileDialog::Instance()->Close();
+        }
+
+        // etc..
+        static bool show_demo_window = true;
+        ImGui::ShowDemoWindow(&show_demo_window);
+
+        if (popupMessage.empty() == false) {
+            if (ImGui::BeginPopupModal("Error", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+                ImGui::Text(popupMessage.c_str());
+                if (ImGui::Button("dismiss")) {
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::SetItemDefaultFocus();
+                ImGui::EndPopup();
+            }
+        }
     }
 
     void renderLoop(std::stop_token stop) {
 
-        graphicsContext = GraphicsDeviceContext::makeDefault();
-
-        auto queue = graphicsContext->renderQueue();
-        auto device = queue->device().get();
-
-        auto swapchain = queue->makeSwapChain(window);
+        auto swapchain = renderQueue->makeSwapChain(window);
         if (swapchain == nullptr)
             throw std::runtime_error("swapchain creation failed");
 
+        auto queue = renderQueue.get();
+        auto device = queue->device().get();
+
+        // load shader
+        do {
+            // load shader
+            auto vsPath = this->appResourcesRoot / "shaders/sample.vert.spv";
+            auto fsPath = this->appResourcesRoot / "shaders/sample.frag.spv";
+            auto vertexShader = loadShader(vsPath, device);
+            if (vertexShader.has_value() == false)
+                throw std::runtime_error("failed to load shader");
+            auto fragmentShader = loadShader(fsPath, device);
+            if (fragmentShader.has_value() == false)
+                throw std::runtime_error("failed to load shader");
+
+            struct PushConstantBuffer {
+                Matrix4 transform;
+                Vector3 lightDir;
+                Vector3 color;
+            };
+
+            // setup shader binding
+            this->shader.resourceSemantics = {
+                { ShaderBindingLocation{ 0, 1, 0}, MaterialSemantic::BaseColorTexture },
+                { ShaderBindingLocation::pushConstant(0), ShaderUniformSemantic::ModelViewProjectionMatrix },
+                //{ ShaderBindingLocation::pushConstant(64), MaterialSemantic::UserDefined },
+                //{ ShaderBindingLocation::pushConstant(80), MaterialSemantic::UserDefined },
+                //{ ShaderBindingLocation::pushConstant(96), MaterialSemantic::UserDefined },
+            };
+
+            this->shader.inputAttributeSemantics = {
+                { 0, VertexAttributeSemantic::Position },
+                { 1, VertexAttributeSemantic::Normal },
+                { 2, VertexAttributeSemantic::TextureCoordinates },
+            };
+            this->shader.functions = { vertexShader.value(), fragmentShader.value() };
+        } while (0);
+
+        const Vector3 camPosition = Vector3(0, 120, 200);
+        const Vector3 camTarget = Vector3(0, 100, 0);
+        const float fov = degreeToRadian(80.0f);
+
+        SceneState sceneState = {
+            .view = ViewTransform(camPosition,
+                              camTarget - camPosition,
+                              Vector3(0, 1, 0)),
+            .projection = ProjectionTransform::perspective(
+                    fov,     // fov
+                    1.0,     // aspect ratio
+                    1.0,     // near
+                    1000.0), // far
+            .model = Matrix4::identity
+        };
+
+        this->colorFormat = swapchain->pixelFormat();
+        this->depthFormat = PixelFormat::Depth32Float;
+        std::shared_ptr<Texture> depthTexture = nullptr;
+
+        auto depthStencilState = device->makeDepthStencilState(
+            {
+                CompareFunctionLessEqual,
+                StencilDescriptor{},
+                StencilDescriptor{},
+                true
+            });
+
+
 #if FVCORE_ENABLE_VULKAN
+        // setup ui
         struct UIContext {
             VkFence fence = VK_NULL_HANDLE;
             VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
@@ -126,10 +319,6 @@ public:
         auto* gdevice = dynamic_cast<FV::Vulkan::GraphicsDevice*>(graphicsContext->device.get());
         if (gdevice == nullptr)
             throw std::runtime_error("Unable to get vulkan device!");
-
-        auto* swapchain2 = dynamic_cast<FV::Vulkan::SwapChain*>(swapchain.get());
-        if (swapchain2 == nullptr)
-            throw std::runtime_error("Unable to get vulkan swapchain!");
 
         auto* cqueue = dynamic_cast<FV::Vulkan::CommandQueue*>(swapchain->queue().get());
         if (cqueue == nullptr)
@@ -177,7 +366,7 @@ public:
             init_info.ImageCount = uint32_t(swapchain->maximumBufferCount());
             init_info.UseDynamicRendering = true;
             init_info.DescriptorPool = uiContext.descriptorPool;
-            init_info.ColorAttachmentFormat = FV::Vulkan::getPixelFormat(swapchain->pixelFormat());
+            init_info.ColorAttachmentFormat = FV::Vulkan::getPixelFormat(colorFormat);
 
             ImGui_ImplVulkan_Init(&init_info, nullptr);
 
@@ -217,18 +406,6 @@ public:
                 throw std::runtime_error("vkCreateFence failed!");
         }
 #endif
-
-        PixelFormat depthFormat = PixelFormat::Depth32Float;
-        std::shared_ptr<Texture> depthTexture = nullptr;
-
-        auto depthStencilState = device->makeDepthStencilState(
-            {
-                CompareFunctionLessEqual,
-                StencilDescriptor{},
-                StencilDescriptor{},
-                true
-            });
-
         constexpr auto frameInterval = 1.0 / 60.0;
         auto timestamp = std::chrono::high_resolution_clock::now();
         double delta = 0.0;
@@ -255,6 +432,26 @@ public:
             auto buffer = queue->makeCommandBuffer();
             auto encoder = buffer->makeRenderCommandEncoder(rp);
             encoder->setDepthStencilState(depthStencilState);
+
+            if (model && model->scenes.empty() == false) {
+                modelTransform.rotate(Quaternion(Vector3(0, 1, 0), std::numbers::pi * delta * 0.4));
+                sceneState.model = modelTransform.matrix4();
+                sceneState.projection = ProjectionTransform::perspective(
+                    fov, // fov
+                    float(width) / float(height),     // aspect ratio
+                    1.0,      // near
+                    1000.0);  // far
+
+                auto& scene = model->scenes.at(model->defaultSceneIndex);
+                for (auto& node : scene.nodes)
+                    ForEachNode{ node }(
+                        [&](auto& node) {
+                            if (node.mesh.has_value()) {
+                                node.mesh.value().updateShadingProperties(&sceneState);
+                                node.mesh.value().encodeRenderCommand(encoder.get(), 1, 0);
+                            }
+                        });
+            }
             encoder->endEncoding();
             buffer->commit();
 
@@ -266,8 +463,6 @@ public:
                 ImGui_ImplWin32_NewFrame();
 #endif
                 ImGui::NewFrame();
-                static bool show_demo_window = true;
-                ImGui::ShowDemoWindow(&show_demo_window);
 
                 this->uiLoop();
 

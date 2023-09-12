@@ -13,11 +13,20 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="imgui">
-      <UniqueIdentifier>{a4ad23b3-ea14-46b6-8a32-859a44b349f9}</UniqueIdentifier>
-    </Filter>
     <Filter Include="tinygltf">
       <UniqueIdentifier>{898ad921-e971-468f-9d5e-6ab051f8dc2c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="imgui">
+      <UniqueIdentifier>{b17feca3-899a-448f-8dec-4db2396611e9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="imgui\imgui">
+      <UniqueIdentifier>{a4ad23b3-ea14-46b6-8a32-859a44b349f9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="imgui\backends">
+      <UniqueIdentifier>{bf9051c4-3953-43f3-8f66-0320d709035e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="imgui\file dialog">
+      <UniqueIdentifier>{d1a76c59-6909-46ff-b546-96c2c6dbef0b}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -34,19 +43,13 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Utils\imgui\imconfig.h">
-      <Filter>imgui</Filter>
+      <Filter>imgui\imgui</Filter>
     </ClInclude>
     <ClInclude Include="..\Utils\imgui\imgui.h">
-      <Filter>imgui</Filter>
+      <Filter>imgui\imgui</Filter>
     </ClInclude>
     <ClInclude Include="..\Utils\imgui\imgui_internal.h">
-      <Filter>imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utils\imgui\backends\imgui_impl_vulkan.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utils\imgui\backends\imgui_impl_win32.h">
-      <Filter>Source Files</Filter>
+      <Filter>imgui\imgui</Filter>
     </ClInclude>
     <ClInclude Include="..\Utils\tinygltf\json.hpp">
       <Filter>tinygltf</Filter>
@@ -66,37 +69,52 @@
     <ClInclude Include="ShaderReflection.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\Utils\ImGuiFileDialog\ImGuiFileDialog.h">
+      <Filter>imgui\file dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utils\ImGuiFileDialog\ImGuiFileDialogConfig.h">
+      <Filter>imgui\file dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utils\imgui\backends\imgui_impl_vulkan.h">
+      <Filter>imgui\backends</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utils\imgui\backends\imgui_impl_win32.h">
+      <Filter>imgui\backends</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Editor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\Utils\imgui\imgui_draw.cpp">
-      <Filter>imgui</Filter>
+      <Filter>imgui\imgui</Filter>
     </ClCompile>
     <ClCompile Include="..\Utils\imgui\imgui.cpp">
-      <Filter>imgui</Filter>
+      <Filter>imgui\imgui</Filter>
     </ClCompile>
     <ClCompile Include="..\Utils\imgui\imgui_demo.cpp">
-      <Filter>imgui</Filter>
+      <Filter>imgui\imgui</Filter>
     </ClCompile>
     <ClCompile Include="..\Utils\imgui\imgui_tables.cpp">
-      <Filter>imgui</Filter>
+      <Filter>imgui\imgui</Filter>
     </ClCompile>
     <ClCompile Include="..\Utils\imgui\imgui_widgets.cpp">
-      <Filter>imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Utils\imgui\backends\imgui_impl_vulkan.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Utils\imgui\backends\imgui_impl_win32.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>imgui\imgui</Filter>
     </ClCompile>
     <ClCompile Include="..\Utils\tinygltf\tiny_gltf.cc">
       <Filter>tinygltf</Filter>
     </ClCompile>
     <ClCompile Include="Model.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utils\ImGuiFileDialog\ImGuiFileDialog.cpp">
+      <Filter>imgui\file dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utils\imgui\backends\imgui_impl_vulkan.cpp">
+      <Filter>imgui\backends</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utils\imgui\backends\imgui_impl_win32.cpp">
+      <Filter>imgui\backends</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
