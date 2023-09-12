@@ -80,6 +80,8 @@ namespace FV::Vulkan {
                   size_t length,
                   uint8_t value) override;
 
+        void callback(std::function<void(VkCommandBuffer)>);
+
         std::shared_ptr<CommandBuffer> cbuffer;
 
     private:

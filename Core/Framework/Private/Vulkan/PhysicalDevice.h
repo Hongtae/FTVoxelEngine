@@ -39,7 +39,9 @@ namespace FV::Vulkan {
         VkPhysicalDeviceExtendedDynamicState3PropertiesEXT extendedDynamicState3Properties;
 
         VkPhysicalDeviceFeatures features;
-        VkPhysicalDeviceTimelineSemaphoreFeatures timelineSemaphoreFeatures;
+        VkPhysicalDeviceVulkan11Features v11Features;
+        VkPhysicalDeviceVulkan12Features v12Features;
+        VkPhysicalDeviceVulkan13Features v13Features;
         VkPhysicalDeviceExtendedDynamicStateFeaturesEXT extendedDynamicStateFeatures;
         VkPhysicalDeviceExtendedDynamicState2FeaturesEXT extendedDynamicState2Features;
         VkPhysicalDeviceExtendedDynamicState3FeaturesEXT extendedDynamicState3Features;

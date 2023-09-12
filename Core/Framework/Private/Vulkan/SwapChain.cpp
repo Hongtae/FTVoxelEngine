@@ -5,6 +5,7 @@
 #include "Image.h"
 #include "ImageView.h"
 #include "Semaphore.h"
+#include "CopyCommandEncoder.h"
 
 #if FVCORE_ENABLE_VULKAN
 using namespace FV::Vulkan;
@@ -348,10 +349,6 @@ bool SwapChain::updateDevice() {
         swapChainImage->mipLevels = 1;
         swapChainImage->arrayLayers = swapchainCI.imageArrayLayers;
         swapChainImage->usage = swapchainCI.imageUsage;
-        swapChainImage->setLayout(VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                                  0,
-                                  VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
-                                  VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT);
 
         std::shared_ptr<ImageView> swapChainImageView = std::make_shared<ImageView>(gdevice, imageView);
         swapChainImageView->image = swapChainImage;
@@ -443,6 +440,25 @@ void SwapChain::setupFrame() {
 }
 
 bool SwapChain::present(FV::GPUEvent** waitEvents, size_t numEvents) {
+
+    auto presentSrc = imageViews.at(frameIndex);
+    if (auto cbuffer = cqueue->makeCommandBuffer(); cbuffer) {
+        if (auto encoder = std::dynamic_pointer_cast<CopyCommandEncoder>(cbuffer->makeCopyCommandEncoder());
+            encoder) {
+            encoder->callback(
+                [&](auto commandBuffer) {
+                    presentSrc->image->setLayout(VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                    VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT,
+                    VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+                    VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+                    cqueue->family->familyIndex,
+                    commandBuffer);
+                });
+            encoder->endEncoding();
+            cbuffer->commit();
+        }
+    }
+
     std::vector<VkSemaphore> waitSemaphores;
     waitSemaphores.reserve(numEvents + 1);
 

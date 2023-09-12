@@ -12,9 +12,13 @@ PhysicalDeviceDescription::PhysicalDeviceDescription(VkPhysicalDevice dev)
     , deviceMemory(0)
     , devicePriority(0) {
     this->properties = {};
-    this->features = {};
-    this->timelineSemaphoreFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES };
     this->extendedDynamicState3Properties = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_3_PROPERTIES_EXT };
+
+    this->features = {};
+    this->v11Features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };
+    this->v12Features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
+    this->v13Features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
+
     this->extendedDynamicStateFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT };
     this->extendedDynamicState2Features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_2_FEATURES_EXT };
     this->extendedDynamicState3Features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_3_FEATURES_EXT };
@@ -46,13 +50,22 @@ PhysicalDeviceDescription::PhysicalDeviceDescription(VkPhysicalDevice dev)
 
     VkPhysicalDeviceFeatures2 features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
 
-    appendNextChain(&features, &this->timelineSemaphoreFeatures);
-    appendNextChain(&features, &this->extendedDynamicStateFeatures);
-    appendNextChain(&features, &this->extendedDynamicState2Features);
-    appendNextChain(&features, &this->extendedDynamicState3Features);
+    void* nextFeatures[] = {
+        &this->v11Features,
+        &this->v12Features,
+        &this->v13Features,
+        &this->extendedDynamicStateFeatures,
+        &this->extendedDynamicState2Features,
+        &this->extendedDynamicState3Features,
+    };
+    for (void* f : nextFeatures)
+        appendNextChain(&features, f);
 
     vkGetPhysicalDeviceFeatures2(device, &features);
     this->features = features.features;
+
+    for (void* f : nextFeatures)
+        ((VkBaseOutStructure*)f)->pNext = nullptr;
 
     this->devicePriority = 0;
     switch (properties.properties.deviceType) {
