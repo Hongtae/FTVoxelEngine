@@ -29,9 +29,14 @@ LRESULT forwardImGuiWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
         return true;
 
+    if (ImGui::GetCurrentContext()) {
+        ImGuiIO& io = ImGui::GetIO();
+         if (io.WantCaptureMouse)
+             return ::DefWindowProcW(hWnd, msg, wParam, lParam);
+    }
+
     if (defaultWndProc)
         return (*defaultWndProc)(hWnd, msg, wParam, lParam);
-
     return ::DefWindowProcW(hWnd, msg, wParam, lParam);
 }
 #endif
@@ -59,9 +64,19 @@ public:
     PixelFormat colorFormat;
     PixelFormat depthFormat;
 
+    struct {
+        Vector3 position = { 0, 0, 100 };
+        Vector3 target = Vector3::zero;
+        float fov = degreeToRadian(80.f);
+        float nearZ = 0.01;
+        float farZ = 1000.0;
+    } camera;
+
     std::string popupMessage;
 
     std::filesystem::path appResourcesRoot;
+
+    std::optional<Point> draggingPosition; // left-click drag
 
     void initUI() {
         IMGUI_CHECKVERSION();
@@ -101,6 +116,10 @@ public:
         });
         window->setContentSize(Size(1024, 768));
         window->activate();
+        window->addEventObserver(this,
+                                 [this](const Window::MouseEvent& event) {
+                                     this->onMouseEvent(event);
+                                 });
 
         this->initUI();
 
@@ -123,8 +142,47 @@ public:
         graphicsContext = nullptr;
     }
 
+    void onMouseEvent(const Window::MouseEvent& event) {
+        if (event.device == Window::MouseEvent::GenericMouse && event.deviceId == 0) {
+            if (event.buttonId == 0) { // left-click
+                switch (event.type) {
+                case Window::MouseEvent::ButtonDown:
+                    this->draggingPosition = event.location;
+                    break;
+                case Window::MouseEvent::ButtonUp:
+                    this->draggingPosition.reset();
+                    break;
+                case Window::MouseEvent::Move:
+                    if (this->draggingPosition.has_value()) {
+                        auto old = this->draggingPosition.value();
+                        auto location = event.location;
+
+                        auto delta = old - location;
+
+                        auto up = Vector3(0, 1, 0);
+                        auto dir = (camera.target - camera.position).normalized();
+                        auto left = Vector3::cross(dir, up);
+
+                        //auto distance = (camera.position - camera.target).magnitude();
+                        auto dx = Quaternion(up, delta.x * 0.01);
+                        auto dy = Quaternion(left, delta.y * 0.01);
+                        auto rot = dx.concatenating(dy);
+
+                        auto p = camera.position - camera.target;
+                        p = p.applying(rot) + camera.target;
+                        camera.position = p;
+
+                        this->draggingPosition = location;
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
     void loadModel(std::string path) {
-        auto model = ::loadModel(path, shader, renderQueue.get());
+        Log::info(std::format("Loading gltf-model: {}", path));
+        auto model = ::loadModel(path, renderQueue.get());
         if (model) {
             auto device = renderQueue->device().get();
 
@@ -134,12 +192,13 @@ public:
             Vector3 ambientColor = { 0.3, 0.3, 0.3 };
 
             for (auto& scene : model->scenes) {
-                for (auto& node : scene.nodes)
+                for (auto& node : scene.nodes) {
                     ForEachNode{ node }(
                         [&](auto& node) {
                             if (node.mesh.has_value()) {
                                 auto& mesh = node.mesh.value();
                                 if (auto material = mesh.material.get(); material) {
+                                    material->shader = this->shader;
                                     material->attachments.front().format = colorFormat;
                                     material->depthFormat = depthFormat;
                                     material->setProperty(ShaderBindingLocation::pushConstant(64), lightDir);
@@ -156,8 +215,30 @@ public:
                                 }
                             }
                         });
+                    node.updateAABB();
+                }
             }
 
+            AABB aabb = {};
+            if (model && model->scenes.empty() == false) {
+                auto& scene = model->scenes.at(model->defaultSceneIndex);
+                for (auto& node : scene.nodes) {
+                    aabb.combine(node.aabb);
+                }
+            }
+            if (aabb.isValid() && camera.fov < std::numbers::pi) {
+                // adjust camera!
+                //auto extent = (aabb.max - aabb.min) * 0.5f;
+                //float ext = std::max({ extent.x, extent.y, extent.z });
+                float ext = (aabb.max - aabb.min).magnitude() * 0.5f;
+                float hfov = camera.fov * 0.5f;
+                float distance = ext / tan(hfov) + ext;
+                auto offset = aabb.center() - camera.target;
+                camera.target += offset;
+                camera.position += offset;
+                Vector3 dir = (camera.position - camera.target).normalized();
+                camera.position = camera.target + dir * distance;
+            }
             this->model = model;
         }
         else
@@ -193,12 +274,41 @@ public:
         // viewport
         if (ImGui::Begin("Viewport")) {
             ImGui::SeparatorText("Camera");
-            static float distance = 100.0f;
-            ImGui::SliderFloat("Distance", &distance, 0.01f, 100.0f, "%.2f");
+            float distance = (camera.position - camera.target).magnitude();
+            if (ImGui::SliderFloat("Distance", &distance, 0.01f, 1000.0f, "%.2f", ImGuiSliderFlags_Logarithmic)) {
+                auto dir = (camera.position - camera.target).normalized();
+                camera.position = camera.target + dir * distance;
+            }
             static float nearZ = 0.1f;
             static float farZ = 10.0f;
             ImGui::DragFloatRange2("Frustum", &nearZ, &farZ, 0.1f, 0.01f, 400.0f,
                                    "Near: %.2f", "Far: %.2f", ImGuiSliderFlags_AlwaysClamp);
+        }
+        ImGui::End();
+
+        if (ImGui::Begin("Voxelize")) {
+
+            static bool processing = false;
+            ImGui::BeginDisabled(processing);
+
+            static int depth = 10;
+            if (ImGui::SliderInt("Depth Level", &depth, 1, 256, nullptr, ImGuiSliderFlags_None)) {
+                // value changed.
+            }
+            
+            if (ImGui::Button("Convert")) {
+                // voxelize..
+                processing = true;
+            }
+            ImGui::EndDisabled();
+
+            ImGui::SameLine();
+            ImGui::BeginDisabled(!processing);
+            if (ImGui::Button("Cancel")) {
+                processing = false;
+            }
+            ImGui::EndDisabled();
+
         }
         ImGui::End();
 
@@ -233,7 +343,6 @@ public:
     }
 
     void renderLoop(std::stop_token stop) {
-
         auto swapchain = renderQueue->makeSwapChain(window);
         if (swapchain == nullptr)
             throw std::runtime_error("swapchain creation failed");
@@ -276,19 +385,12 @@ public:
             this->shader.functions = { vertexShader.value(), fragmentShader.value() };
         } while (0);
 
-        const Vector3 camPosition = Vector3(0, 120, 200);
-        const Vector3 camTarget = Vector3(0, 100, 0);
-        const float fov = degreeToRadian(80.0f);
-
         SceneState sceneState = {
-            .view = ViewTransform(camPosition,
-                              camTarget - camPosition,
-                              Vector3(0, 1, 0)),
+            .view = ViewTransform(
+                camera.position, camera.target - camera.position, 
+                Vector3(0, 1, 0)),
             .projection = ProjectionTransform::perspective(
-                    fov,     // fov
-                    1.0,     // aspect ratio
-                    1.0,     // near
-                    1000.0), // far
+                camera.fov, 1.0, camera.nearZ, camera.farZ),
             .model = Matrix4::identity
         };
 
@@ -434,13 +536,15 @@ public:
             encoder->setDepthStencilState(depthStencilState);
 
             if (model && model->scenes.empty() == false) {
-                modelTransform.rotate(Quaternion(Vector3(0, 1, 0), std::numbers::pi * delta * 0.4));
+                //modelTransform.rotate(Quaternion(Vector3(0, 1, 0), std::numbers::pi * delta * 0.4));
                 sceneState.model = modelTransform.matrix4();
+                sceneState.view = ViewTransform(
+                    camera.position, camera.target - camera.position,
+                    Vector3(0, 1, 0));
                 sceneState.projection = ProjectionTransform::perspective(
-                    fov, // fov
-                    float(width) / float(height),     // aspect ratio
-                    1.0,      // near
-                    1000.0);  // far
+                    camera.fov,
+                    float(width) / float(height),
+                    camera.nearZ, camera.farZ);
 
                 auto& scene = model->scenes.at(model->defaultSceneIndex);
                 for (auto& node : scene.nodes)

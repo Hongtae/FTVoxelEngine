@@ -9,7 +9,6 @@ using namespace FV;
 struct LoaderContext {
     tinygltf::Model model;
     CommandQueue* queue;
-    MaterialShaderMap shader;
     std::shared_ptr<SamplerState> defaultSampler;
 
     std::vector<std::shared_ptr<GPUBuffer>> buffers;
@@ -276,7 +275,6 @@ void loadMaterials(LoaderContext& context) {
         if (auto ts = textureSampler(glTFMaterial.emissiveTexture.index); ts.texture) {
             material->setProperty(MaterialSemantic::EmissiveTexture, ts);
         }
-        material->shader = context.shader;
         context.materials.at(index) = material;
     }
 }
@@ -344,9 +342,21 @@ void loadMeshes(LoaderContext& context) {
                 // Note: 
                 // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#meshes
 
-                if (_stricmp(attributeName.c_str(), "POSITION") == 0)
+                if (_stricmp(attributeName.c_str(), "POSITION") == 0) {
                     attribute.semantic = VertexAttributeSemantic::Position;
-                else if (_stricmp(attributeName.c_str(), "NORMAL") == 0)
+                    if (attribute.format == VertexFormat::Float3) {
+                        // get AABB
+                        const uint8_t* ptr = glTFBuffer.data.data();
+                        ptr += bufferOffset + attribOffset;
+                        AABB aabb = {};
+                        for (size_t i = 0; i < glTFAccessor.count; ++i) {
+                            const Vector3* p = reinterpret_cast<const Vector3*>(ptr);
+                            aabb.expand(*p);
+                            ptr += vertexStride;
+                        }
+                        mesh.aabb = aabb;
+                    }
+                } else if (_stricmp(attributeName.c_str(), "NORMAL") == 0)
                     attribute.semantic = VertexAttributeSemantic::Normal;
                 else if (_stricmp(attributeName.c_str(), "TANGENT") == 0)
                     attribute.semantic = VertexAttributeSemantic::Tangent;
@@ -426,7 +436,6 @@ void loadMeshes(LoaderContext& context) {
                 mesh.material = context.materials[glTFPrimitive.material];
             } else {
                 mesh.material = std::make_shared<Material>("default");
-                mesh.material->shader = context.shader;
             }
 
             SceneNode meshNode = {};
@@ -533,8 +542,8 @@ Model::Scene loadScene(const tinygltf::Scene& scene, LoaderContext& context) {
     return output;
 }
 
-std::shared_ptr<Model> loadModel(std::filesystem::path path, MaterialShaderMap shader, CommandQueue* queue) {
-    LoaderContext context = { .queue = queue, .shader = shader };
+std::shared_ptr<Model> loadModel(std::filesystem::path path, CommandQueue* queue) {
+    LoaderContext context = { .queue = queue };
     tinygltf::TinyGLTF loader;
     std::string err, warn;
     std::string lowercasedPath = path.string();
