@@ -60,7 +60,6 @@ namespace FV {
             FVASSERT_DEBUG(aspect > 0.0);
             FVASSERT_DEBUG(fov > 0.0);
             FVASSERT_DEBUG(nearZ > 0.0);
-            FVASSERT_DEBUG(farZ > 0.0);
             FVASSERT_DEBUG(farZ > nearZ);
 
             auto f = 1.0f / std::tan(fov * 0.5f);

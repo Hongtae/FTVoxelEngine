@@ -8,12 +8,14 @@
 #include "RenderCommandEncoder.h"
 #include "VertexDescriptor.h"
 #include "GraphicsDeviceContext.h"
+#include "AABB.h"
 
 namespace FV {
     struct SceneState;
 
     struct FVCORE_API Mesh {
         std::shared_ptr<Material> material;
+        AABB aabb;
 
         struct VertexAttribute {
             VertexAttributeSemantic semantic;

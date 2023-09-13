@@ -12,13 +12,8 @@
 #include "Mesh.h"
 #include "Transform.h"
 #include "RenderCommandEncoder.h"
+#include "AABB.h"
 
-#ifndef NOMINMAX
-#pragma push_macro("min")
-#pragma push_macro("max")
-#undef min
-#undef max
-#endif
 namespace FV {
     struct SceneState {
         ViewTransform view;
@@ -26,30 +21,10 @@ namespace FV {
         Matrix4 model;
     };
 
-    struct AABB {
-        Vector3 min = {
-            std::numeric_limits<float>::max(),
-            std::numeric_limits<float>::max(),
-            std::numeric_limits<float>::max()
-        };
-        Vector3 max = {
-            -std::numeric_limits<float>::max(),
-            -std::numeric_limits<float>::max(),
-            -std::numeric_limits<float>::max()
-        };
-        bool isValid() const {
-            return max.x > min.x && max.y > min.y && max.z > min.z;
-        }
-        bool isPointInside(const Vector3& pt) const {
-            return pt.x >= min.x && pt.x <= max.x &&
-                pt.y >= min.y && pt.y <= max.y &&
-                pt.z >= min.z && pt.z <= max.z;
-        }
-    };
-
     struct FVCORE_API SceneNode {
         std::string name;
         std::optional<Mesh> mesh;
+        AABB aabb;
 
         Vector3 scale = Vector3(1, 1, 1);
         Transform transform = Transform::identity;
@@ -57,6 +32,7 @@ namespace FV {
         std::vector<SceneNode> children;
 
         void draw(RenderCommandEncoder*, const SceneState&) const;
+        void updateAABB();
     };
 
     class FVCORE_API Scene {
@@ -67,7 +43,3 @@ namespace FV {
         std::vector<SceneNode> nodes;
     };
 }
-#ifndef NOMINMAX
-#pragma pop_macro("min")
-#pragma pop_macro("max")
-#endif

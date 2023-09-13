@@ -14,6 +14,17 @@ void SceneNode::draw(RenderCommandEncoder* encoder, const SceneState& state) con
     }
 }
 
+void SceneNode::updateAABB() {
+    this->aabb = {};
+    if (mesh) {
+        this->aabb = mesh.value().aabb;
+    }
+    for (auto& child : children) {
+        child.updateAABB();
+        this->aabb.combine(child.aabb);
+    }
+}
+
 Scene::Scene() {
 
 }

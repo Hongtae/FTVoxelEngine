@@ -187,6 +187,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h" />
+    <ClInclude Include="Framework\AABB.h" />
     <ClInclude Include="Framework\AffineTransform2.h" />
     <ClInclude Include="Framework\AffineTransform3.h" />
     <ClInclude Include="Framework\Application.h" />

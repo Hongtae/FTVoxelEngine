@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Framework/AABB.h"
 #include "Framework/AffineTransform2.h"
 #include "Framework/AffineTransform3.h"
 #include "Framework/Application.h"
