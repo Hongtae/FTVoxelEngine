@@ -794,11 +794,11 @@ uint32_t Mesh::bindMaterialSamplers(MaterialSemantic semantic, const ShaderResou
 }
 
 uint32_t Mesh::bindMaterialProperty(MaterialSemantic semantic,
-                                       ShaderBindingLocation location,
-                                       ShaderDataType dataType,
-                                       const std::string& name,
-                                       uint32_t itemOffset,
-                                       uint8_t* buffer, size_t length) const {
+                                    ShaderBindingLocation location,
+                                    ShaderDataType dataType,
+                                    const std::string& name,
+                                    uint32_t itemOffset,
+                                    uint8_t* buffer, size_t length) const {
     auto material = this->material.get();
     if (material == nullptr)
         return 0;
@@ -866,9 +866,9 @@ uint32_t Mesh::bindMaterialProperty(MaterialSemantic semantic,
 }
 
 uint32_t Mesh::bindShaderUniformTextures(ShaderUniformSemantic semantic,
-                                            const std::string& name,
-                                            const SceneState& sceneState,
-                                            ShaderBindingSet* bindingSet) const {
+                                         const std::string& name,
+                                         const SceneState& sceneState,
+                                         ShaderBindingSet* bindingSet) const {
     Log::warning(std::format(
         "No textures for ShaderUniformSemantic:{} name:\"{}\"",
         (uint32_t)semantic, name));
@@ -876,9 +876,9 @@ uint32_t Mesh::bindShaderUniformTextures(ShaderUniformSemantic semantic,
 }
 
 uint32_t Mesh::bindShaderUniformSamplers(ShaderUniformSemantic semantic,
-                                            const std::string& name,
-                                            const SceneState& sceneState,
-                                            ShaderBindingSet* bindingSet) const {
+                                         const std::string& name,
+                                         const SceneState& sceneState,
+                                         ShaderBindingSet* bindingSet) const {
     Log::warning(std::format(
         "No samplers for ShaderUniformSemantic:{} name:\"{}\"",
         (uint32_t)semantic, name));
@@ -886,10 +886,10 @@ uint32_t Mesh::bindShaderUniformSamplers(ShaderUniformSemantic semantic,
 }
 
 uint32_t Mesh::bindShaderUniformBuffer(ShaderUniformSemantic semantic,
-                                          ShaderDataType dataType,
-                                          const std::string& name,
-                                          const SceneState& sceneState,
-                                          uint8_t* buffer, size_t length) const {
+                                       ShaderDataType dataType,
+                                       const std::string& name,
+                                       const SceneState& sceneState,
+                                       uint8_t* buffer, size_t length) const {
     auto bindMatrix4 = [&](const Matrix4& matrix)->uint32_t {
         if (dataType == ShaderDataType::Float4x4) {
             memcpy(buffer, matrix.val, sizeof(matrix));
@@ -930,8 +930,8 @@ uint32_t Mesh::bindShaderUniformBuffer(ShaderUniformSemantic semantic,
 }
 
 bool Mesh::encodeRenderCommand(RenderCommandEncoder* encoder,
-                                  uint32_t numInstances,
-                                  uint32_t baseInstance) const {
+                               uint32_t numInstances,
+                               uint32_t baseInstance) const {
     if (pipelineState && vertexBuffers.empty() == false && material) {
         encoder->setRenderPipelineState(pipelineState);
         encoder->setFrontFacing(material->frontFace);
@@ -995,8 +995,8 @@ bool Mesh::encodeRenderCommand(RenderCommandEncoder* encoder,
 }
 
 bool Mesh::enumerateVertexBufferContent(VertexAttributeSemantic semantic,
-                                           CommandQueue* queue,
-                                           std::function<bool(const void*, VertexFormat, uint32_t)> handler) const {
+                                        CommandQueue* queue,
+                                        std::function<bool(const void*, VertexFormat, uint32_t)> handler) const {
     // find semantic
     const VertexAttribute* attrib = nullptr;
     const VertexBuffer* vertexBuffer = nullptr;
