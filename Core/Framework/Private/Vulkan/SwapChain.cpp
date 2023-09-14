@@ -440,22 +440,23 @@ void SwapChain::setupFrame() {
 }
 
 bool SwapChain::present(FV::GPUEvent** waitEvents, size_t numEvents) {
-
     auto presentSrc = imageViews.at(frameIndex);
-    if (auto cbuffer = cqueue->makeCommandBuffer(); cbuffer) {
-        if (auto encoder = std::dynamic_pointer_cast<CopyCommandEncoder>(cbuffer->makeCopyCommandEncoder());
-            encoder) {
-            encoder->callback(
-                [&](auto commandBuffer) {
-                    presentSrc->image->setLayout(VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                    VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT,
-                    VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
-                    VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
-                    cqueue->family->familyIndex,
-                    commandBuffer);
-                });
-            encoder->endEncoding();
-            cbuffer->commit();
+    if (presentSrc->image->layout() != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
+        if (auto cbuffer = cqueue->makeCommandBuffer(); cbuffer) {
+            if (auto encoder = std::dynamic_pointer_cast<CopyCommandEncoder>(cbuffer->makeCopyCommandEncoder());
+                encoder) {
+                encoder->callback(
+                    [&](auto commandBuffer) {
+                        presentSrc->image->setLayout(VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                        VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT,
+                        VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+                        VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+                        cqueue->family->familyIndex,
+                        commandBuffer);
+                    });
+                encoder->endEncoding();
+                cbuffer->commit();
+            }
         }
     }
 
@@ -487,10 +488,14 @@ bool SwapChain::present(FV::GPUEvent** waitEvents, size_t numEvents) {
 
     renderPassDescriptor.colorAttachments.clear();
 
-    // Check if a device reset is requested and update the device if necessary.
-    std::unique_lock guard(lock);
-    bool resetSwapchain = this->deviceReset;
-    guard.unlock();
+    bool resetSwapchain = err == VK_ERROR_OUT_OF_DATE_KHR;
+    std::unique_lock guard(lock, std::defer_lock_t{});
+    if (resetSwapchain == false) {
+        // Check if a device reset is requested and update the device if necessary.
+        guard.lock();
+        bool resetSwapchain = this->deviceReset;
+        guard.unlock();
+    }
 
     if (resetSwapchain) {
         auto& gdevice = cqueue->gdevice;
@@ -499,7 +504,7 @@ bool SwapChain::present(FV::GPUEvent** waitEvents, size_t numEvents) {
         this->deviceReset = false;
         guard.unlock();
         if (this->updateDevice() == false) {
-            Log::warning("VulkanSwapChain.updateDevice() failed.");
+            Log::error("VulkanSwapChain.updateDevice() failed.");
         }
     }
 
