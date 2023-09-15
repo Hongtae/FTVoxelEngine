@@ -17,6 +17,8 @@ namespace FV {
         std::shared_ptr<CommandQueue> renderQueue();
         std::shared_ptr<CommandQueue> computeQueue();
         std::shared_ptr<CommandQueue> copyQueue();
+
+        std::shared_ptr<GPUBuffer> makeCPUAccessible(std::shared_ptr<GPUBuffer>);
     private:
         std::vector<std::shared_ptr<CommandQueue>> renderQueues;
         std::vector<std::shared_ptr<CommandQueue>> computeQueues;

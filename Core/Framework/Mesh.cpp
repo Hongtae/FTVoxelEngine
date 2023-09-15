@@ -995,7 +995,7 @@ bool Mesh::encodeRenderCommand(RenderCommandEncoder* encoder,
 }
 
 bool Mesh::enumerateVertexBufferContent(VertexAttributeSemantic semantic,
-                                        CommandQueue* queue,
+                                        GraphicsDeviceContext* context,
                                         std::function<bool(const void*, VertexFormat, uint32_t)> handler) const {
     // find semantic
     const VertexAttribute* attrib = nullptr;
@@ -1020,42 +1020,11 @@ bool Mesh::enumerateVertexBufferContent(VertexAttributeSemantic semantic,
         if (bool(handler) == false) // function is empty, nothing more to do. 
             return true; // because we found a attribute with semantics.
 
-        auto& buffer = vertexBuffer->buffer;
-        std::shared_ptr<GPUBuffer> stgBuffer = nullptr;
+        auto buffer = context->makeCPUAccessible(vertexBuffer->buffer);
+        if (buffer == nullptr)
+            return false;
 
         const uint8_t* mapped = (const uint8_t*)buffer->contents();
-        if (mapped == nullptr) {
-            if (queue == nullptr)
-                return false;
-
-            auto cond = std::make_shared<std::tuple<std::mutex, std::condition_variable>>();
-            constexpr double timeout = 2.0;
-
-            auto device = queue->device();
-            stgBuffer = device->makeBuffer(buffer->length(),
-                                           GPUBuffer::StorageModeShared,
-                                           CPUCacheModeDefault);
-            auto cbuffer = queue->makeCommandBuffer();
-            auto encoder = cbuffer->makeCopyCommandEncoder();
-
-            encoder->copy(buffer, 0, stgBuffer, 0, buffer->length());
-            encoder->endEncoding();
-            cbuffer->addCompletedHandler(
-                [cond] // copying cond to avoid destruction due to scope out
-                {
-                    std::get<1>(*cond).notify_all();
-                });
-            cbuffer->commit();
-
-            std::unique_lock lock(std::get<0>(*cond));
-            if (auto status = std::get<1>(*cond).wait_for(lock, std::chrono::duration<double>(timeout));
-                status == std::cv_status::timeout) {
-                Log::error("The operation timed out. Device did not respond to the command.");
-                return false;
-            }
-
-            mapped = (const uint8_t*)stgBuffer->contents();
-        }
         if (mapped) {
             mapped += vertexBuffer->byteOffset + attrib->offset;
             for (uint32_t i = 0; i < vertexBuffer->vertexCount; ++i) {
@@ -1063,6 +1032,46 @@ bool Mesh::enumerateVertexBufferContent(VertexAttributeSemantic semantic,
                 if (handler(mapped, attrib->format, i) == false)
                     return true;
                 mapped += vertexBuffer->byteStride;
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Mesh::enumerateIndexBufferContent(GraphicsDeviceContext* context,
+                                       std::function<bool(uint32_t index)> handler) const {
+    if (indexBuffer) {
+        if (bool(handler) == false || indexCount == 0)
+            return true;
+
+        auto buffer = context->makeCPUAccessible(indexBuffer);
+        if (buffer == nullptr)
+            return false;
+
+        const uint8_t* mapped = (const uint8_t*)buffer->contents();
+        if (mapped == nullptr) {
+            return false;
+        }
+        if (mapped) {
+            mapped += indexBufferByteOffset;
+            uint32_t base = indexBufferBaseVertexIndex;
+
+            switch (indexType) {
+            case IndexType::UInt16:
+                for (uint32_t i = 0; i < indexCount; ++i) {
+                    uint32_t index = reinterpret_cast<const uint16_t*>(mapped)[i];
+                    if (handler(index + base) == false)
+                        return true;
+                }
+                break;
+            case IndexType::UInt32:
+                for (uint32_t i = 0; i < indexCount; ++i) {
+                    uint32_t index = reinterpret_cast<const uint32_t*>(mapped)[i];
+                    if (handler(index + base) == false)
+                        return true;
+                }
+                break;
             }
             return true;
         }

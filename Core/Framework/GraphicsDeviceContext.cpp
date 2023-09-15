@@ -117,3 +117,57 @@ std::shared_ptr<CommandQueue> GraphicsDeviceContext::copyQueue() {
     }
     return copyQueues.front();
 }
+
+std::shared_ptr<GPUBuffer> GraphicsDeviceContext::makeCPUAccessible(
+    std::shared_ptr<GPUBuffer> buffer) {
+    if (buffer == nullptr) {
+        Log::warning("Invalid buffer! buffer should not be null!");
+        return nullptr;
+    }
+
+    if (buffer->contents() != nullptr)
+        return buffer;
+
+    auto queue = copyQueue();
+    if (queue == nullptr) {
+        Log::error("[FATAL] Unable to make command queue!");
+        throw std::runtime_error("Unable to make command queue!");
+    }
+
+    if (auto stgBuffer = device->makeBuffer(buffer->length(),
+                                            GPUBuffer::StorageModeShared,
+                                            CPUCacheModeDefault);
+        stgBuffer != nullptr) {
+
+        auto cond = std::make_shared<
+            std::tuple<std::mutex, std::condition_variable>>();
+
+        constexpr double timeout = 2.0;
+
+        auto cbuffer = queue->makeCommandBuffer();
+        auto encoder = cbuffer->makeCopyCommandEncoder();
+
+        encoder->copy(buffer, 0, stgBuffer, 0, buffer->length());
+        encoder->endEncoding();
+        cbuffer->addCompletedHandler(
+            [cond] // copying cond to avoid destruction due to scope out
+            {
+                std::get<1>(*cond).notify_all();
+            });
+        cbuffer->commit();
+
+        std::unique_lock lock(std::get<0>(*cond));
+        if (auto status = std::get<1>(*cond)
+            .wait_for(lock, std::chrono::duration<double>(timeout));
+            status == std::cv_status::timeout) {
+            Log::error(
+                "The operation timed out. Device did not respond to the command.");
+            return nullptr;
+        }
+
+        if (stgBuffer->contents() != nullptr) {
+            return stgBuffer;
+        }
+    }
+    return nullptr;
+}

@@ -60,9 +60,11 @@ namespace FV {
         // the given handler is called, with a vertex attribute as an argument.
         // If the handler returns false, stop enumerating.
         bool enumerateVertexBufferContent(VertexAttributeSemantic semantic,
-                                          CommandQueue* queue,
+                                          GraphicsDeviceContext* context,
                                           std::function<bool(const void* data, VertexFormat format, uint32_t index)> handler) const;
 
+        bool enumerateIndexBufferContent(GraphicsDeviceContext* context,
+                                         std::function<bool(uint32_t index)> handler) const;
     private:
         struct ResourceBinding {
             ShaderResource resource;    // from spir-v
@@ -97,5 +99,8 @@ namespace FV {
         uint32_t bindShaderUniformTextures(ShaderUniformSemantic semantic, const std::string& name, const SceneState& sceneState, ShaderBindingSet* bindingSet) const;
         uint32_t bindShaderUniformSamplers(ShaderUniformSemantic semantic, const std::string& name, const SceneState& sceneState, ShaderBindingSet* bindingSet) const;
         uint32_t bindShaderUniformBuffer(ShaderUniformSemantic semantic, ShaderDataType type, const std::string& name, const SceneState&, uint8_t* buffer, size_t length) const;
+
+        std::shared_ptr<GPUBuffer> mappableBuffer(CommandQueue*, std::shared_ptr<GPUBuffer> buffer) const {
+        }
     };
 }

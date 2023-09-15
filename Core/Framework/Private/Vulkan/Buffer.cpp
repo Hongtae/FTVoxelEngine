@@ -12,38 +12,46 @@ Buffer::Buffer(std::shared_ptr<DeviceMemory> mem, VkBuffer b, const VkBufferCrea
     , gdevice(mem->gdevice)
     , buffer(b)
     , usage(createInfo.usage)
-    , sharingMode(createInfo.sharingMode) {
+    , sharingMode(createInfo.sharingMode)
+    , size(createInfo.size) {
+    FVASSERT_DEBUG(buffer);
     FVASSERT_DEBUG(deviceMemory);
-    FVASSERT_DEBUG(deviceMemory->length > 0);
+    FVASSERT_DEBUG(deviceMemory->length >= size);
 }
 
-Buffer::Buffer(std::shared_ptr<GraphicsDevice> dev, VkBuffer b)
+Buffer::Buffer(std::shared_ptr<GraphicsDevice> dev, VkBuffer b, VkDeviceSize s)
     : deviceMemory(nullptr)
     , gdevice(dev)
-    , buffer(b) {
+    , buffer(b)
+    , size(s) {
+    FVASSERT_DEBUG(buffer);
+    FVASSERT_DEBUG(size > 0);
 }
 
 Buffer::~Buffer() {
-    if (buffer) {
-        vkDestroyBuffer(gdevice->device, buffer, gdevice->allocationCallbacks());
-    }
+    FVASSERT_DEBUG(buffer);
+    vkDestroyBuffer(gdevice->device, buffer, gdevice->allocationCallbacks());
 }
 
 void* Buffer::contents() {
-    return deviceMemory->mapped;
+    if (deviceMemory)
+        return deviceMemory->mapped;
+    return nullptr;
 }
 
 void Buffer::flush(size_t offset, size_t size) {
-    size_t length = deviceMemory->length;
-    if (offset < length) {
-        if (size > 0)
-            deviceMemory->flush(offset, size);
+    if (deviceMemory) {
+        size_t length = deviceMemory->length;
+        if (offset < length) {
+            if (size > 0)
+                deviceMemory->flush(offset, size);
+        }
+        deviceMemory->invalidate(0, VK_WHOLE_SIZE);
     }
-    deviceMemory->invalidate(0, VK_WHOLE_SIZE);
 }
 
 size_t Buffer::length() const {
-    return deviceMemory->length;
+    return size;
 }
 
 std::shared_ptr<BufferView> Buffer::makeBufferView(PixelFormat pixelFormat, size_t offset, size_t range) {
