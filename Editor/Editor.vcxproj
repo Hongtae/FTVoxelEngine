@@ -192,6 +192,7 @@ xcopy /Y /D /R /Q /E "$(ProjectDir)Resources" "$(OutDir)$(ProjectName).Resources
     <ClInclude Include="Resource.h" />
     <ClInclude Include="ShaderReflection.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="Voxel.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Utils\ImGuiFileDialog\ImGuiFileDialog.cpp" />
@@ -205,6 +206,7 @@ xcopy /Y /D /R /Q /E "$(ProjectDir)Resources" "$(OutDir)$(ProjectName).Resources
     <ClCompile Include="..\Utils\tinygltf\tiny_gltf.cc" />
     <ClCompile Include="Editor.cpp" />
     <ClCompile Include="Model.cpp" />
+    <ClCompile Include="Voxel.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Editor.rc" />

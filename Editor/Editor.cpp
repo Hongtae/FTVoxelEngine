@@ -18,6 +18,7 @@
 #endif
 #include "Model.h"
 #include "ShaderReflection.h"
+#include "Voxel.h"
 
 
 #ifdef _WIN32
@@ -77,6 +78,7 @@ public:
     std::filesystem::path appResourcesRoot;
 
     std::optional<Point> draggingPosition; // left-click drag
+    std::shared_ptr<Voxelizer> voxelizer;
 
     void initUI() {
         IMGUI_CHECKVERSION();
@@ -178,6 +180,101 @@ public:
                 }
             }
         }
+    }
+
+    std::vector<Triangle> triangleList() {
+        auto getMeshTriangles = [this](const Mesh& mesh) -> std::vector<Triangle> {
+
+            if (mesh.primitiveType != PrimitiveType::Triangle &&
+                mesh.primitiveType != PrimitiveType::TriangleStrip)
+                return {};
+
+            std::vector<Triangle> triangles;
+
+            std::vector<Vector3> positions;
+            mesh.enumerateVertexBufferContent(
+                VertexAttributeSemantic::Position,
+                graphicsContext.get(),
+                [&](const void* data, VertexFormat format, uint32_t index)->bool {
+                    if (format == VertexFormat::Float3) {
+                        positions.push_back(*(const Vector3*)data);
+                        return true;
+                    }
+                    return false;
+                });
+            std::vector<uint32_t> indices;
+            if (mesh.indexBuffer) {
+                indices.reserve(mesh.indexCount);
+                mesh.enumerateIndexBufferContent(
+                    graphicsContext.get(),
+                    [&](uint32_t index)->bool {
+                        indices.push_back(index);
+                        return true;
+                    });
+            } else {
+                indices.reserve(positions.size());
+                for (int i = 0; i < positions.size(); ++i)
+                    indices.push_back(i);
+            }
+
+            if (mesh.primitiveType == PrimitiveType::TriangleStrip) {
+                auto numTris = indices.size() > 2 ? indices.size() - 2 : 0;
+                triangles.reserve(numTris);
+
+                for (int i = 0; i < numTris; ++i) {
+                    uint32_t idx[3] = {
+                    indices.at(i),
+                    indices.at(i + 1),
+                    indices.at(i + 2)
+                    };
+                    if (i % 2)
+                        std::swap(idx[0], idx[1]);
+
+                    Triangle t = {
+                    positions.at(idx[0]),
+                    positions.at(idx[1]),
+                    positions.at(idx[2])
+                    };
+                    triangles.push_back(t);
+                }
+            } else {
+                auto numTris = indices.size() / 3;
+                triangles.reserve(numTris);
+                for (int i = 0; i < numTris; ++i) {
+                    uint32_t idx[3] = {
+                    indices.at(i * 3),
+                    indices.at(i * 3 + 1),
+                    indices.at(i * 3 + 2)
+                    };
+                    Triangle t = {
+                    positions.at(idx[0]),
+                    positions.at(idx[1]),
+                    positions.at(idx[2])
+                    };
+                    triangles.push_back(t);
+                }
+            }
+            return triangles;
+        };
+
+        if (model &&
+            model->defaultSceneIndex >= 0 &&
+            model->defaultSceneIndex < model->scenes.size()) {
+
+            std::vector<Triangle> triangles;
+            auto& scene = model->scenes.at(model->defaultSceneIndex);
+            for (auto& node : scene.nodes)
+                ForEachNode{ node }(
+                    [&](auto& node) {
+                        if (node.mesh.has_value()) {
+                            const Mesh& mesh = node.mesh.value();
+                            auto tris = getMeshTriangles(mesh);
+                            triangles.insert(triangles.end(), tris.begin(), tris.end());
+                        }
+                    });
+            return triangles;
+        }
+        return {};
     }
 
     void loadModel(std::string path) {
@@ -288,8 +385,8 @@ public:
 
         if (ImGui::Begin("Voxelize")) {
 
-            static bool processing = false;
-            ImGui::BeginDisabled(processing);
+            bool voxelizationInProgress = voxelizer != nullptr;
+            ImGui::BeginDisabled(voxelizationInProgress);
 
             static int depth = 10;
             if (ImGui::SliderInt("Depth Level", &depth, 1, 256, nullptr, ImGuiSliderFlags_None)) {
@@ -298,14 +395,14 @@ public:
             
             if (ImGui::Button("Convert")) {
                 // voxelize..
-                processing = true;
+                voxelizer = voxelize(triangleList(), depth);
             }
             ImGui::EndDisabled();
 
             ImGui::SameLine();
-            ImGui::BeginDisabled(!processing);
+            ImGui::BeginDisabled(!voxelizationInProgress);
             if (ImGui::Button("Cancel")) {
-                processing = false;
+                voxelizer = nullptr;                
             }
             ImGui::EndDisabled();
 
