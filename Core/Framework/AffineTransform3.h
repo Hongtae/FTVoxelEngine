@@ -3,6 +3,7 @@
 #include "Matrix3.h"
 #include "Matrix4.h"
 #include "Vector3.h"
+#include "Quaternion.h"
 
 #pragma pack(push, 4)
 namespace FV {
@@ -39,6 +40,12 @@ namespace FV {
 
         AffineTransform3 translated(const Vector3& offset) const;
         AffineTransform3& translate(const Vector3& offset);
+
+        AffineTransform3 scaled(const Vector3& scale) const;
+        AffineTransform3& scale(const Vector3& scale);
+
+        AffineTransform3 rotated(const Quaternion& quat) const;
+        AffineTransform3& rotate(const Quaternion& quat);
 
         AffineTransform3 inverted() const;
         AffineTransform3& invert();

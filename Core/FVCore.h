@@ -50,6 +50,7 @@
 #include "Framework/SwapChain.h"
 #include "Framework/Texture.h"
 #include "Framework/Transform.h"
+#include "Framework/Triangle.h"
 #include "Framework/Unicode.h"
 #include "Framework/Vector2.h"
 #include "Framework/Vector3.h"

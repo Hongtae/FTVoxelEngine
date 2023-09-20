@@ -1,5 +1,6 @@
 #pragma once
 #include "../include.h"
+#include <format>
 
 #pragma pack(push, 4)
 namespace FV {
@@ -55,3 +56,12 @@ namespace FV {
     };
 }
 #pragma pack(pop)
+
+namespace std {
+    template <> struct formatter<FV::Vector2> : formatter<string> {
+        auto format(const FV::Vector2& arg, format_context& ctx) {
+            auto str = std::format("Vector2({}, {})", arg.x, arg.y);
+            return formatter<string>::format(str, ctx);
+        }
+    };
+}

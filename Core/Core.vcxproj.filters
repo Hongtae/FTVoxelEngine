@@ -323,6 +323,9 @@
     <ClInclude Include="Framework\AABB.h">
       <Filter>Framework</Filter>
     </ClInclude>
+    <ClInclude Include="Framework\Triangle.h">
+      <Filter>Framework</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -515,6 +518,12 @@
       <Filter>Framework</Filter>
     </ClCompile>
     <ClCompile Include="Framework\Transform.cpp">
+      <Filter>Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\AABB.cpp">
+      <Filter>Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Triangle.cpp">
       <Filter>Framework</Filter>
     </ClCompile>
   </ItemGroup>

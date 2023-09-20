@@ -272,6 +272,7 @@
     <ClInclude Include="Framework\SwapChain.h" />
     <ClInclude Include="Framework\Texture.h" />
     <ClInclude Include="Framework\Transform.h" />
+    <ClInclude Include="Framework\Triangle.h" />
     <ClInclude Include="Framework\Unicode.h" />
     <ClInclude Include="Framework\Vector2.h" />
     <ClInclude Include="Framework\Vector3.h" />
@@ -285,6 +286,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="Framework\AABB.cpp" />
     <ClCompile Include="Framework\AffineTransform2.cpp" />
     <ClCompile Include="Framework\AffineTransform3.cpp" />
     <ClCompile Include="Framework\Application.cpp" />
@@ -343,6 +345,7 @@
     <ClCompile Include="Framework\Scene.cpp" />
     <ClCompile Include="Framework\Shader.cpp" />
     <ClCompile Include="Framework\Transform.cpp" />
+    <ClCompile Include="Framework\Triangle.cpp" />
     <ClCompile Include="Framework\Unicode.cpp" />
     <ClCompile Include="Framework\Vector2.cpp" />
     <ClCompile Include="Framework\Vector3.cpp" />

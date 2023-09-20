@@ -1,6 +1,7 @@
 #pragma once
 #include "../include.h"
 #include <algorithm>
+#include <optional>
 #include "Vector3.h"
 
 #ifndef NOMINMAX
@@ -9,22 +10,20 @@
 #undef min
 #undef max
 #endif
+
+#pragma pack(push, 4)
 namespace FV {
-    struct AABB {
-        Vector3 min = {
-            std::numeric_limits<float>::max(),
-            std::numeric_limits<float>::max(),
-            std::numeric_limits<float>::max()
-        };
-        Vector3 max = {
-            -std::numeric_limits<float>::max(),
-            -std::numeric_limits<float>::max(),
-            -std::numeric_limits<float>::max()
-        };
+    struct Triangle;
+    struct FVCORE_API AABB {
+        Vector3 min;
+        Vector3 max;
         
-        bool isValid() const {
-            return max.x >= min.x && max.y >= min.y && max.z >= min.z;
-        }
+        static const AABB null;
+
+        AABB();
+        AABB(const Vector3& _min, const Vector3& _max);
+
+        bool isNull() const;
 
         bool isPointInside(const Vector3& pt) const {
             return pt.x >= min.x && pt.x <= max.x &&
@@ -33,24 +32,29 @@ namespace FV {
         }
 
         AABB& expand(const Vector3& point) {
-            if (isValid()) {
-                min = Vector3::minimum(min, point);
-                max = Vector3::maximum(max, point);
-            } else {
+            if (isNull()) {
                 min = point;
                 max = point;
+            } else {
+                min = Vector3::minimum(min, point);
+                max = Vector3::maximum(max, point);
             }
             return *this;
         }
 
+        AABB& expand(std::initializer_list<Vector3> pts) {
+            for (auto& p : pts) expand(p);
+            return *this;
+        }
+
         AABB intersection(const AABB& other) const {
-            if (isValid() && other.isValid()) {
-                return {
-                    Vector3::maximum(min, other.min),
-                    Vector3::minimum(max, other.max)
-                };
+            if (isNull() || other.isNull()) {
+                return {};
             }
-            return {};
+            return {
+                Vector3::maximum(min, other.min),
+                Vector3::minimum(max, other.max)
+            };
         }
 
         AABB combining(const AABB& other) const {
@@ -58,27 +62,37 @@ namespace FV {
         }
 
         AABB& combine(const AABB& other) {
-            if (other.isValid()) {
-                if (isValid()) {
-                    min = Vector3::minimum(min, other.min);
-                    max = Vector3::maximum(max, other.max);
-                } else {
+            if (other.isNull() == false) {
+                if (isNull()) {
                     min = other.min;
                     max = other.max;
+                } else {
+                    min = Vector3::minimum(min, other.min);
+                    max = Vector3::maximum(max, other.max);
                 }
             }
             return *this;
         }
 
         bool intersects(const AABB& other) const {
-            return intersection(other).isValid();
+            return intersection(other).isNull() == false;
         }
 
         Vector3 center() const {
             return (min + max) * 0.5f;
         }
+
+        Vector3 extent() const {
+            return (max - min);
+        }
+
+        std::optional<Vector3> rayTest(const Vector3& origin, const Vector3& dir) const;
+        bool overlapTest(const Triangle& tri) const;
+        bool overlapTest(const AABB& aabb) const;
     };
 }
+#pragma pack(pop)
+
 #ifndef NOMINMAX
 #pragma pop_macro("min")
 #pragma pop_macro("max")

@@ -36,6 +36,12 @@ namespace FV
         AffineTransform2 translated(const Vector2& offset) const;
         AffineTransform2& translate(const Vector2& offset);
 
+        AffineTransform2 scaled(const Vector2& scale) const;
+        AffineTransform2& scale(const Vector2& scale);
+        
+        AffineTransform2 rotated(float radian) const;
+        AffineTransform2& rotate(float radian);
+
         AffineTransform2 inverted() const;
         AffineTransform2& invert();
 

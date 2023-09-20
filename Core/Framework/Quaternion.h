@@ -3,6 +3,7 @@
 #include <numbers>
 #include <type_traits>
 #include "Vector4.h"
+#include <format>
 
 #pragma pack(push, 4)
 namespace FV {
@@ -83,3 +84,12 @@ namespace FV {
     };
 }
 #pragma pack(pop)
+
+namespace std {
+    template <> struct formatter<FV::Quaternion> : formatter<string> {
+        auto format(const FV::Quaternion& arg, format_context& ctx) {
+            auto str = std::format("Quaternion({}, {}, {}, {})", arg.x, arg.y, arg.z, arg.w);
+            return formatter<string>::format(str, ctx);
+        }
+    };
+}

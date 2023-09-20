@@ -477,7 +477,7 @@ SceneNode loadNode(const tinygltf::Node& node, LoaderContext& context) {
             mat.row3().magnitude()
         };
         output.scale = scale;
-        auto ulpOfOne = std::numeric_limits<float>::epsilon();
+        constexpr auto ulpOfOne = std::numeric_limits<float>::epsilon();
         if (fabs(scale.x) > ulpOfOne &&
             fabs(scale.y) > ulpOfOne &&
             fabs(scale.z) > ulpOfOne) {
