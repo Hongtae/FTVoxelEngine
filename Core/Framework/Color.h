@@ -43,8 +43,8 @@ namespace FV {
             , b(static_cast<float>(argb.b) / 255.0f)
             , a(static_cast<float>(argb.a) / 255.0f) {
         }
-        explicit Color(const Vector3& v)
-            : r(v.x), g(v.y), b(v.z), a(1.0) {
+        explicit Color(const Vector3& v, float alpha = 1.0f)
+            : r(v.x), g(v.y), b(v.z), a(alpha) {
         }
         explicit Color(const Vector4& v)
             : r(v.x), g(v.y), b(v.z), a(v.w) {

@@ -14,6 +14,7 @@
 #pragma pack(push, 4)
 namespace FV {
     struct Triangle;
+    struct Plane;
     struct FVCORE_API AABB {
         Vector3 min;
         Vector3 max;
@@ -23,7 +24,9 @@ namespace FV {
         AABB();
         AABB(const Vector3& _min, const Vector3& _max);
 
-        bool isNull() const;
+        bool isNull() const {
+            return max.x < min.x || max.y < min.y || max.z < min.z; 
+        }
 
         bool isPointInside(const Vector3& pt) const {
             return pt.x >= min.x && pt.x <= max.x &&
@@ -82,11 +85,13 @@ namespace FV {
             return (min + max) * 0.5f;
         }
 
-        Vector3 extent() const {
+        Vector3 extents() const {
+            if (isNull()) return Vector3::zero;
             return (max - min);
         }
 
-        std::optional<Vector3> rayTest(const Vector3& origin, const Vector3& dir) const;
+        std::optional<Vector3> rayTest(const Vector3& rayOrigin, const Vector3& rayDir) const;
+        bool overlapTest(const Plane& plane) const;
         bool overlapTest(const Triangle& tri) const;
         bool overlapTest(const AABB& aabb) const;
     };

@@ -12,7 +12,7 @@ constexpr bool epsilon_test = false;
 namespace {
     // algorithm based on Tomas Möller
     // https://cs.lth.se/tomas-akenine-moller/
-    inline bool _edge_edge_test(float ax, float ay,
+    inline bool edge_edge_test(float ax, float ay,
                                 uint8_t i0, uint8_t i1,
                                 const Vector3& v0, const Vector3& u0, const Vector3& u1) {
         float bx = u0.val[i0] - u1.val[i0];
@@ -33,17 +33,17 @@ namespace {
         }
         return false;
     }
-    inline bool _edge_against_tri_edges(uint8_t i0, uint8_t i1,
+    inline bool edge_against_tri_edges(uint8_t i0, uint8_t i1,
                                         const Vector3& v0, const Vector3& v1,
                                         const Vector3& u0, const Vector3& u1, const Vector3& u2) {
         float ax = v1.val[i0] - v0.val[i0];
         float ay = v1.val[i1] - v0.val[i1];
-        if (_edge_edge_test(ax, ay, i0, i1, v0, u0, u1))   return true;
-        if (_edge_edge_test(ax, ay, i0, i1, v0, u1, u2))   return true;
-        if (_edge_edge_test(ax, ay, i0, i1, v0, u2, u0))   return true;
+        if (edge_edge_test(ax, ay, i0, i1, v0, u0, u1))   return true;
+        if (edge_edge_test(ax, ay, i0, i1, v0, u1, u2))   return true;
+        if (edge_edge_test(ax, ay, i0, i1, v0, u2, u0))   return true;
         return false;
     }
-    inline bool _point_in_tri(uint8_t i0, uint8_t i1,
+    inline bool point_in_tri(uint8_t i0, uint8_t i1,
                               const Vector3& v0, const Vector3& u0, const Vector3& u1, const Vector3& u2) {
         float a, b, c, d0, d1, d2;
         /* is T1 completly inside T2? */
@@ -68,7 +68,7 @@ namespace {
         }
         return false;
     }
-    inline bool _coplanar_tri_tri(const Vector3& n,
+    inline bool coplanar_tri_tri(const Vector3& n,
                                   const Vector3& v0, const Vector3& v1, const Vector3& v2,
                                   const Vector3& u0, const Vector3& u1, const Vector3& u2) {
         Vector3 a;
@@ -96,19 +96,19 @@ namespace {
             }
         }
         /* test all edges of triangle 1 against the edges of triangle 2 */
-        if (_edge_against_tri_edges(i0, i1, v0, v1, u0, u1, u2)) return true;
-        if (_edge_against_tri_edges(i0, i1, v1, v2, u0, u1, u2)) return true;
-        if (_edge_against_tri_edges(i0, i1, v2, v0, u0, u1, u2)) return true;
+        if (edge_against_tri_edges(i0, i1, v0, v1, u0, u1, u2)) return true;
+        if (edge_against_tri_edges(i0, i1, v1, v2, u0, u1, u2)) return true;
+        if (edge_against_tri_edges(i0, i1, v2, v0, u0, u1, u2)) return true;
 
         /* finally, test if tri1 is totally contained in tri2 or vice versa */
-        if (_point_in_tri(i0, i1, v0, u0, u1, u2)) return true;
-        if (_point_in_tri(i0, i1, u0, v0, v1, v2)) return true;
+        if (point_in_tri(i0, i1, v0, u0, u1, u2)) return true;
+        if (point_in_tri(i0, i1, u0, v0, v1, v2)) return true;
 
         return false;
     }
-    template <typename T> inline void _sort(T& a, T& b) { if (a > b) std::swap(a, b); }
+    template <typename T> inline void sort(T& a, T& b) { if (a > b) std::swap(a, b); }
     
-    inline bool _compute_intervals(float vv0, float vv1, float vv2,
+    inline bool compute_intervals(float vv0, float vv1, float vv2,
                                    float d0, float d1, float d2,
                                    float d0d1, float d0d2,
                                    float& isect0, float& isect1) {
@@ -136,7 +136,7 @@ namespace {
         }
         return false;
     }
-    static bool _tri_tri_intersect(const Vector3& v0, const Vector3& v1, const Vector3& v2,
+    static bool tri_tri_intersect(const Vector3& v0, const Vector3& v1, const Vector3& v2,
                                    const Vector3& u0, const Vector3& u1, const Vector3& u2) {
         /* compute plane equation of triangle(V0,V1,V2) */
         Vector3 e1 = v1 - v0;
@@ -208,22 +208,22 @@ namespace {
 
         float isect1[2], isect2[2];
         /* compute interval for triangle 1 */
-        if (_compute_intervals(vp0, vp1, vp2, dv0, dv1, dv2, dv0dv1, dv0dv2, isect1[0], isect1[1])) {
-            return _coplanar_tri_tri(n1, v0, v1, v2, u0, u1, u2);
+        if (compute_intervals(vp0, vp1, vp2, dv0, dv1, dv2, dv0dv1, dv0dv2, isect1[0], isect1[1])) {
+            return coplanar_tri_tri(n1, v0, v1, v2, u0, u1, u2);
         }
 
         /* compute interval for triangle 2 */
-        if (_compute_intervals(up0, up1, up2, du0, du1, du2, du0du1, du0du2, isect2[0], isect2[1])) {
-            return _coplanar_tri_tri(n1, v0, v1, v2, u0, u1, u2);
+        if (compute_intervals(up0, up1, up2, du0, du1, du2, du0du1, du0du2, isect2[0], isect2[1])) {
+            return coplanar_tri_tri(n1, v0, v1, v2, u0, u1, u2);
         }
 
-        _sort(isect1[0], isect1[1]);
-        _sort(isect2[0], isect2[1]);
+        sort(isect1[0], isect1[1]);
+        sort(isect2[0], isect2[1]);
 
         if (isect1[1] < isect2[0] || isect2[1] < isect1[0]) return false;
         return true;
     }
-    inline bool _compute_intervals2(float vv0, float vv1, float vv2,
+    inline bool compute_intervals2(float vv0, float vv1, float vv2,
                                     float d0, float d1, float d2,
                                     float d0d1, float d0d2,
                                     float& a, float& b, float& c, float& x0, float& x1) {
@@ -246,7 +246,7 @@ namespace {
         }
         return false;
     }
-    static bool _tri_tri_intersect_no_div(const Vector3& v0, const Vector3& v1, const Vector3& v2,
+    static bool tri_tri_intersect_no_div(const Vector3& v0, const Vector3& v1, const Vector3& v2,
                                           const Vector3& u0, const Vector3& u1, const Vector3& u2) {
         /* compute plane equation of triangle(V0,V1,V2) */
         Vector3 e1 = v1 - v0;
@@ -319,14 +319,14 @@ namespace {
 
         /* compute interval for triangle 1 */
         float a, b, c, x0, x1;
-        if (_compute_intervals2(vp0, vp1, vp2, dv0, dv1, dv2, dv0dv1, dv0dv2, a, b, c, x0, x1)) {
-            return _coplanar_tri_tri(n1, v0, v1, v2, u0, u1, u2);
+        if (compute_intervals2(vp0, vp1, vp2, dv0, dv1, dv2, dv0dv1, dv0dv2, a, b, c, x0, x1)) {
+            return coplanar_tri_tri(n1, v0, v1, v2, u0, u1, u2);
         }
 
         /* compute interval for triangle 2 */
         float d, e, f, y0, y1;
-        if (_compute_intervals2(up0, up1, up2, du0, du1, du2, du0du1, du0du2, d, e, f, y0, y1)) {
-            return _coplanar_tri_tri(n1, v0, v1, v2, u0, u1, u2);
+        if (compute_intervals2(up0, up1, up2, du0, du1, du2, du0du1, du0du2, d, e, f, y0, y1)) {
+            return coplanar_tri_tri(n1, v0, v1, v2, u0, u1, u2);
         }
 
         float xx = x0 * x1;
@@ -342,14 +342,14 @@ namespace {
         isect2[0] = tmp + e * xx * y1;
         isect2[1] = tmp + f * xx * y0;
 
-        _sort(isect1[0], isect1[1]);
-        _sort(isect2[0], isect2[1]);
+        sort(isect1[0], isect1[1]);
+        sort(isect2[0], isect2[1]);
 
         if (isect1[1] < isect2[0] || isect2[1] < isect1[0]) return false;
         return true;
     }
 
-    inline bool _compute_intervals_isectline(const Vector3& vert0, const Vector3& vert1, const Vector3& vert2,
+    inline bool compute_intervals_isectline(const Vector3& vert0, const Vector3& vert1, const Vector3& vert2,
                                             float vv0, float vv1, float vv2, float d0, float d1, float d2,
                                             float d0d1, float d0d2, float* isect0, float* isect1,
                                             Vector3& isectpoint0, Vector3& isectpoint1) {
@@ -387,14 +387,14 @@ namespace {
         }
         return false;
     }
-    template <typename T, typename U> inline void _sort2(T& a, T& b, U& smallest) {
+    template <typename T, typename U> inline void sort2(T& a, T& b, U& smallest) {
         if (a > b) {
             std::swap(a, b);
             smallest = 1;
         } else
             smallest = 0;
     }
-    static bool _tri_tri_intersect_with_isectline(const Vector3& v0, const Vector3& v1, const Vector3& v2,
+    static bool tri_tri_intersect_with_isectline(const Vector3& v0, const Vector3& v1, const Vector3& v2,
                                                   const Vector3& u0, const Vector3& u1, const Vector3& u2,
                                                   bool& coplanar,
                                                   Vector3& isectpt1, Vector3& isectpt2) {
@@ -470,18 +470,18 @@ namespace {
         float isect1[2], isect2[2];
         Vector3 isectpointA1, isectpointA2;
         Vector3 isectpointB1, isectpointB2;
-        coplanar = _compute_intervals_isectline(v0, v1, v2, vp0, vp1, vp2, dv0, dv1, dv2,
+        coplanar = compute_intervals_isectline(v0, v1, v2, vp0, vp1, vp2, dv0, dv1, dv2,
                                                 dv0dv1, dv0dv2, &isect1[0], &isect1[1], isectpointA1, isectpointA2);
         if (coplanar)
-            return _coplanar_tri_tri(n1, v0, v1, v2, u0, u1, u2);
+            return coplanar_tri_tri(n1, v0, v1, v2, u0, u1, u2);
 
         /* compute interval for triangle 2 */
-        _compute_intervals_isectline(u0, u1, u2, up0, up1, up2, du0, du1, du2,
+        compute_intervals_isectline(u0, u1, u2, up0, up1, up2, du0, du1, du2,
                                      du0du1, du0du2, &isect2[0], &isect2[1], isectpointB1, isectpointB2);
 
         uint8_t smallest1, smallest2;
-        _sort2(isect1[0], isect1[1], smallest1);
-        _sort2(isect2[0], isect2[1], smallest2);
+        sort2(isect1[0], isect1[1], smallest1);
+        sort2(isect2[0], isect2[1], smallest2);
 
         if (isect1[1] < isect2[0] || isect2[1] < isect1[0]) return false;
 
@@ -607,19 +607,19 @@ std::optional<Triangle::RayTestResult> Triangle::rayTestCCW(const Vector3& origi
     return result;
 }
 
-std::optional<Triangle::LineSegment> Triangle::intersectionTest(const Triangle& other) const {
+std::optional<Triangle::LineSegment> Triangle::overlapTest(const Triangle& other) const {
     LineSegment line = {};
     bool coplanar = false;
-    if (_tri_tri_intersect_with_isectline(p0, p1, p2,
-                                          other.p0, other.p1, other.p2,
-                                          coplanar,
-                                          line.p0, line.p1)) {
+    if (tri_tri_intersect_with_isectline(p0, p1, p2,
+                                         other.p0, other.p1, other.p2,
+                                         coplanar,
+                                         line.p0, line.p1)) {
         return line;
     }
     return {};
 }
 
 bool Triangle::intersects(const Triangle& other) const {
-    return _tri_tri_intersect_no_div(p0, p1, p2,
-                                     other.p0, other.p1, other.p2);
+    return tri_tri_intersect_no_div(p0, p1, p2,
+                                    other.p0, other.p1, other.p2);
 }

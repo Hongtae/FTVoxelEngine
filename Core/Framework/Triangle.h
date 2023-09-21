@@ -19,14 +19,14 @@ namespace FV {
             float u, v; // barycentric coordinates of intersection point inside the triangle.
                         // intersection point T(u,v) = (1-u-v)*p0 + u*p1 + v*p2
         };
-        std::optional<RayTestResult> rayTest(const Vector3& origin, const Vector3& dir) const;
-        std::optional<RayTestResult> rayTestCW(const Vector3& origin, const Vector3& dir) const;
-        std::optional<RayTestResult> rayTestCCW(const Vector3& origin, const Vector3& dir) const;
+        std::optional<RayTestResult> rayTest(const Vector3& rayOrigin, const Vector3& rayDir) const;
+        std::optional<RayTestResult> rayTestCW(const Vector3& rayOrigin, const Vector3& rayDir) const;
+        std::optional<RayTestResult> rayTestCCW(const Vector3& rayOrigin, const Vector3& rayDir) const;
 
         struct LineSegment {
             Vector3 p0, p1;
         };
-        std::optional<LineSegment> intersectionTest(const Triangle&) const;
+        std::optional<LineSegment> overlapTest(const Triangle&) const;
         bool intersects(const Triangle&) const;
     };
 }

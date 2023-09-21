@@ -35,6 +35,7 @@
 #include "Framework/Mesh.h"
 #include "Framework/PipelineReflection.h"
 #include "Framework/PixelFormat.h"
+#include "Framework/Plane.h"
 #include "Framework/Quaternion.h"
 #include "Framework/Rect.h"
 #include "Framework/RenderCommandEncoder.h"

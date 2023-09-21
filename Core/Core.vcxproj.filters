@@ -326,6 +326,9 @@
     <ClInclude Include="Framework\Triangle.h">
       <Filter>Framework</Filter>
     </ClInclude>
+    <ClInclude Include="Framework\Plane.h">
+      <Filter>Framework</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -524,6 +527,9 @@
       <Filter>Framework</Filter>
     </ClCompile>
     <ClCompile Include="Framework\Triangle.cpp">
+      <Filter>Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\Plane.cpp">
       <Filter>Framework</Filter>
     </ClCompile>
   </ItemGroup>

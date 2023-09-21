@@ -223,6 +223,7 @@
     <ClInclude Include="Framework\Mesh.h" />
     <ClInclude Include="Framework\PipelineReflection.h" />
     <ClInclude Include="Framework\PixelFormat.h" />
+    <ClInclude Include="Framework\Plane.h" />
     <ClInclude Include="Framework\Private\Vulkan\Buffer.h" />
     <ClInclude Include="Framework\Private\Vulkan\BufferView.h" />
     <ClInclude Include="Framework\Private\Vulkan\CommandBuffer.h" />
@@ -309,6 +310,7 @@
     <ClCompile Include="Framework\Matrix3.cpp" />
     <ClCompile Include="Framework\Matrix4.cpp" />
     <ClCompile Include="Framework\Mesh.cpp" />
+    <ClCompile Include="Framework\Plane.cpp" />
     <ClCompile Include="Framework\Private\Vulkan\Buffer.cpp" />
     <ClCompile Include="Framework\Private\Vulkan\BufferView.cpp" />
     <ClCompile Include="Framework\Private\Vulkan\CommandBuffer.cpp" />
