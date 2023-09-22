@@ -10,7 +10,7 @@ using namespace FV;
 constexpr auto epsilon = std::numeric_limits<float>::epsilon();
 constexpr auto fltmax = std::numeric_limits<float>::max();
 
-static const AABB null = AABB(Vector3(fltmax, fltmax, fltmax), Vector3(-fltmax, -fltmax, -fltmax));
+const AABB AABB::null = AABB(Vector3(fltmax, fltmax, fltmax), Vector3(-fltmax, -fltmax, -fltmax));
 
 AABB::AABB()
     : min(null.min)

@@ -25,6 +25,7 @@
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 LRESULT(*defaultWndProc)(HWND, UINT, WPARAM, LPARAM) = nullptr;
+bool mouseLocked = false;
 
 LRESULT forwardImGuiWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
@@ -32,9 +33,12 @@ LRESULT forwardImGuiWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
     if (ImGui::GetCurrentContext()) {
         ImGuiIO& io = ImGui::GetIO();
-         if (io.WantCaptureMouse)
-             return ::DefWindowProcW(hWnd, msg, wParam, lParam);
+        if (io.WantCaptureMouse) {
+            mouseLocked = true;
+            return ::DefWindowProcW(hWnd, msg, wParam, lParam);
+        }
     }
+    mouseLocked = false;
 
     if (defaultWndProc)
         return (*defaultWndProc)(hWnd, msg, wParam, lParam);
@@ -323,7 +327,7 @@ public:
                     aabb.combine(node.aabb);
                 }
             }
-            if (aabb.isValid() && camera.fov < std::numbers::pi) {
+            if (aabb.isNull() == false && camera.fov < std::numbers::pi) {
                 // adjust camera!
                 //auto extent = (aabb.max - aabb.min) * 0.5f;
                 //float ext = std::max({ extent.x, extent.y, extent.z });
@@ -380,6 +384,7 @@ public:
             static float farZ = 10.0f;
             ImGui::DragFloatRange2("Frustum", &nearZ, &farZ, 0.1f, 0.01f, 400.0f,
                                    "Near: %.2f", "Far: %.2f", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::Text(std::format("Mouse-Locked: {}", mouseLocked).c_str());
         }
         ImGui::End();
 
@@ -388,14 +393,15 @@ public:
             bool voxelizationInProgress = voxelizer != nullptr;
             ImGui::BeginDisabled(voxelizationInProgress);
 
-            static int depth = 10;
-            if (ImGui::SliderInt("Depth Level", &depth, 1, 256, nullptr, ImGuiSliderFlags_None)) {
+            static int depth = 5;
+            if (ImGui::SliderInt("Depth Level", &depth, 1, 12, nullptr, ImGuiSliderFlags_None)) {
                 // value changed.
             }
             
             if (ImGui::Button("Convert")) {
                 // voxelize..
                 voxelizer = voxelize(triangleList(), depth);
+                Log::debug("voxelize done. (test)");
             }
             ImGui::EndDisabled();
 
