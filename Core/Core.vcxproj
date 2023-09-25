@@ -198,6 +198,7 @@
     <ClInclude Include="Framework\AudioSource.h" />
     <ClInclude Include="Framework\AudioStream.h" />
     <ClInclude Include="Framework\BlendState.h" />
+    <ClInclude Include="Framework\BVH.h" />
     <ClInclude Include="Framework\Color.h" />
     <ClInclude Include="Framework\CommandBuffer.h" />
     <ClInclude Include="Framework\CommandEncoder.h" />
@@ -298,6 +299,7 @@
     <ClCompile Include="Framework\AudioSource.cpp" />
     <ClCompile Include="Framework\AudioStream.cpp" />
     <ClCompile Include="Framework\BlendState.cpp" />
+    <ClCompile Include="Framework\BVH.cpp" />
     <ClCompile Include="Framework\Color.cpp" />
     <ClCompile Include="Framework\Compression.cpp" />
     <ClCompile Include="Framework\Float16.cpp" />

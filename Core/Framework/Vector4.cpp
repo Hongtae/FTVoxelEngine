@@ -1,9 +1,14 @@
 #include "Vector4.h"
 #include "Matrix4.h"
+#include "Vector3.h"
 
 using namespace FV;
 
 const Vector4 Vector4::zero = {};
+
+Vector4::Vector4(const Vector3& v3, float _w)
+    : x(v3.x), y(v3.y), z(v3.z), w(_w) {
+}
 
 float Vector4::dot(const Vector4& v1, const Vector4& v2) {
     return (v1.x * v2.x) + (v1.y * v2.y) + (v1.z * v2.z) + (v1.w * v2.w);

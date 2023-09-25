@@ -1,3 +1,4 @@
+#include "Vector2.h"
 #include "Vector3.h"
 #include "Matrix3.h"
 #include "AffineTransform3.h"
@@ -6,6 +7,10 @@
 using namespace FV;
 
 const Vector3 Vector3::zero = {};
+
+Vector3::Vector3(const Vector2& v2, float _z)
+    : x(v2.x), y(v2.y), z(_z) {
+}
 
 float Vector3::dot(const Vector3& v1, const Vector3& v2) {
     return (v1.x * v2.x) + (v1.y * v2.y) + (v1.z * v2.z);
