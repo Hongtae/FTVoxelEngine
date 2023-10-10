@@ -23,7 +23,13 @@ namespace FV {
         AABB quantizedAABB;
         std::vector<Node> volumes;
 
-        std::optional<Vector3> rayTest(const Vector3& rayOrigin, const Vector3& dir) const;
+        enum RayHitResultOption {
+            AnyHit,
+            CloestHit,
+            LongestHit,
+        };
+
+        std::optional<Vector3> rayTest(const Vector3& rayOrigin, const Vector3& dir, RayHitResultOption option = CloestHit) const;
         uint32_t rayTest(const Vector3& rayOrigin, const Vector3& dir, std::function<bool(const Vector3&)> filter) const;
     };
 }

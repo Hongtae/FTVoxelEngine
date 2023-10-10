@@ -1,17 +1,19 @@
-#include "Bvh.h"
+#include "AABBOctree.h"
 #include "Matrix4.h"
 #include "AffineTransform3.h"
 
 using namespace FV;
 
-std::optional<Vector3> BVH::rayTest(const Vector3& rayOrigin, const Vector3& dir, RayHitResultOption option) const {
-    std::optional<Vector3> rayHit = {};
+std::optional<AABBOctree::RayHitResult>
+AABBOctree::rayTest(const Vector3& rayOrigin, const Vector3& dir,
+                    RayHitResultOption option) const {
+    std::optional<RayHitResult> rayHit = {};
     if (option == CloestHit) {
-        auto numHits = rayTest(rayOrigin, dir, [&](const Vector3& p2) {
+        auto numHits = rayTest(rayOrigin, dir, [&](const auto& p2) {
             if (rayHit.has_value()) {
                 auto p1 = rayHit.value();
-                auto sq1 = (p1 - rayOrigin).magnitudeSquared();
-                auto sq2 = (p2 - rayOrigin).magnitudeSquared();
+                auto sq1 = (p1.hitPoint - rayOrigin).magnitudeSquared();
+                auto sq2 = (p2.hitPoint - rayOrigin).magnitudeSquared();
                 if (sq2 < sq1) {
                     rayHit = p2;
                 }
@@ -21,11 +23,11 @@ std::optional<Vector3> BVH::rayTest(const Vector3& rayOrigin, const Vector3& dir
             return true;
         });
     } else if (option == LongestHit) {
-        auto numHits = rayTest(rayOrigin, dir, [&](const Vector3& p2) {
+        auto numHits = rayTest(rayOrigin, dir, [&](const auto& p2) {
             if (rayHit.has_value()) {
                 auto p1 = rayHit.value();
-                auto sq1 = (p1 - rayOrigin).magnitudeSquared();
-                auto sq2 = (p2 - rayOrigin).magnitudeSquared();
+                auto sq1 = (p1.hitPoint - rayOrigin).magnitudeSquared();
+                auto sq2 = (p2.hitPoint - rayOrigin).magnitudeSquared();
                 if (sq2 > sq1) {
                     rayHit = p2;
                 }
@@ -35,7 +37,7 @@ std::optional<Vector3> BVH::rayTest(const Vector3& rayOrigin, const Vector3& dir
             return true;
         });
     } else {
-        auto numHits = rayTest(rayOrigin, dir, [&](const Vector3& p2) {
+        auto numHits = rayTest(rayOrigin, dir, [&](const auto& p2) {
             rayHit = p2;
             return false;
         });
@@ -43,7 +45,9 @@ std::optional<Vector3> BVH::rayTest(const Vector3& rayOrigin, const Vector3& dir
     return rayHit;
 }
 
-uint32_t BVH::rayTest(const Vector3& rayOrigin, const Vector3& dir, std::function<bool (const Vector3&)> filter) const {
+uint32_t AABBOctree::rayTest(const Vector3& rayOrigin,
+                             const Vector3& dir,
+                             std::function<bool(const RayHitResult&)> filter) const {
     if (quantizedAABB.isNull()) return 0;
 
     Vector3 origin = quantizedAABB.min;
@@ -63,18 +67,23 @@ uint32_t BVH::rayTest(const Vector3& rayOrigin, const Vector3& dir, std::functio
 
     uint64_t index = 0;
     while (index < volumes.size()) {
-        const Node& node = volumes.at(index);
+        const auto& node = volumes.at(index);
+        Vector3 center = Vector3(float(node.aabbCenter[0]), float(node.aabbCenter[1]), float(node.aabbCenter[2])) * q;
+        float halfExtent = float(node.aabbHalfExtent) * q;
+
         AABB aabb = {
-            Vector3(float(node.aabbUnormMin[0]), float(node.aabbUnormMin[1]), float(node.aabbUnormMin[2])) * q,
-            Vector3(float(node.aabbUnormMax[0]), float(node.aabbUnormMax[1]), float(node.aabbUnormMax[2])) * q
+            center - Vector3(halfExtent, halfExtent, halfExtent),
+            center + Vector3(halfExtent, halfExtent, halfExtent)
         };
 
         auto r = aabb.rayTest(rayStart, rayDir);
         if (r.has_value()) {
-            numHits++;
-            Vector3 hitPoint = r.value().applying(quantize);
-            if (filter(hitPoint) == false)
-                break;
+            if (node.isLeaf()) {
+                numHits++;
+                Vector3 hitPoint = r.value().applying(quantize);
+                if (filter(RayHitResult{ hitPoint, node.payload }) == false)
+                    break;
+            }
             index++;
         } else {
             index += node.strideToNextSibling;

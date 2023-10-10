@@ -351,7 +351,7 @@ public:
         ImGui::OpenPopup("Error");
     }
 
-    void uiLoop() {
+    void uiLoop(float delta) {
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("File")) {
                 if (ImGui::MenuItem("Open", "Ctrl+O")) {
@@ -369,6 +369,8 @@ public:
                 if (ImGui::MenuItem("Paste", "CTRL+V")) {}
                 ImGui::EndMenu();
             }
+            if (delta > 0.0f)
+                ImGui::Text(std::format(" ({:.2f} FPS)", 1.0/delta).c_str());
             ImGui::EndMainMenuBar();
         }
 
@@ -671,7 +673,7 @@ public:
 #endif
                 ImGui::NewFrame();
 
-                this->uiLoop();
+                this->uiLoop(delta);
 
                 ImGui::Render();
                 ImDrawData* draw_data = ImGui::GetDrawData();

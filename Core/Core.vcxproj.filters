@@ -332,6 +332,9 @@
     <ClInclude Include="Framework\BVH.h">
       <Filter>Framework</Filter>
     </ClInclude>
+    <ClInclude Include="Framework\AABBOctree.h">
+      <Filter>Framework</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -536,6 +539,9 @@
       <Filter>Framework</Filter>
     </ClCompile>
     <ClCompile Include="Framework\BVH.cpp">
+      <Filter>Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\AABBOctree.cpp">
       <Filter>Framework</Filter>
     </ClCompile>
   </ItemGroup>

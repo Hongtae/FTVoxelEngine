@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Framework/AABB.h"
+#include "Framework/AABBOctree.h"
 #include "Framework/AffineTransform2.h"
 #include "Framework/AffineTransform3.h"
 #include "Framework/Application.h"
@@ -11,6 +12,7 @@
 #include "Framework/AudioSource.h"
 #include "Framework/AudioStream.h"
 #include "Framework/BlendState.h"
+#include "Framework/BVH.h"
 #include "Framework/Color.h"
 #include "Framework/CommandBuffer.h"
 #include "Framework/CommandEncoder.h"
@@ -29,6 +31,7 @@
 #include "Framework/Image.h"
 #include "Framework/Logger.h"
 #include "Framework/Material.h"
+#include "Framework/MaterialSemantics.h"
 #include "Framework/Matrix2.h"
 #include "Framework/Matrix3.h"
 #include "Framework/Matrix4.h"

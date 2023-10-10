@@ -4,9 +4,16 @@
 #include <FVCore.h>
 
 struct TriangleOctree {
-    AABB aabb;
+    Vector3 aabbCenter;
+    float halfExtent;
+
     std::vector<Triangle> triangles;
     std::vector<TriangleOctree> subdivisions;
+
+    AABB aabb() const {
+        auto halfExt = Vector3(halfExtent, halfExtent, halfExtent);
+        return { aabbCenter - halfExt, aabbCenter + halfExt };
+    }
 
     void subdivide(int depthLevel) {
         std::vector<Triangle> buffer;
@@ -19,8 +26,9 @@ struct TriangleOctree {
 
         buffer.reserve(this->triangles.size());
 
-        auto extent = aabb.extents();
-        auto halfExt = extent * 0.5f;
+        auto halfExt = Vector3(halfExtent, halfExtent, halfExtent);
+        auto aabbMin = aabbCenter - halfExt;
+
         subdivisions.reserve(8);
 
         AABB div[8];
@@ -30,8 +38,8 @@ struct TriangleOctree {
             const int z = (n >> 2) & 1;
 
             AABB& aabb = div[n];
-            aabb.min = this->aabb.min;
-            aabb.max = aabb.min + halfExt;
+            aabb.min = aabbMin;
+            aabb.max = aabbMin + halfExt;
             aabb.min.x += halfExt.x * x;
             aabb.max.x += halfExt.x * x;
             aabb.min.y += halfExt.y * y;
@@ -45,7 +53,7 @@ struct TriangleOctree {
                     buffer.push_back(t);
             }
             if (buffer.empty() == false) {
-                TriangleOctree node{ aabb, buffer, {} };
+                TriangleOctree node{ aabb.center(), halfExtent * 0.5f, buffer, {}};
                 this->subdivisions.push_back(node);
             }
         }
@@ -76,14 +84,24 @@ std::shared_ptr<Voxelizer> voxelize(const std::vector<Triangle>& triangles, int 
         if (s == 0.0f) s = 1.0;
     }
 
-    Matrix4 quantize = AffineTransform3::identity.scaled(scale).matrix4();
-    Matrix4 normalize = quantize.inverted();
+    auto quantize = AffineTransform3::identity.scaled(scale).translated(aabb.min);
+    auto normalize = quantize.inverted();
+
+    // normalize triangles
+    std::vector<Triangle> normalizedTriangles;
+    normalizedTriangles.reserve(triangles.size());
+    for (const Triangle& tri : triangles) {
+        Triangle normTri = { tri.p0.applying(normalize),
+            tri.p1.applying(normalize),
+            tri.p2.applying(normalize) };
+        normalizedTriangles.push_back(normTri);
+    }
 
     auto start = std::chrono::high_resolution_clock::now();
 
     TriangleOctree tree {
-        aabb,
-        triangles,
+        Vector3(0.5f, 0.5f, 0.5f), 0.5f,
+        normalizedTriangles,
         {}
     };
     tree.subdivide(std::max(depth-1, 0));
@@ -105,8 +123,22 @@ std::shared_ptr<Voxelizer> voxelize(const std::vector<Triangle>& triangles, int 
         }
     };
 
-    Log::info(std::format("triangle-octree(depth:{}) generated with leaf-nodes:{}, elapsed:{}",
-                          depth, LeafNodeCounter{ tree }.count(),
+    struct NodeCounter {
+        const TriangleOctree& tree;
+        size_t count() const {
+            return 1 + std::reduce(tree.subdivisions.begin(),
+                                   tree.subdivisions.end(),
+                                   size_t(0),
+                                   [](size_t r, const auto& node) {
+                return r + NodeCounter{node}.count();
+            });
+        }
+    };
+
+    Log::info(std::format("triangle-octree(depth:{}) generated with nodes:{}, leaf-nodes:{}, elapsed:{}",
+                          depth,
+                          NodeCounter{ tree }.count(),
+                          LeafNodeCounter{ tree }.count(),
                           elapsed.count()));
 
     return std::make_shared<Voxelizer>();
