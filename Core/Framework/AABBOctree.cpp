@@ -1,3 +1,4 @@
+#include <limits>
 #include "AABBOctree.h"
 #include "Matrix4.h"
 #include "AffineTransform3.h"
@@ -48,10 +49,10 @@ AABBOctree::rayTest(const Vector3& rayOrigin, const Vector3& dir,
 uint32_t AABBOctree::rayTest(const Vector3& rayOrigin,
                              const Vector3& dir,
                              std::function<bool(const RayHitResult&)> filter) const {
-    if (quantizedAABB.isNull()) return 0;
+    if (aabb.isNull()) return 0;
 
-    Vector3 origin = quantizedAABB.min;
-    Vector3 scale = quantizedAABB.extents();
+    Vector3 origin = aabb.min;
+    Vector3 scale = aabb.extents();
     for (float& s : scale.val) {
         if (s == 0.0f) s = 1.0;
     }
@@ -66,10 +67,12 @@ uint32_t AABBOctree::rayTest(const Vector3& rayOrigin,
     constexpr float q = 1.0f / float(std::numeric_limits<uint16_t>::max());
 
     uint64_t index = 0;
-    while (index < volumes.size()) {
-        const auto& node = volumes.at(index);
+    while (index < subdivisions.size()) {
+        const auto& node = subdivisions.at(index);
         Vector3 center = Vector3(float(node.aabbCenter[0]), float(node.aabbCenter[1]), float(node.aabbCenter[2])) * q;
-        float halfExtent = float(node.aabbHalfExtent) * q;
+        float halfExtent = 1.0f;
+        for (int i = 0; i < node.aabbHalfExtentExponent; ++i)
+            halfExtent = halfExtent * 0.5f;
 
         AABB aabb = {
             center - Vector3(halfExtent, halfExtent, halfExtent),

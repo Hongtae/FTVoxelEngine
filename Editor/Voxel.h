@@ -2,20 +2,10 @@
 #include <memory>
 #include <vector>
 #include <variant>
+#include <functional>
 #include <FVCore.h>
 
 using namespace FV;
-
-struct VolumeMaterial {
-    Color color;
-};
-
-struct AABBTree {
-    AABB aabb;
-    VolumeMaterial* material;
-    std::vector<AABBTree> subdivisions;
-};
-
 
 class Voxelizer {
 
@@ -23,4 +13,7 @@ public:
     bool conversionInProgress = false;
 };
 
-std::shared_ptr<Voxelizer> voxelize(const std::vector<Triangle>&, int depth);
+using TriangleQuery = std::function<const Triangle& (uint64_t)>;
+using PayloadQuery = std::function<uint64_t(uint64_t)>;
+
+std::shared_ptr<AABBOctree> voxelize(uint64_t numTriangles, int depth, TriangleQuery, PayloadQuery);

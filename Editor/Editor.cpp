@@ -82,7 +82,7 @@ public:
     std::filesystem::path appResourcesRoot;
 
     std::optional<Point> draggingPosition; // left-click drag
-    std::shared_ptr<Voxelizer> voxelizer;
+    std::shared_ptr<AABBOctree> aabbOctree;
 
     void initUI() {
         IMGUI_CHECKVERSION();
@@ -392,17 +392,26 @@ public:
 
         if (ImGui::Begin("Voxelize")) {
 
-            bool voxelizationInProgress = voxelizer != nullptr;
+            bool voxelizationInProgress = false;
             ImGui::BeginDisabled(voxelizationInProgress);
 
             static int depth = 5;
             if (ImGui::SliderInt("Depth Level", &depth, 1, 12, nullptr, ImGuiSliderFlags_None)) {
                 // value changed.
             }
-            
+
             if (ImGui::Button("Convert")) {
                 // voxelize..
-                voxelizer = voxelize(triangleList(), depth);
+                auto triangles = triangleList();
+
+                aabbOctree = voxelize(triangles.size(),
+                                      depth,
+                                      [&](uint64_t i)->const Triangle& {
+                                          return triangles.at(i);
+                                      },
+                                      [&](uint64_t i)->uint64_t {
+                                          return 0xffffff;
+                                      });
                 Log::debug("voxelize done. (test)");
             }
             ImGui::EndDisabled();
@@ -410,7 +419,7 @@ public:
             ImGui::SameLine();
             ImGui::BeginDisabled(!voxelizationInProgress);
             if (ImGui::Button("Cancel")) {
-                voxelizer = nullptr;                
+                Log::debug("Voxelization cancelled.");
             }
             ImGui::EndDisabled();
 
