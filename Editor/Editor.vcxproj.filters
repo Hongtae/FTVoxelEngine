@@ -28,6 +28,9 @@
     <Filter Include="imgui\file dialog">
       <UniqueIdentifier>{d1a76c59-6909-46ff-b546-96c2c6dbef0b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{4a5d3090-c144-4707-b550-4e7951fbac7c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -135,5 +138,13 @@
     <Image Include="Editor.ico">
       <Filter>Resource Files</Filter>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Shaders\compileshaders.py">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Resources\Shaders\bvh_raycast.comp">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -1,0 +1,10 @@
+#version 450
+
+layout (binding=0) uniform BVHInfo {
+    mat4 transform;
+    vec3 aabbMin;
+    vec3 aabbMax;
+} bvh;
+
+void main() {
+}

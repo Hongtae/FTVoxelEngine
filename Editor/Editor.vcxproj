@@ -216,6 +216,10 @@ xcopy /Y /D /R /Q /E "$(ProjectDir)Resources" "$(OutDir)$(ProjectName).Resources
       <Project>{3adf360f-dd2e-40e9-8901-989c7bf852af}</Project>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Shaders\bvh_raycast.comp" />
+    <None Include="Resources\Shaders\compileshaders.py" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
