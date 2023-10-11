@@ -396,7 +396,7 @@ public:
             ImGui::BeginDisabled(voxelizationInProgress);
 
             static int depth = 5;
-            if (ImGui::SliderInt("Depth Level", &depth, 1, 12, nullptr, ImGuiSliderFlags_None)) {
+            if (ImGui::SliderInt("Depth Level", &depth, 0, 12, nullptr, ImGuiSliderFlags_None)) {
                 // value changed.
             }
 
@@ -404,12 +404,10 @@ public:
                 // voxelize..
                 auto triangles = triangleList();
 
-                aabbOctree = voxelize(triangles.size(),
-                                      depth,
+                aabbOctree = voxelize(depth, triangles.size(), 0,
                                       [&](uint64_t i)->const Triangle& {
                                           return triangles.at(i);
-                                      },
-                                      [&](uint64_t i)->uint64_t {
+                                      }, [&](uint64_t* indices, size_t s, const Vector3& p)->uint64_t {
                                           return 0xffffff;
                                       });
                 Log::debug("voxelize done. (test)");
@@ -423,6 +421,23 @@ public:
             }
             ImGui::EndDisabled();
 
+            if (aabbOctree) {
+                ImGui::Text(std::format("MaxDepth: {}", aabbOctree->maxDepth).c_str());
+                if (ImGui::Button("Make Layer Buffer")) {
+                    auto maxDepth = std::min(uint32_t(depth), aabbOctree->maxDepth);
+                    Log::info(std::format("make layer buffer. (maxDepth: {})", maxDepth));
+
+                    auto start = std::chrono::high_resolution_clock::now();
+                    auto layer = aabbOctree->makeLayer(depth);
+                    auto end = std::chrono::high_resolution_clock::now();
+                    auto elapsed = std::chrono::duration<double>(end - start);
+                    Log::info(std::format("aabb-octree make layer with depth:{}, nodes:{} ({} bytes), elapsed: {}",
+                                          maxDepth,
+                                          layer->data.size(),
+                                          layer->data.size() * sizeof(AABBOctreeLayer::Node),
+                                          elapsed.count()));
+                }
+            }
         }
         ImGui::End();
 

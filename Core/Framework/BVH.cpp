@@ -1,3 +1,4 @@
+#include <limits>
 #include "Bvh.h"
 #include "Matrix4.h"
 #include "AffineTransform3.h"
