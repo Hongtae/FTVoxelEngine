@@ -5,46 +5,13 @@
 #include "Editor.h"
 #include <FVCore.h>
 #include <imgui.h>
-#ifdef _WIN32
-#include <backends/imgui_impl_win32.h>
-#include <backends/imgui_impl_vulkan.h>
 #include "../Utils/ImGuiFileDialog/ImGuiFileDialog.h"
-#define FVCORE_ENABLE_VULKAN 1
-#include <Framework/Private/Vulkan/GraphicsDevice.h>
-#include <Framework/Private/Vulkan/CommandQueue.h>
-#include <Framework/Private/Vulkan/SwapChain.h>
-#include <Framework/Private/Vulkan/RenderCommandEncoder.h>
-#include <Framework/Private/Vulkan/ImageView.h>
-#endif
 #include "Model.h"
 #include "ShaderReflection.h"
 #include "Voxel.h"
-
-
-#ifdef _WIN32
-extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
-LRESULT(*defaultWndProc)(HWND, UINT, WPARAM, LPARAM) = nullptr;
-bool mouseLocked = false;
-
-LRESULT forwardImGuiWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
-        return true;
-
-    if (ImGui::GetCurrentContext()) {
-        ImGuiIO& io = ImGui::GetIO();
-        if (io.WantCaptureMouse) {
-            mouseLocked = true;
-            return ::DefWindowProcW(hWnd, msg, wParam, lParam);
-        }
-    }
-    mouseLocked = false;
-
-    if (defaultWndProc)
-        return (*defaultWndProc)(hWnd, msg, wParam, lParam);
-    return ::DefWindowProcW(hWnd, msg, wParam, lParam);
-}
-#endif
+#include "UIRenderer.h"
+#include "MeshRenderer.h"
+#include "VolumeRenderer.h"
 
 using namespace FV;
 
@@ -69,6 +36,11 @@ public:
     PixelFormat colorFormat;
     PixelFormat depthFormat;
 
+    MeshRenderer* meshRenderer;
+    VolumeRenderer* volumeRenderer;
+    UIRenderer* uiRenderer;
+    std::vector<std::shared_ptr<Renderer>> renderers;
+
     struct {
         Vector3 position = { 0, 0, 100 };
         Vector3 target = Vector3::zero;
@@ -83,24 +55,6 @@ public:
 
     std::optional<Point> draggingPosition; // left-click drag
     std::shared_ptr<AABBOctree> aabbOctree;
-
-    void initUI() {
-        IMGUI_CHECKVERSION();
-        ImGui::CreateContext();
-        ImGuiIO& io = ImGui::GetIO();
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-        ImGui::StyleColorsDark();
-        //ImGui::StyleColorsLight();
-
-#ifdef _WIN32
-        HWND hWnd = (HWND)window->platformHandle();
-        ImGui_ImplWin32_Init(hWnd);
-
-        defaultWndProc = decltype(defaultWndProc)(GetWindowLongPtrW(hWnd, GWLP_WNDPROC));
-        SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)forwardImGuiWndProc);
-#endif
-    }
 
     void initialize() override {
         appResourcesRoot = environmentPath(EnvironmentPath::AppRoot) / "Editor.Resources";
@@ -127,7 +81,17 @@ public:
                                      this->onMouseEvent(event);
                                  });
 
-        this->initUI();
+        auto meshRenderer = std::make_shared<MeshRenderer>();
+        auto volumeRenderer = std::make_shared<VolumeRenderer>();
+        auto uiRenderer = std::make_shared<UIRenderer>();
+        this->renderers = {
+            meshRenderer, volumeRenderer, uiRenderer
+        };
+        this->meshRenderer = meshRenderer.get();
+        this->volumeRenderer = volumeRenderer.get();
+        this->uiRenderer = uiRenderer.get();
+
+        this->uiRenderer->setWindow(window.get());
 
         graphicsContext = GraphicsDeviceContext::makeDefault();
         renderQueue = graphicsContext->renderQueue();
@@ -137,13 +101,13 @@ public:
 
     void finalize() override {
         renderThread.join();
+
+        renderers.clear();
+        meshRenderer = nullptr;
+        volumeRenderer = nullptr;
+        uiRenderer = nullptr;
+
         window = nullptr;
-
-#ifdef _WIN32
-        ImGui_ImplWin32_Shutdown();
-#endif
-        ImGui::DestroyContext();
-
         renderQueue = nullptr;
         graphicsContext = nullptr;
     }
@@ -386,6 +350,7 @@ public:
             static float farZ = 10.0f;
             ImGui::DragFloatRange2("Frustum", &nearZ, &farZ, 0.1f, 0.01f, 400.0f,
                                    "Near: %.2f", "Far: %.2f", ImGuiSliderFlags_AlwaysClamp);
+            extern bool mouseLocked;
             ImGui::Text(std::format("Mouse-Locked: {}", mouseLocked).c_str());
         }
         ImGui::End();
@@ -476,8 +441,15 @@ public:
         if (swapchain == nullptr)
             throw std::runtime_error("swapchain creation failed");
 
+        uiRenderer->setSwapChain(swapchain.get());
+        
+        for (auto& renderer : this->renderers) {
+            renderer->initialize(renderQueue);
+        }
+
         auto queue = renderQueue.get();
         auto device = queue->device().get();
+
 
         // load shader
         do {
@@ -535,114 +507,17 @@ public:
                 true
             });
 
-
-#if FVCORE_ENABLE_VULKAN
-        // setup ui
-        struct UIContext {
-            VkFence fence = VK_NULL_HANDLE;
-            VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
-            VkCommandPool commandPool = VK_NULL_HANDLE;
-            VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
-        };
-        UIContext uiContext = {};
-        VkResult err = VK_SUCCESS;
-
-        auto* gdevice = dynamic_cast<FV::Vulkan::GraphicsDevice*>(graphicsContext->device.get());
-        if (gdevice == nullptr)
-            throw std::runtime_error("Unable to get vulkan device!");
-
-        auto* cqueue = dynamic_cast<FV::Vulkan::CommandQueue*>(swapchain->queue().get());
-        if (cqueue == nullptr)
-            throw std::runtime_error("Unable to get vulkan command queue!");
-
-        if (true) {
-            VkDescriptorPoolSize pool_sizes[] =
-            {
-                { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 },
-            };
-            VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {};
-            descriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-            descriptorPoolCreateInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-            descriptorPoolCreateInfo.maxSets = 1;
-            descriptorPoolCreateInfo.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
-            descriptorPoolCreateInfo.pPoolSizes = pool_sizes;
-
-            VkResult err = vkCreateDescriptorPool(gdevice->device, &descriptorPoolCreateInfo, nullptr, &uiContext.descriptorPool);
-            if (err != VK_SUCCESS)
-                throw std::runtime_error("vkCreateDescriptorPool error!");
-
-            VkCommandPoolCreateInfo cmdPoolCreateInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
-            cmdPoolCreateInfo.queueFamilyIndex = cqueue->family->familyIndex;
-            cmdPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-
-            err = vkCreateCommandPool(gdevice->device, &cmdPoolCreateInfo, gdevice->allocationCallbacks(), &uiContext.commandPool);
-            if (err != VK_SUCCESS)
-                throw std::runtime_error("vkCreateCommandPool failed");
-
-            VkCommandBufferAllocateInfo  bufferInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-            bufferInfo.commandPool = uiContext.commandPool;
-            bufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-            bufferInfo.commandBufferCount = 1;
-            err = vkAllocateCommandBuffers(gdevice->device, &bufferInfo, &uiContext.commandBuffer);
-            if (err != VK_SUCCESS)
-                throw std::runtime_error("vkAllocateCommandBuffers failed");
-
-            ImGui_ImplVulkan_InitInfo init_info = {};
-            init_info.Instance = gdevice->instance->instance;
-            init_info.Device = gdevice->device;
-            init_info.PhysicalDevice = gdevice->physicalDevice.device;
-            init_info.Queue = cqueue->queue;
-            init_info.QueueFamily = cqueue->family->familyIndex;
-            init_info.MinImageCount = 2;
-            init_info.ImageCount = uint32_t(swapchain->maximumBufferCount());
-            init_info.UseDynamicRendering = true;
-            init_info.DescriptorPool = uiContext.descriptorPool;
-            init_info.ColorAttachmentFormat = FV::Vulkan::getPixelFormat(colorFormat);
-
-            ImGui_ImplVulkan_Init(&init_info, nullptr);
-
-            err = vkResetCommandPool(gdevice->device, uiContext.commandPool, 0);
-            if (err != VK_SUCCESS)
-                throw std::runtime_error("vkResetCommandPool failed");
-
-            VkCommandBufferBeginInfo cbufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-            cbufferBeginInfo.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-            err = vkBeginCommandBuffer(uiContext.commandBuffer, &cbufferBeginInfo);
-            if (err != VK_SUCCESS)
-                throw std::runtime_error("vkBeginCommandBuffer failed!");
-
-            ImGui_ImplVulkan_CreateFontsTexture(uiContext.commandBuffer);
-
-            err = vkEndCommandBuffer(uiContext.commandBuffer);
-            if (err != VK_SUCCESS)
-                throw std::runtime_error("vkEndCommandBuffer failed!");
-
-            VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-            submitInfo.commandBufferCount = 1;
-            submitInfo.pCommandBuffers = &uiContext.commandBuffer;
-            err = vkQueueSubmit(cqueue->queue, 1, &submitInfo, VK_NULL_HANDLE);
-            if (err != VK_SUCCESS)
-                throw std::runtime_error("vkQueueSubmit failed!");
-
-            err = vkDeviceWaitIdle(gdevice->device);
-            if (err != VK_SUCCESS)
-                throw std::runtime_error("vkDeviceWaitIdle failed!");
-
-            ImGui_ImplVulkan_DestroyFontUploadObjects();
-
-            VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-            fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-            err = vkCreateFence(gdevice->device, &fenceCreateInfo, gdevice->allocationCallbacks(), &uiContext.fence);
-            if (err != VK_SUCCESS)
-                throw std::runtime_error("vkCreateFence failed!");
-        }
-#endif
         constexpr auto frameInterval = 1.0 / 60.0;
         auto timestamp = std::chrono::high_resolution_clock::now();
         double delta = 0.0;
         Transform modelTransform = Transform();
 
         while (stop.stop_requested() == false) {
+
+            for (auto& renderer : this->renderers) {
+                renderer->update(delta);
+            }
+
             auto rp = swapchain->currentRenderPassDescriptor();
 
             auto& frontAttachment = rp.colorAttachments.front();
@@ -659,6 +534,10 @@ public:
             rp.depthStencilAttachment.renderTarget = depthTexture;
             rp.depthStencilAttachment.loadAction = RenderPassLoadAction::LoadActionClear;
             rp.depthStencilAttachment.storeAction = RenderPassStoreAction::StoreActionDontCare;
+
+            for (auto& renderer : this->renderers) {
+                renderer->prepareScene(rp);
+            }
 
             auto buffer = queue->makeCommandBuffer();
             auto encoder = buffer->makeRenderCommandEncoder(rp);
@@ -688,72 +567,12 @@ public:
             encoder->endEncoding();
             buffer->commit();
 
-            if (true) {
-#if FVCORE_ENABLE_VULKAN
-                ImGui_ImplVulkan_NewFrame();
-#endif
-#ifdef _WIN32
-                ImGui_ImplWin32_NewFrame();
-#endif
-                ImGui::NewFrame();
+            ImGui::NewFrame();
+            this->uiLoop(delta);
+            ImGui::Render();
 
-                this->uiLoop(delta);
-
-                ImGui::Render();
-                ImDrawData* draw_data = ImGui::GetDrawData();
-                const bool is_minimized = (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f);
-                if (!is_minimized) {
-#if FVCORE_ENABLE_VULKAN
-                    err = vkWaitForFences(gdevice->device, 1, &uiContext.fence, VK_TRUE, UINT64_MAX);
-                    if (err != VK_SUCCESS)
-                        throw std::runtime_error("vkWaitForFences failed.");
-
-                    err = vkResetFences(gdevice->device, 1, &uiContext.fence);
-                    if (err != VK_SUCCESS)
-                        throw std::runtime_error("vkResetFences failed.");
-
-                    err = vkResetCommandPool(gdevice->device, uiContext.commandPool, 0);
-                    if (err != VK_SUCCESS)
-                        throw std::runtime_error("vkResetCommandPool failed.");
-
-                    VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-                    commandBufferBeginInfo.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-                    vkBeginCommandBuffer(uiContext.commandBuffer, &commandBufferBeginInfo);
-
-                    VkRenderingAttachmentInfo colorAttachment = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
-                    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-                    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-                    if (auto imageView = dynamic_cast<FV::Vulkan::ImageView*>(rp.colorAttachments.front().renderTarget.get());
-                        imageView) {
-                        colorAttachment.imageView = imageView->imageView;
-                        colorAttachment.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
-                    }
-
-                    VkRenderingInfo renderingInfo = { VK_STRUCTURE_TYPE_RENDERING_INFO };
-                    renderingInfo.flags = 0;
-                    renderingInfo.layerCount = 1;
-                    renderingInfo.renderArea = { 0, 0, width, height };
-                    renderingInfo.colorAttachmentCount = 1;
-                    renderingInfo.pColorAttachments = &colorAttachment;
-
-                    vkCmdBeginRendering(uiContext.commandBuffer, &renderingInfo);
-                    ImGui_ImplVulkan_RenderDrawData(draw_data, uiContext.commandBuffer);
-                    vkCmdEndRendering(uiContext.commandBuffer);
-
-                    vkEndCommandBuffer(uiContext.commandBuffer);
-
-                    VkCommandBufferSubmitInfo cbufferSubmitInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO };
-                    cbufferSubmitInfo.commandBuffer = uiContext.commandBuffer;
-                    cbufferSubmitInfo.deviceMask = 0;
-                    VkSubmitInfo2 submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO_2 };
-                    submitInfo.commandBufferInfoCount = 1;
-                    submitInfo.pCommandBufferInfos = &cbufferSubmitInfo;
-
-                    err = vkQueueSubmit2(cqueue->queue, 1, &submitInfo, uiContext.fence);
-                    if (err != VK_SUCCESS)
-                        throw std::runtime_error("vkQueueSubmit2 failed.");
-#endif
-                }
+            for (auto& renderer : this->renderers) {
+                renderer->render(Rect(0, 0, width, height), renderQueue.get());
             }
 
             swapchain->FV::SwapChain::present();
@@ -771,18 +590,9 @@ public:
             }
         }
 
-#if FVCORE_ENABLE_VULKAN
-        err = vkDeviceWaitIdle(gdevice->device);
-        if (err != VK_SUCCESS)
-            throw std::runtime_error("vkDeviceWaitIdle failed.");
-
-        ImGui_ImplVulkan_Shutdown();
-
-        vkDestroyFence(gdevice->device, uiContext.fence, gdevice->allocationCallbacks());
-        vkFreeCommandBuffers(gdevice->device, uiContext.commandPool, 1, &uiContext.commandBuffer);
-        vkDestroyCommandPool(gdevice->device, uiContext.commandPool, gdevice->allocationCallbacks());
-        vkDestroyDescriptorPool(gdevice->device, uiContext.descriptorPool, gdevice->allocationCallbacks());
-#endif
+        for (auto& renderer : this->renderers) {
+            renderer->finalize();
+        }
     }
 };
 

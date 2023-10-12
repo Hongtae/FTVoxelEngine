@@ -42,9 +42,6 @@
     <ClInclude Include="Resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Editor.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\Utils\imgui\imconfig.h">
       <Filter>imgui\imgui</Filter>
     </ClInclude>
@@ -87,6 +84,21 @@
     <ClInclude Include="Voxel.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="MeshRenderer.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="VolumeRenderer.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderer.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="UIRenderer.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Editor.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Editor.cpp">
@@ -125,6 +137,15 @@
     <ClCompile Include="Voxel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="VolumeRenderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshRenderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="UIRenderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Editor.rc">
@@ -144,6 +165,12 @@
       <Filter>Shaders</Filter>
     </None>
     <None Include="Resources\Shaders\bvh_raycast.comp">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Resources\Shaders\sample.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Resources\Shaders\sample.frag">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>
