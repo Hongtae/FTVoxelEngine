@@ -6,15 +6,36 @@
 #include <unordered_map>
 #include <FVCore.h>
 
+using namespace FV;
 
 struct Model {
     struct Scene {
         std::string name;
-        std::vector<FV::SceneNode> nodes;
+        std::vector<SceneNode> nodes;
     };
 
     std::vector<Scene> scenes;
     int defaultSceneIndex;
+
+    std::vector<Triangle> triangleList(int scene, GraphicsDeviceContext* graphicsContext) const;
+};
+
+struct ForEachNode {
+    SceneNode& node;
+    void operator()(std::function<void(SceneNode&)> fn) {
+        fn(node);
+        for (auto& child : node.children)
+            ForEachNode{ child }(fn);
+    }
+};
+
+struct ForEachNodeConst {
+    const SceneNode& node;
+    void operator()(std::function<void(const SceneNode&)> fn) {
+        fn(node);
+        for (auto& child : node.children)
+            ForEachNodeConst{ child }(fn);
+    }
 };
 
 std::shared_ptr<Model> loadModel(std::filesystem::path path, FV::CommandQueue* queue);

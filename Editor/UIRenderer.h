@@ -24,7 +24,7 @@ public:
     void finalize() override;
 
     void update(float delta) override;
-    void render(Rect, CommandQueue*) override;
+    void render(const RenderPassDescriptor&, const Rect&, CommandQueue*) override;
     void prepareScene(const RenderPassDescriptor&) override;
 
 private:

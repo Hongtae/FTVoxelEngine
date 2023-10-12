@@ -601,3 +601,94 @@ std::optional<MaterialShaderMap::Function> loadShader(std::filesystem::path path
     }
     return {};
 }
+
+std::vector<Triangle> Model::triangleList(int sceneIndex, GraphicsDeviceContext* graphicsContext) const {
+    auto getMeshTriangles = [&](const Mesh& mesh) -> std::vector<Triangle> {
+        if (mesh.primitiveType != PrimitiveType::Triangle &&
+            mesh.primitiveType != PrimitiveType::TriangleStrip)
+            return {};
+
+        std::vector<Triangle> triangles;
+
+        std::vector<Vector3> positions;
+        mesh.enumerateVertexBufferContent(
+            VertexAttributeSemantic::Position,
+            graphicsContext,
+            [&](const void* data, VertexFormat format, uint32_t index)->bool {
+                if (format == VertexFormat::Float3) {
+                    positions.push_back(*(const Vector3*)data);
+                    return true;
+                }
+                return false;
+            });
+        std::vector<uint32_t> indices;
+        if (mesh.indexBuffer) {
+            indices.reserve(mesh.indexCount);
+            mesh.enumerateIndexBufferContent(
+                graphicsContext,
+                [&](uint32_t index)->bool {
+                    indices.push_back(index);
+                    return true;
+                });
+        } else {
+            indices.reserve(positions.size());
+            for (int i = 0; i < positions.size(); ++i)
+                indices.push_back(i);
+        }
+
+        if (mesh.primitiveType == PrimitiveType::TriangleStrip) {
+            auto numTris = indices.size() > 2 ? indices.size() - 2 : 0;
+            triangles.reserve(numTris);
+
+            for (int i = 0; i < numTris; ++i) {
+                uint32_t idx[3] = {
+                indices.at(i),
+                indices.at(i + 1),
+                indices.at(i + 2)
+                };
+                if (i % 2)
+                    std::swap(idx[0], idx[1]);
+
+                Triangle t = {
+                positions.at(idx[0]),
+                positions.at(idx[1]),
+                positions.at(idx[2])
+                };
+                triangles.push_back(t);
+            }
+        } else {
+            auto numTris = indices.size() / 3;
+            triangles.reserve(numTris);
+            for (int i = 0; i < numTris; ++i) {
+                uint32_t idx[3] = {
+                indices.at(i * 3),
+                indices.at(i * 3 + 1),
+                indices.at(i * 3 + 2)
+                };
+                Triangle t = {
+                positions.at(idx[0]),
+                positions.at(idx[1]),
+                positions.at(idx[2])
+                };
+                triangles.push_back(t);
+            }
+        }
+        return triangles;
+    };
+
+    if (sceneIndex >= 0 && sceneIndex < this->scenes.size()) {
+        std::vector<Triangle> triangles;
+        auto& scene = this->scenes.at(sceneIndex);
+        for (auto& node : scene.nodes)
+            ForEachNodeConst{ node }(
+                [&](auto& node) {
+                    if (node.mesh.has_value()) {
+                        const Mesh& mesh = node.mesh.value();
+                        auto tris = getMeshTriangles(mesh);
+                        triangles.insert(triangles.end(), tris.begin(), tris.end());
+                    }
+                });
+        return triangles;
+    }
+    return {};
+}

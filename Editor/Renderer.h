@@ -12,6 +12,6 @@ public:
     virtual void finalize() = 0;
 
     virtual void update(float delta) {}
-    virtual void render(Rect, CommandQueue*) = 0;
+    virtual void render(const RenderPassDescriptor&, const Rect&, CommandQueue*) = 0;
     virtual void prepareScene(const RenderPassDescriptor&) {}
 };

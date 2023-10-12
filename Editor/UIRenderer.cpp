@@ -186,7 +186,7 @@ void UIRenderer::prepareScene(const RenderPassDescriptor&) {
 #endif
 }
 
-void UIRenderer::render(Rect frame, CommandQueue*) {
+void UIRenderer::render(const RenderPassDescriptor& rp, const Rect& frame, CommandQueue*) {
     ImDrawData* draw_data = ImGui::GetDrawData();
     const bool is_minimized = (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f);
     if (!is_minimized) {
@@ -210,8 +210,6 @@ void UIRenderer::render(Rect frame, CommandQueue*) {
         VkRenderingAttachmentInfo colorAttachment = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
         colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
         colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-
-        auto rp = swapchain->currentRenderPassDescriptor();
 
         if (auto imageView = dynamic_cast<FV::Vulkan::ImageView*>(rp.colorAttachments.front().renderTarget.get());
             imageView) {

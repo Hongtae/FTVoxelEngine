@@ -15,24 +15,15 @@
 
 using namespace FV;
 
-struct ForEachNode {
-    SceneNode& node;
-    void operator()(std::function<void(SceneNode&)> fn) {
-        fn(node);
-        for (auto& child : node.children)
-            ForEachNode{ child }(fn);
-    }
-};
+std::filesystem::path appResourcesRoot;
 
 class EditorApp : public Application {
 public:
-    std::shared_ptr<Model> model;
     std::shared_ptr<Window> window;
     std::jthread renderThread;
 
     std::shared_ptr<GraphicsDeviceContext> graphicsContext;
     std::shared_ptr<CommandQueue> renderQueue;
-    MaterialShaderMap shader = {};
     PixelFormat colorFormat;
     PixelFormat depthFormat;
 
@@ -40,6 +31,8 @@ public:
     VolumeRenderer* volumeRenderer;
     UIRenderer* uiRenderer;
     std::vector<std::shared_ptr<Renderer>> renderers;
+
+    std::string popupMessage;
 
     struct {
         Vector3 position = { 0, 0, 100 };
@@ -49,12 +42,7 @@ public:
         float farZ = 1000.0;
     } camera;
 
-    std::string popupMessage;
-
-    std::filesystem::path appResourcesRoot;
-
     std::optional<Point> draggingPosition; // left-click drag
-    std::shared_ptr<AABBOctree> aabbOctree;
 
     void initialize() override {
         appResourcesRoot = environmentPath(EnvironmentPath::AppRoot) / "Editor.Resources";
@@ -150,147 +138,11 @@ public:
         }
     }
 
-    std::vector<Triangle> triangleList() {
-        auto getMeshTriangles = [this](const Mesh& mesh) -> std::vector<Triangle> {
-
-            if (mesh.primitiveType != PrimitiveType::Triangle &&
-                mesh.primitiveType != PrimitiveType::TriangleStrip)
-                return {};
-
-            std::vector<Triangle> triangles;
-
-            std::vector<Vector3> positions;
-            mesh.enumerateVertexBufferContent(
-                VertexAttributeSemantic::Position,
-                graphicsContext.get(),
-                [&](const void* data, VertexFormat format, uint32_t index)->bool {
-                    if (format == VertexFormat::Float3) {
-                        positions.push_back(*(const Vector3*)data);
-                        return true;
-                    }
-                    return false;
-                });
-            std::vector<uint32_t> indices;
-            if (mesh.indexBuffer) {
-                indices.reserve(mesh.indexCount);
-                mesh.enumerateIndexBufferContent(
-                    graphicsContext.get(),
-                    [&](uint32_t index)->bool {
-                        indices.push_back(index);
-                        return true;
-                    });
-            } else {
-                indices.reserve(positions.size());
-                for (int i = 0; i < positions.size(); ++i)
-                    indices.push_back(i);
-            }
-
-            if (mesh.primitiveType == PrimitiveType::TriangleStrip) {
-                auto numTris = indices.size() > 2 ? indices.size() - 2 : 0;
-                triangles.reserve(numTris);
-
-                for (int i = 0; i < numTris; ++i) {
-                    uint32_t idx[3] = {
-                    indices.at(i),
-                    indices.at(i + 1),
-                    indices.at(i + 2)
-                    };
-                    if (i % 2)
-                        std::swap(idx[0], idx[1]);
-
-                    Triangle t = {
-                    positions.at(idx[0]),
-                    positions.at(idx[1]),
-                    positions.at(idx[2])
-                    };
-                    triangles.push_back(t);
-                }
-            } else {
-                auto numTris = indices.size() / 3;
-                triangles.reserve(numTris);
-                for (int i = 0; i < numTris; ++i) {
-                    uint32_t idx[3] = {
-                    indices.at(i * 3),
-                    indices.at(i * 3 + 1),
-                    indices.at(i * 3 + 2)
-                    };
-                    Triangle t = {
-                    positions.at(idx[0]),
-                    positions.at(idx[1]),
-                    positions.at(idx[2])
-                    };
-                    triangles.push_back(t);
-                }
-            }
-            return triangles;
-        };
-
-        if (model &&
-            model->defaultSceneIndex >= 0 &&
-            model->defaultSceneIndex < model->scenes.size()) {
-
-            std::vector<Triangle> triangles;
-            auto& scene = model->scenes.at(model->defaultSceneIndex);
-            for (auto& node : scene.nodes)
-                ForEachNode{ node }(
-                    [&](auto& node) {
-                        if (node.mesh.has_value()) {
-                            const Mesh& mesh = node.mesh.value();
-                            auto tris = getMeshTriangles(mesh);
-                            triangles.insert(triangles.end(), tris.begin(), tris.end());
-                        }
-                    });
-            return triangles;
-        }
-        return {};
-    }
-
-    void loadModel(std::string path) {
-        Log::info(std::format("Loading gltf-model: {}", path));
-        auto model = ::loadModel(path, renderQueue.get());
+    void loadModel(std::filesystem::path path) {
+        Log::info(std::format("Loading gltf-model: {}", path.generic_u8string()));
+        auto model = meshRenderer->loadModel(path, renderQueue.get(), colorFormat, depthFormat);
         if (model) {
-            auto device = renderQueue->device().get();
-
-            // set user-defined property values (lighting)
-            Vector3 lightDir = { 1, -1, 1 };
-            Vector3 lightColor = { 1, 1, 1 };
-            Vector3 ambientColor = { 0.3, 0.3, 0.3 };
-
-            for (auto& scene : model->scenes) {
-                for (auto& node : scene.nodes) {
-                    ForEachNode{ node }(
-                        [&](auto& node) {
-                            if (node.mesh.has_value()) {
-                                auto& mesh = node.mesh.value();
-                                if (auto material = mesh.material.get(); material) {
-                                    material->shader = this->shader;
-                                    material->attachments.front().format = colorFormat;
-                                    material->depthFormat = depthFormat;
-                                    material->setProperty(ShaderBindingLocation::pushConstant(64), lightDir);
-                                    material->setProperty(ShaderBindingLocation::pushConstant(80), lightColor);
-                                    material->setProperty(ShaderBindingLocation::pushConstant(96), ambientColor);
-                                }
-
-                                PipelineReflection reflection = {};
-                                if (mesh.buildPipelineState(device, &reflection)) {
-                                    printPipelineReflection(reflection, Log::Level::Debug);
-                                    mesh.initResources(device, Mesh::BufferUsagePolicy::SingleBuffer);
-                                } else {
-                                    Log::error("Failed to make pipeline descriptor");
-                                }
-                            }
-                        });
-                    node.updateAABB();
-                }
-            }
-
-            AABB aabb = {};
-            if (model && model->scenes.empty() == false) {
-                auto& scene = model->scenes.at(model->defaultSceneIndex);
-                for (auto& node : scene.nodes) {
-                    aabb.combine(node.aabb);
-                }
-            }
+            AABB aabb = meshRenderer->aabb;
             if (aabb.isNull() == false && camera.fov < std::numbers::pi) {
                 // adjust camera!
                 //auto extent = (aabb.max - aabb.min) * 0.5f;
@@ -304,15 +156,15 @@ public:
                 Vector3 dir = (camera.position - camera.target).normalized();
                 camera.position = camera.target + dir * distance;
             }
-            this->model = model;
-        }
-        else
+        } else {
             messageBox("failed to load glTF");
+        }
     }
 
+    bool openPopupModal = false;
     void messageBox(const std::string& mesg) {
         popupMessage = mesg;
-        ImGui::OpenPopup("Error");
+        openPopupModal = true;
     }
 
     void uiLoop(float delta) {
@@ -367,15 +219,24 @@ public:
 
             if (ImGui::Button("Convert")) {
                 // voxelize..
-                auto triangles = triangleList();
+                auto model = meshRenderer->model.get();
+                if (model) {
+                    auto triangles = model->triangleList(model->defaultSceneIndex, graphicsContext.get());
 
-                aabbOctree = voxelize(depth, triangles.size(), 0,
-                                      [&](uint64_t i)->const Triangle& {
-                                          return triangles.at(i);
-                                      }, [&](uint64_t* indices, size_t s, const Vector3& p)->uint64_t {
-                                          return 0xffffff;
-                                      });
-                Log::debug("voxelize done. (test)");
+                    auto aabbOctree = voxelize(depth, triangles.size(), 0,
+                                          [&](uint64_t i)->const Triangle& {
+                                              return triangles.at(i);
+                                          }, [&](uint64_t* indices, size_t s, const Vector3& p)->uint64_t {
+                                              return 0xffffff;
+                                          });
+                    Log::debug("voxelize done. (test)");
+                    if (aabbOctree) {
+                        volumeRenderer->aabbOctree = aabbOctree;
+                    }
+                } else {
+                    Log::error("Invalid model");
+                    messageBox("Model is not loaded.");
+                }
             }
             ImGui::EndDisabled();
 
@@ -386,6 +247,7 @@ public:
             }
             ImGui::EndDisabled();
 
+            auto aabbOctree = volumeRenderer->aabbOctree.get();
             if (aabbOctree) {
                 ImGui::Text(std::format("MaxDepth: {}", aabbOctree->maxDepth).c_str());
                 if (ImGui::Button("Make Layer Buffer")) {
@@ -424,15 +286,18 @@ public:
         static bool show_demo_window = true;
         ImGui::ShowDemoWindow(&show_demo_window);
 
-        if (popupMessage.empty() == false) {
-            if (ImGui::BeginPopupModal("Error", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-                ImGui::Text(popupMessage.c_str());
-                if (ImGui::Button("dismiss")) {
-                    ImGui::CloseCurrentPopup();
-                }
-                ImGui::SetItemDefaultFocus();
-                ImGui::EndPopup();
+        if (openPopupModal) {
+            ImGui::OpenPopup("Error");
+            openPopupModal = false;
+        }
+
+        if (ImGui::BeginPopupModal("Error", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::Text(popupMessage.c_str());
+            if (ImGui::Button("dismiss")) {
+                ImGui::CloseCurrentPopup();
             }
+            ImGui::SetItemDefaultFocus();
+            ImGui::EndPopup();
         }
     }
 
@@ -450,62 +315,9 @@ public:
         auto queue = renderQueue.get();
         auto device = queue->device().get();
 
-
-        // load shader
-        do {
-            // load shader
-            auto vsPath = this->appResourcesRoot / "Shaders/sample.vert.spv";
-            auto fsPath = this->appResourcesRoot / "Shaders/sample.frag.spv";
-            auto vertexShader = loadShader(vsPath, device);
-            if (vertexShader.has_value() == false)
-                throw std::runtime_error("failed to load shader");
-            auto fragmentShader = loadShader(fsPath, device);
-            if (fragmentShader.has_value() == false)
-                throw std::runtime_error("failed to load shader");
-
-            struct PushConstantBuffer {
-                Matrix4 transform;
-                Vector3 lightDir;
-                Vector3 color;
-            };
-
-            // setup shader binding
-            this->shader.resourceSemantics = {
-                { ShaderBindingLocation{ 0, 1, 0}, MaterialSemantic::BaseColorTexture },
-                { ShaderBindingLocation::pushConstant(0), ShaderUniformSemantic::ModelViewProjectionMatrix },
-                //{ ShaderBindingLocation::pushConstant(64), MaterialSemantic::UserDefined },
-                //{ ShaderBindingLocation::pushConstant(80), MaterialSemantic::UserDefined },
-                //{ ShaderBindingLocation::pushConstant(96), MaterialSemantic::UserDefined },
-            };
-
-            this->shader.inputAttributeSemantics = {
-                { 0, VertexAttributeSemantic::Position },
-                { 1, VertexAttributeSemantic::Normal },
-                { 2, VertexAttributeSemantic::TextureCoordinates },
-            };
-            this->shader.functions = { vertexShader.value(), fragmentShader.value() };
-        } while (0);
-
-        SceneState sceneState = {
-            .view = ViewTransform(
-                camera.position, camera.target - camera.position, 
-                Vector3(0, 1, 0)),
-            .projection = ProjectionTransform::perspective(
-                camera.fov, 1.0, camera.nearZ, camera.farZ),
-            .model = Matrix4::identity
-        };
-
         this->colorFormat = swapchain->pixelFormat();
         this->depthFormat = PixelFormat::Depth32Float;
         std::shared_ptr<Texture> depthTexture = nullptr;
-
-        auto depthStencilState = device->makeDepthStencilState(
-            {
-                CompareFunctionLessEqual,
-                StencilDescriptor{},
-                StencilDescriptor{},
-                true
-            });
 
         constexpr auto frameInterval = 1.0 / 60.0;
         auto timestamp = std::chrono::high_resolution_clock::now();
@@ -535,44 +347,31 @@ public:
             rp.depthStencilAttachment.loadAction = RenderPassLoadAction::LoadActionClear;
             rp.depthStencilAttachment.storeAction = RenderPassStoreAction::StoreActionDontCare;
 
+            auto buffer = queue->makeCommandBuffer();
+            auto encoder = buffer->makeRenderCommandEncoder(rp);
+            encoder->endEncoding();
+            buffer->commit();
+
+            frontAttachment.loadAction = RenderPassAttachmentDescriptor::LoadActionLoad;
+
             for (auto& renderer : this->renderers) {
                 renderer->prepareScene(rp);
             }
 
-            auto buffer = queue->makeCommandBuffer();
-            auto encoder = buffer->makeRenderCommandEncoder(rp);
-            encoder->setDepthStencilState(depthStencilState);
-
-            if (model && model->scenes.empty() == false) {
-                //modelTransform.rotate(Quaternion(Vector3(0, 1, 0), std::numbers::pi * delta * 0.4));
-                sceneState.model = modelTransform.matrix4();
-                sceneState.view = ViewTransform(
-                    camera.position, camera.target - camera.position,
-                    Vector3(0, 1, 0));
-                sceneState.projection = ProjectionTransform::perspective(
-                    camera.fov,
-                    float(width) / float(height),
-                    camera.nearZ, camera.farZ);
-
-                auto& scene = model->scenes.at(model->defaultSceneIndex);
-                for (auto& node : scene.nodes)
-                    ForEachNode{ node }(
-                        [&](auto& node) {
-                            if (node.mesh.has_value()) {
-                                node.mesh.value().updateShadingProperties(&sceneState);
-                                node.mesh.value().encodeRenderCommand(encoder.get(), 1, 0);
-                            }
-                        });
-            }
-            encoder->endEncoding();
-            buffer->commit();
+            meshRenderer->view = ViewTransform(
+                camera.position, camera.target - camera.position,
+                Vector3(0, 1, 0));
+            meshRenderer->projection = ProjectionTransform::perspective(
+                camera.fov,
+                float(width) / float(height),
+                camera.nearZ, camera.farZ);
 
             ImGui::NewFrame();
             this->uiLoop(delta);
             ImGui::Render();
 
             for (auto& renderer : this->renderers) {
-                renderer->render(Rect(0, 0, width, height), renderQueue.get());
+                renderer->render(rp, Rect(0, 0, width, height), renderQueue.get());
             }
 
             swapchain->FV::SwapChain::present();

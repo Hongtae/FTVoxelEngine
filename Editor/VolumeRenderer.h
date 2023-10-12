@@ -10,5 +10,7 @@ public:
     void finalize() override;
 
     void update(float delta) override;
-    void render(Rect, CommandQueue*) override;
+    void render(const RenderPassDescriptor&, const Rect&, CommandQueue*) override;
+
+    std::shared_ptr<AABBOctree> aabbOctree;
 };
