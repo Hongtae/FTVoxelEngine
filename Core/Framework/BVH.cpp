@@ -45,10 +45,10 @@ std::optional<Vector3> BVH::rayTest(const Vector3& rayOrigin, const Vector3& dir
 }
 
 uint32_t BVH::rayTest(const Vector3& rayOrigin, const Vector3& dir, std::function<bool (const Vector3&)> filter) const {
-    if (quantizedAABB.isNull()) return 0;
+    if (aabb.isNull()) return 0;
 
-    Vector3 origin = quantizedAABB.min;
-    Vector3 scale = quantizedAABB.extents();
+    Vector3 origin = aabb.min;
+    Vector3 scale = aabb.extents();
     for (float& s : scale.val) {
         if (s == 0.0f) s = 1.0;
     }
@@ -66,8 +66,8 @@ uint32_t BVH::rayTest(const Vector3& rayOrigin, const Vector3& dir, std::functio
     while (index < volumes.size()) {
         const Node& node = volumes.at(index);
         AABB aabb = {
-            Vector3(float(node.aabbUnormMin[0]), float(node.aabbUnormMin[1]), float(node.aabbUnormMin[2])) * q,
-            Vector3(float(node.aabbUnormMax[0]), float(node.aabbUnormMax[1]), float(node.aabbUnormMax[2])) * q
+            Vector3(float(node.aabbMin[0]), float(node.aabbMin[1]), float(node.aabbMin[2])) * q,
+            Vector3(float(node.aabbMax[0]), float(node.aabbMax[1]), float(node.aabbMax[2])) * q
         };
 
         auto r = aabb.rayTest(rayStart, rayDir);

@@ -482,8 +482,8 @@ public:
         // load shader
         do {
             // load shader
-            auto vsPath = this->appResourcesRoot / "shaders/sample.vert.spv";
-            auto fsPath = this->appResourcesRoot / "shaders/sample.frag.spv";
+            auto vsPath = this->appResourcesRoot / "Shaders/sample.vert.spv";
+            auto fsPath = this->appResourcesRoot / "Shaders/sample.frag.spv";
             auto vertexShader = loadShader(vsPath, device);
             if (vertexShader.has_value() == false)
                 throw std::runtime_error("failed to load shader");

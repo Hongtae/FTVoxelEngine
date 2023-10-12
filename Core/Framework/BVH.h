@@ -11,8 +11,8 @@ namespace FV {
     struct FVCORE_API BVH {
 #pragma pack(push, 1)
         struct Node {
-            uint16_t aabbUnormMin[3];
-            uint16_t aabbUnormMax[3];
+            uint16_t aabbMin[3];
+            uint16_t aabbMax[3];
             union {
                 int32_t strideToNextSibling;
                 int32_t payload;
@@ -20,7 +20,7 @@ namespace FV {
         };
 #pragma pack(pop)
 
-        AABB quantizedAABB;
+        AABB aabb;
         std::vector<Node> volumes;
 
         enum RayHitResultOption {
