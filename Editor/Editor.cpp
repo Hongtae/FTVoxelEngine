@@ -199,7 +199,7 @@ public:
                 camera.position = camera.target + dir * distance;
             }
             static float nearZ = 0.1f;
-            static float farZ = 10.0f;
+            static float farZ = 100.0f;
             ImGui::DragFloatRange2("Frustum", &nearZ, &farZ, 0.1f, 0.01f, 400.0f,
                                    "Near: %.2f", "Far: %.2f", ImGuiSliderFlags_AlwaysClamp);
             extern bool mouseLocked;
@@ -258,7 +258,8 @@ public:
                     auto layer = aabbOctree->makeLayer(depth);
                     auto end = std::chrono::high_resolution_clock::now();
                     auto elapsed = std::chrono::duration<double>(end - start);
-                    Log::info(std::format("aabb-octree make layer with depth:{}, nodes:{} ({} bytes), elapsed: {}",
+                    Log::info(std::format(std::locale("en_US.UTF-8"),
+                        "aabb-octree make layer with depth:{}, nodes:{:Ld} ({:Ld} bytes), elapsed: {}",
                                           maxDepth,
                                           layer->data.size(),
                                           layer->data.size() * sizeof(AABBOctreeLayer::Node),

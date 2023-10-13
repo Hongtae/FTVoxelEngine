@@ -18,7 +18,8 @@ std::shared_ptr<AABBOctree> voxelize(uint32_t maxDepth,
     auto elapsed = std::chrono::duration<double>(end - start);
 
     if (octrees) {
-        Log::info(std::format("triangle-octree(depth:{}) generated with nodes:{}, leaf-nodes:{}, elapsed:{}",
+        Log::info(std::format(std::locale("en_US.UTF-8"),
+                              "triangle-octree(depth:{}) generated with nodes:{:Ld}, leaf-nodes:{:Ld}, elapsed:{}",
                               maxDepth,
                               octrees->numDescendants,
                               octrees->numLeafNodes,

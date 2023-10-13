@@ -8,11 +8,12 @@
 #extension GL_EXT_shader_explicit_arithmetic_types_float32 : require
 #extension GL_EXT_shader_explicit_arithmetic_types_float64 : require
 
-layout (binding=0) uniform BVHInfo {
-    mat4 transform;
+layout (push_constant) uniform SceneInfo {
+    layout(row_major) mat4 transform; // inverse of model-view-projection
     vec3 aabbMin;
     vec3 aabbMax;
-} bvh;
+    uint32_t width, height;
+} info;
 
 struct EncodedAABB {
     uint16_t x, y, z;
@@ -21,10 +22,29 @@ struct EncodedAABB {
     uint64_t payload;
 };
 
-layout (binding=1) readonly buffer AABBArray {
+layout (binding=0) readonly buffer AABBArray {
     EncodedAABB volumes[];
 };
 
-void main() {
+layout (binding=2, rgba8) uniform image2D outputImage;
 
+struct Ray {
+    vec3 start;
+    vec3 dir;
+};
+
+Ray ray() {
+    float x = float(gl_GlobalInvocationID.x) / float(info.width);
+    float y = float(gl_GlobalInvocationID.y) / float(info.height);
+    
+    vec4 start4 = vec4(x, y, 0.0, 1.0) * info.transform;
+    vec4 end4 = vec4(x, y, 1.0, 1.0) * info.transform;
+    vec3 start = start4.xyz / start4.w;
+    vec3 end = end4.xyz / end4.w;
+    return Ray(start, normalize(end - start));
+}
+
+void main() {
+    vec4 color = vec4(1,1,1,1);
+    imageStore(outputImage, ivec2(gl_GlobalInvocationID.xy), color);
 }

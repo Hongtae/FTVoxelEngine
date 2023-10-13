@@ -172,7 +172,7 @@ AABBOctree::makeTree(uint32_t maxDepth,
     struct Counter {
         uint64_t numNodes;
         uint64_t numLeafNodes;
-    } counter {0, 0};
+    };
 
     struct Subdivider {
         Node& node;
@@ -242,10 +242,11 @@ AABBOctree::makeTree(uint32_t maxDepth,
         normalizedTriangleQuery, quantizedTrianglePayloadQuery };
 
     std::vector<uint64_t> buffer;
-    counter.numNodes = 1;
+    Counter counter{ 0, 0 };
     sub(maxDepth, buffer, counter);
     if (counter.numLeafNodes == 0)
         counter.numLeafNodes = 1; // root
+    counter.numNodes += 1; // root
 
     auto octrees = std::make_shared<AABBOctree>();
     octrees->root = std::move(node);
