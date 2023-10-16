@@ -315,7 +315,12 @@ bool Shader::compile() {
                         // member offset within this struct.
                         member.offset = compiler.type_struct_member_offset(spType, i);
                         member.size = (uint32_t)compiler.get_declared_struct_member_size(spType, i);
-                        FVASSERT_THROW(member.size > 0);
+                        if (member.size == 0) {
+                            bool isRuntimeArray = false;
+                            if (memberType.array.empty() == false)
+                                isRuntimeArray = memberType.array_size_literal.back() && memberType.array.back() == 0;
+                            FVASSERT_DEBUG(isRuntimeArray);
+                        }
 
                         if (member.dataType == ShaderDataType::Struct) {
                             member.members = StructMemberExtractor{ compiler }(memberType);
@@ -323,11 +328,11 @@ bool Shader::compile() {
                         }
 
                         member.count = 1;
-                        for (auto n : memberType.array)
-                            member.count = member.count * n;
-
-                        if (member.count > 1)
+                        if (memberType.array.empty() == false) {
+                            for (auto n : memberType.array)
+                                member.count = member.count * n;
                             member.stride = compiler.type_struct_member_array_stride(spType, i);
+                        }
 
                         members.push_back(member);
                     }
