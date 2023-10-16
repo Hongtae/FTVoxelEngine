@@ -224,7 +224,7 @@ xcopy /Y /D /R /Q /E "$(ProjectDir)Resources" "$(OutDir)$(ProjectName).Resources
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\Shaders\bvh_raycast.comp" />
+    <None Include="Resources\Shaders\bvh_aabb_raycast.comp" />
     <None Include="Resources\Shaders\compileshaders.py" />
     <None Include="Resources\Shaders\sample.frag" />
     <None Include="Resources\Shaders\sample.vert" />

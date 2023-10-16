@@ -164,7 +164,7 @@
     <None Include="Resources\Shaders\compileshaders.py">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="Resources\Shaders\bvh_raycast.comp">
+    <None Include="Resources\Shaders\bvh_aabb_raycast.comp">
       <Filter>Shaders</Filter>
     </None>
     <None Include="Resources\Shaders\sample.vert">

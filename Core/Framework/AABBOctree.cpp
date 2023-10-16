@@ -230,7 +230,7 @@ AABBOctree::makeTree(uint32_t maxDepth,
         FVASSERT_DEBUG(index >= baseIndex);
         return triangles.at(index - baseIndex);
     };
-    PayloadQuery quantizedTrianglePayloadQuery = [&](uint64_t* indices, size_t size, const Vector3& position) -> uint64_t {
+    PayloadQuery quantizedTrianglePayloadQuery = [&](uint64_t* indices, size_t size, const Vector3& position) -> AABBOctree::Payload {
         return payloadQuery(indices, size, position.applying(quantize));
     };
 
@@ -278,7 +278,10 @@ std::shared_ptr<AABBOctreeLayer> AABBOctree::makeLayer(uint32_t maxDepth) const 
                 for (auto& sub : node.subdivisions) {
                     MakeLayerNodeArray{ sub, maxDepth }(nodes);
                 }
-                n.strideToNextSibling = nodes.size() - index;
+                auto stride = nodes.size() - index;
+                constexpr auto maxLength = std::numeric_limits<AABBOctreeLayer::Index>::max();
+                FVASSERT_DEBUG(uint64_t(stride) < uint64_t(maxLength));
+                n.strideToNextSibling = AABBOctreeLayer::Index(stride);
             }
         }
     };

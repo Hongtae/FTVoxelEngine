@@ -11,6 +11,8 @@
 namespace FV {
 
     struct FVCORE_API AABBOctreeLayer {
+        using Payload = uint32_t;
+        using Index = uint32_t;
 
         enum NodeFlagBit {
             FlagPayload = 1,
@@ -23,8 +25,8 @@ namespace FV {
             uint8_t depth;
             uint8_t flags;
             union {
-                uint64_t strideToNextSibling;
-                uint64_t payload;
+                Index strideToNextSibling;
+                Payload payload;
             };
             bool isLeaf() const { return (flags & FlagPayload) != 0; }
         };
@@ -41,13 +43,14 @@ namespace FV {
 
         struct RayHitResult {
             Vector3 hitPoint;
-            uint64_t payload;
+            Payload payload;
         };
         std::optional<RayHitResult> rayTest(const Vector3& rayOrigin, const Vector3& dir, RayHitResultOption option = CloestHit) const;
         uint32_t rayTest(const Vector3& rayOrigin, const Vector3& dir, std::function<bool(const RayHitResult&)> filter) const;
     };
 
     struct FVCORE_API AABBOctree {
+        using Payload = AABBOctreeLayer::Payload;
         AABB aabb;
         uint32_t maxDepth;
         uint64_t numDescendants;
@@ -55,12 +58,12 @@ namespace FV {
 
         using TriangleQuery = std::function<const Triangle& (uint64_t)>;
         // (triangle-indices, num-indices, aabb-center)
-        using PayloadQuery = std::function<uint64_t (uint64_t*, size_t, const Vector3&)>;
+        using PayloadQuery = std::function<Payload (uint64_t*, size_t, const Vector3&)>;
 
         struct Node {
             Vector3 center;
             uint32_t depth; // aabb-extent-exponent
-            uint64_t payload;
+            Payload payload;
             std::vector<Node> subdivisions;
             AABB aabb() const {
                 float halfExtent = 0.5f;

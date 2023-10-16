@@ -38,8 +38,8 @@ public:
         Vector3 position = { 0, 0, 100 };
         Vector3 target = Vector3::zero;
         float fov = degreeToRadian(80.f);
-        float nearZ = 0.01;
-        float farZ = 1000.0;
+        float nearZ = 0.01f;
+        float farZ = 1000.0f;
     } camera;
 
     std::optional<Point> draggingPosition; // left-click drag
@@ -223,12 +223,14 @@ public:
                 if (model) {
                     auto triangles = model->triangleList(model->defaultSceneIndex, graphicsContext.get());
 
-                    auto aabbOctree = voxelize(depth, triangles.size(), 0,
-                                          [&](uint64_t i)->const Triangle& {
-                                              return triangles.at(i);
-                                          }, [&](uint64_t* indices, size_t s, const Vector3& p)->uint64_t {
-                                              return 0xffffff;
-                                          });
+                    auto aabbOctree = voxelize(
+                        depth, triangles.size(), 0,
+                        [&](uint64_t i)->const Triangle& {
+                            return triangles.at(i);
+                        },
+                        [&](uint64_t* indices, size_t s, const Vector3& p)->AABBOctree::Payload {
+                            return 0xffffff;
+                        });
                     Log::debug("voxelize done. (test)");
                     if (aabbOctree) {
                         volumeRenderer->aabbOctree = aabbOctree;
