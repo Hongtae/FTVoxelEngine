@@ -516,4 +516,6 @@ namespace FV {
     FVCORE_API std::u32string u32string(const std::u32string& input, bool strict) {
         return { input.c_str() };
     }
+
+    const std::locale enUS_UTF8 = std::locale("en_US.UTF-8");
 }

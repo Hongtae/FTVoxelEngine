@@ -58,6 +58,8 @@ namespace FV {
     inline std::u8string toUTF32(const T* str) {
         return u32string(std::basic_string<T>(str));
     }
+
+    extern const std::locale enUS_UTF8;
 }
 
 #ifndef FVCORE_NO_UNICODE_FORMATTER
