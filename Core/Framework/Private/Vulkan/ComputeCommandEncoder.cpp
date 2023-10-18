@@ -128,7 +128,7 @@ void ComputeCommandEncoder::setResources(uint32_t index, std::shared_ptr<FV::Sha
                                     1,
                                     &ds,
                                     0,      // dynamic offsets
-                                    0);
+                                    nullptr);
         }
     };
     encoder->commands.push_back(command);
@@ -166,7 +166,7 @@ void ComputeCommandEncoder::pushConstant(uint32_t stages, uint32_t offset, uint3
                                    state.pipelineState->layout,
                                    stageFlags,
                                    offset, size,
-                                   buffer.get());
+                                   buffer->data());
             }
         };
         encoder->commands.push_back(command);
