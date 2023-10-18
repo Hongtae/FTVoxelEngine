@@ -78,7 +78,7 @@ void UIRenderer::initialize(std::shared_ptr<GraphicsDeviceContext>, std::shared_
     VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {};
     descriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     descriptorPoolCreateInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-    descriptorPoolCreateInfo.maxSets = 1;
+    descriptorPoolCreateInfo.maxSets = 16;
     descriptorPoolCreateInfo.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
     descriptorPoolCreateInfo.pPoolSizes = pool_sizes;
 
@@ -150,9 +150,20 @@ void UIRenderer::initialize(std::shared_ptr<GraphicsDeviceContext>, std::shared_
     err = vkCreateFence(gdevice->device, &fenceCreateInfo, gdevice->allocationCallbacks(), &this->fence);
     if (err != VK_SUCCESS)
         throw std::runtime_error("vkCreateFence failed!");
+
+    this->defaultSampler = gdevice->makeSamplerState(
+        {
+            .minFilter = SamplerMinMagFilter::Linear,
+            .magFilter = SamplerMinMagFilter::Linear
+        });
 }
 
 void UIRenderer::finalize() {
+    for (auto& t : registeredTextures) {
+        ImGui_ImplVulkan_RemoveTexture((VkDescriptorSet)t.tid);
+    }
+    registeredTextures.clear();
+
     VkResult err = vkDeviceWaitIdle(gdevice->device);
     if (err != VK_SUCCESS)
         throw std::runtime_error("vkDeviceWaitIdle failed.");
@@ -169,6 +180,7 @@ void UIRenderer::finalize() {
     this->commandPool = VK_NULL_HANDLE;
     this->descriptorPool = VK_NULL_HANDLE;
     this->swapchain = nullptr;
+    this->defaultSampler = nullptr;
 
     cqueue.reset();
     gdevice.reset();
@@ -243,4 +255,64 @@ void UIRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
             throw std::runtime_error("vkQueueSubmit2 failed.");
 #endif
     }
+}
+
+ImTextureID UIRenderer::registerTexture(std::shared_ptr<Texture> texture, 
+                                        std::shared_ptr<SamplerState> sampler) {
+    if (texture.get() == nullptr)
+        return nullptr;
+    if (sampler == nullptr)
+        sampler = this->defaultSampler;
+
+    if (auto t = textureID(texture.get()); t)
+        return t;
+
+#if FVCORE_ENABLE_VULKAN
+    auto sampler2 = std::dynamic_pointer_cast<FV::Vulkan::Sampler>(sampler);
+    auto imageview = std::dynamic_pointer_cast<FV::Vulkan::ImageView>(texture);
+
+    auto cbuffer = cqueue->makeCommandBuffer();
+    auto encoder = std::dynamic_pointer_cast<FV::Vulkan::CopyCommandEncoder>(cbuffer->makeCopyCommandEncoder());
+    encoder->callback(
+        [&](auto commandBuffer) {
+            imageview->image->setLayout(VK_IMAGE_LAYOUT_GENERAL,
+            VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT,
+            VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+            VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+            cqueue->family->familyIndex,
+            commandBuffer);
+        });
+    encoder->endEncoding();
+    cbuffer->commit();
+
+    auto layout = imageview->image->layout();
+    auto texID = ImGui_ImplVulkan_AddTexture(sampler2->sampler,
+                                             imageview->imageView,
+                                             layout);
+
+    registeredTextures.push_back({ texture, sampler, (ImTextureID)texID });
+    return (ImTextureID)texID;
+#endif
+    return nullptr;
+}
+
+void UIRenderer::unregisterTexture(Texture* texture) {
+    if (auto it = find_if(registeredTextures.begin(),
+                          registeredTextures.end(),
+                          [&](const auto& t) {
+                              return t.texture.get() == texture;
+                          }); it != registeredTextures.end()) {
+#if FVCORE_ENABLE_VULKAN
+        ImGui_ImplVulkan_RemoveTexture((VkDescriptorSet)it->tid);
+#endif
+        registeredTextures.erase(it);
+    }
+}
+
+ImTextureID UIRenderer::textureID(Texture* tex) const {
+    for (const auto& t : registeredTextures) {
+        if (t.texture.get() == tex)
+            return t.tid;
+    }
+    return nullptr;
 }

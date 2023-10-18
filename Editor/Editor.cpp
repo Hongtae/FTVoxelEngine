@@ -269,6 +269,12 @@ public:
                     volumeRenderer->setOctreeLayer(layer);
                 }
             }
+            ImGui::Text("Volume Image");
+            auto texture = volumeRenderer->texture;
+            ImGui::Text(std::format("width:{}, height:{}",
+                                    texture->width(), texture->height()).c_str());
+            ImGui::Image(uiRenderer->textureID(texture.get()), ImVec2(
+                texture->width(), texture->height()));
         }
         ImGui::End();
 
@@ -315,6 +321,8 @@ public:
         for (auto& renderer : this->renderers) {
             renderer->initialize(graphicsContext, swapchain);
         }
+
+        uiRenderer->registerTexture(volumeRenderer->texture);
 
         auto queue = renderQueue.get();
         auto device = queue->device().get();

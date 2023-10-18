@@ -64,7 +64,7 @@ namespace FV {
         std::shared_ptr<Image> resample(ImagePixelFormat) const;
         std::shared_ptr<Image> resample(uint32_t width, uint32_t height, ImagePixelFormat format, ImageInterpolation interpolation) const;
 
-        std::shared_ptr<Texture> makeTexture(CommandQueue*) const;
+        std::shared_ptr<Texture> makeTexture(CommandQueue*, uint32_t usage = TextureUsageSampled) const;
     private:
         std::vector<uint8_t> data;
 

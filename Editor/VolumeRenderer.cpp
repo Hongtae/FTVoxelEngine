@@ -47,12 +47,10 @@ void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc, std::
     // create render-target
     uint32_t width = 400;
     uint32_t height = 400;
-    texture = device->makeTexture({
-        TextureType2D,
-        PixelFormat::RGBA8Unorm,
-        width, height,
-        1, 1, 1, 1,
-        TextureUsageSampled | TextureUsageStorage | TextureUsageShaderRead | TextureUsageShaderWrite});
+    std::vector<uint32_t> initialColors(width * height, 0);
+    texture = Image(width, height, ImagePixelFormat::RGBA8, initialColors.data())
+        .makeTexture(queue.get(), TextureUsageSampled | TextureUsageStorage | TextureUsageShaderRead | TextureUsageShaderWrite);
+
     FVASSERT_DEBUG(texture);
 
     ShaderBindingSetLayout layout = {

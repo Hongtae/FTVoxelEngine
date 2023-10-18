@@ -389,7 +389,7 @@ std::shared_ptr<Image> Image::resample(uint32_t width, uint32_t height, ImagePix
     return image;
 }
 
-std::shared_ptr<Texture> Image::makeTexture(CommandQueue* queue) const {
+std::shared_ptr<Texture> Image::makeTexture(CommandQueue* queue, uint32_t usage) const {
     if (queue == nullptr)
         return nullptr;
 
@@ -467,7 +467,7 @@ std::shared_ptr<Texture> Image::makeTexture(CommandQueue* queue) const {
             width,
             height,
             1, 1, 1, 1,
-            TextureUsageCopyDestination | TextureUsageSampled
+            TextureUsageCopyDestination | usage
         });
     if (texture == nullptr)
         return nullptr;
