@@ -8,10 +8,10 @@ class Renderer {
 public:
     virtual ~Renderer() {}
 
-    virtual void initialize(std::shared_ptr<CommandQueue>) = 0;
+    virtual void initialize(std::shared_ptr<GraphicsDeviceContext>, std::shared_ptr<SwapChain>) = 0;
     virtual void finalize() = 0;
 
     virtual void update(float delta) {}
-    virtual void render(const RenderPassDescriptor&, const Rect&, CommandQueue*) = 0;
-    virtual void prepareScene(const RenderPassDescriptor&) {}
+    virtual void render(const RenderPassDescriptor&, const Rect&) = 0;
+    virtual void prepareScene(const RenderPassDescriptor&, const ViewTransform&, const ProjectionTransform&) {}
 };

@@ -140,7 +140,7 @@ public:
 
     void loadModel(std::filesystem::path path) {
         Log::info(std::format("Loading gltf-model: {}", path.generic_u8string()));
-        auto model = meshRenderer->loadModel(path, renderQueue.get(), colorFormat, depthFormat);
+        auto model = meshRenderer->loadModel(path, colorFormat, depthFormat);
         if (model) {
             AABB aabb = meshRenderer->aabb;
             if (aabb.isNull() == false && camera.fov < std::numbers::pi) {
@@ -229,7 +229,7 @@ public:
                             return triangles.at(i);
                         },
                         [&](uint64_t* indices, size_t s, const Vector3& p)->AABBOctree::Payload {
-                            return 0xffffff;
+                            return 0xffffffff;
                         });
                     Log::debug("voxelize done. (test)");
                     if (aabbOctree) {
@@ -260,12 +260,13 @@ public:
                     auto layer = aabbOctree->makeLayer(depth);
                     auto end = std::chrono::high_resolution_clock::now();
                     auto elapsed = std::chrono::duration<double>(end - start);
-                    Log::info(std::format(std::locale("en_US.UTF-8"),
+                    Log::info(std::format(enUS_UTF8,
                         "aabb-octree make layer with depth:{}, nodes:{:Ld} ({:Ld} bytes), elapsed: {}",
                                           maxDepth,
                                           layer->data.size(),
                                           layer->data.size() * sizeof(AABBOctreeLayer::Node),
                                           elapsed.count()));
+                    volumeRenderer->setOctreeLayer(layer);
                 }
             }
         }
@@ -312,7 +313,7 @@ public:
         uiRenderer->setSwapChain(swapchain.get());
         
         for (auto& renderer : this->renderers) {
-            renderer->initialize(renderQueue);
+            renderer->initialize(graphicsContext, swapchain);
         }
 
         auto queue = renderQueue.get();
@@ -357,24 +358,24 @@ public:
 
             frontAttachment.loadAction = RenderPassAttachmentDescriptor::LoadActionLoad;
 
-            for (auto& renderer : this->renderers) {
-                renderer->prepareScene(rp);
-            }
-
-            meshRenderer->view = ViewTransform(
+            auto view = ViewTransform(
                 camera.position, camera.target - camera.position,
                 Vector3(0, 1, 0));
-            meshRenderer->projection = ProjectionTransform::perspective(
+            auto projection = ProjectionTransform::perspective(
                 camera.fov,
                 float(width) / float(height),
                 camera.nearZ, camera.farZ);
+
+            for (auto& renderer : this->renderers) {
+                renderer->prepareScene(rp, view, projection);
+            }
 
             ImGui::NewFrame();
             this->uiLoop(delta);
             ImGui::Render();
 
             for (auto& renderer : this->renderers) {
-                renderer->render(rp, Rect(0, 0, width, height), renderQueue.get());
+                renderer->render(rp, Rect(0, 0, width, height));
             }
 
             swapchain->FV::SwapChain::present();

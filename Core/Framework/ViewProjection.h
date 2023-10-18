@@ -158,7 +158,7 @@ namespace FV {
             };
             auto mat = this->matrix().inverted();
             for (auto& v : vec) {
-                auto v2 = Vector4(v.x, v.y, v.z, 1.0f).apply(mat);
+                auto v2 = Vector4(v.x, v.y, v.z, 1.0f).applying(mat);
                 v = Vector3(v2.x, v2.y, v2.z) / v2.w;
             }
 

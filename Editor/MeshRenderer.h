@@ -7,14 +7,18 @@ public:
     MeshRenderer();
     ~MeshRenderer();
 
-    void initialize(std::shared_ptr<CommandQueue>) override;
+    void initialize(std::shared_ptr<GraphicsDeviceContext>, std::shared_ptr<SwapChain>) override;
     void finalize() override;
 
     void update(float delta) override;
-    void render(const RenderPassDescriptor&, const Rect&, CommandQueue*) override;
+    void render(const RenderPassDescriptor&, const Rect&) override;
+
+    void prepareScene(const RenderPassDescriptor&, const ViewTransform& v, const ProjectionTransform& p) override {
+        this->view = v;
+        this->projection = p;
+    }
 
     Model* loadModel(std::filesystem::path path,
-                     CommandQueue* queue,
                      PixelFormat colorFormat,
                      PixelFormat depthFormat);
 

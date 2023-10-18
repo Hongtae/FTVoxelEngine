@@ -20,12 +20,12 @@ public:
     void setWindow(Window*);
     void setSwapChain(SwapChain*);
 
-    void initialize(std::shared_ptr<CommandQueue>) override;
+    void initialize(std::shared_ptr<GraphicsDeviceContext>, std::shared_ptr<SwapChain>) override;
     void finalize() override;
 
     void update(float delta) override;
-    void render(const RenderPassDescriptor&, const Rect&, CommandQueue*) override;
-    void prepareScene(const RenderPassDescriptor&) override;
+    void render(const RenderPassDescriptor&, const Rect&) override;
+    void prepareScene(const RenderPassDescriptor&, const ViewTransform&, const ProjectionTransform&) override;
 
 private:
     SwapChain* swapchain;

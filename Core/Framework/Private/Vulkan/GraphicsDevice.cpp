@@ -1532,6 +1532,8 @@ std::shared_ptr<FV::ComputePipelineState> GraphicsDevice::makeComputePipeline(co
     savePipelineCache();
 
     if (reflection) {
+        reflection->inputAttributes = module->inputAttributes;
+        reflection->pushConstantLayouts = module->pushConstantLayouts;
         reflection->resources = module->resources;
         reflection->resources.shrink_to_fit();
     }

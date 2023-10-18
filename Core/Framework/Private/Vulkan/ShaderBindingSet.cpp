@@ -123,7 +123,7 @@ void ShaderBindingSet::setBufferArray(uint32_t binding, uint32_t numBuffers, Buf
         case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
         case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
         case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-        case  VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
             // buffer (pBufferInfo)
             descriptorBinding->bufferInfos.reserve(availableItems);
             for (uint32_t i = 0; i < availableItems; ++i) {

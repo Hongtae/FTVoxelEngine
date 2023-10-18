@@ -140,7 +140,7 @@ inline void printShaderResourceStructMember(const FV::ShaderResourceStructMember
         indentStr += "    ";
     }
 
-    if (member.count > 1)
+    if (member.stride > 0)
     {
         FV::Log::log(lv, std::format("{} {}+ {}[{:d}] ({}, Offset: {:d}, size: {:d}, stride: {:d})",
                                      prefix,

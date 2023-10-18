@@ -6,11 +6,31 @@ public:
     VolumeRenderer();
     ~VolumeRenderer();
 
-    void initialize(std::shared_ptr<CommandQueue>) override;
+    void initialize(std::shared_ptr<GraphicsDeviceContext>, std::shared_ptr<SwapChain>) override;
     void finalize() override;
 
-    void update(float delta) override;
-    void render(const RenderPassDescriptor&, const Rect&, CommandQueue*) override;
+    void render(const RenderPassDescriptor&, const Rect&) override;
+
+    void prepareScene(const RenderPassDescriptor&, const ViewTransform& v, const ProjectionTransform& p) override {
+        this->view = v;
+        this->projection = p;
+    }
+
+    void setOctreeLayer(std::shared_ptr<AABBOctreeLayer> layer);
 
     std::shared_ptr<AABBOctree> aabbOctree;
+
+    std::shared_ptr<ComputePipelineState> pipelineState;
+    std::shared_ptr<Texture> texture;
+    std::shared_ptr<ShaderBindingSet> bindingSet;
+
+    ViewTransform view;
+    ProjectionTransform projection;
+    Transform transform;
+
+    std::shared_ptr<CommandQueue> queue;
+    struct { uint32_t x, y, z; } threadgroupSize;
+
+private:
+    std::shared_ptr<GPUBuffer> aabbOctreeLayerBuffer;
 };

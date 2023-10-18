@@ -1006,9 +1006,6 @@ bool Mesh::enumerateVertexBufferContent(VertexAttributeSemantic semantic,
             if (attr.semantic == semantic) {
                 // lock buffer!
                 attrib = &attr;
-                break;
-            }
-            if (attrib) {
                 vertexBuffer = &vb;
                 break;
             }

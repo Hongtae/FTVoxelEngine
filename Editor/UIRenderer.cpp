@@ -63,9 +63,8 @@ void UIRenderer::setSwapChain(SwapChain* swapchain) {
     this->swapchain = swapchain;
 }
 
-void UIRenderer::initialize(std::shared_ptr<CommandQueue> queue) {
-
-    this->cqueue = std::dynamic_pointer_cast<FV::Vulkan::CommandQueue>(queue);
+void UIRenderer::initialize(std::shared_ptr<GraphicsDeviceContext>, std::shared_ptr<SwapChain> swapchain) {
+    this->cqueue = std::dynamic_pointer_cast<FV::Vulkan::CommandQueue>(swapchain->queue());
     if (this->cqueue.get() == nullptr)
         throw std::runtime_error("Unable to get vulkan command queue!");
     this->gdevice = this->cqueue->gdevice;
@@ -178,7 +177,7 @@ void UIRenderer::finalize() {
 void UIRenderer::update(float delta) {
 }
 
-void UIRenderer::prepareScene(const RenderPassDescriptor&) {
+void UIRenderer::prepareScene(const RenderPassDescriptor&, const ViewTransform&, const ProjectionTransform&) {
     ImGui_ImplVulkan_NewFrame();
 
 #ifdef _WIN32
@@ -186,7 +185,7 @@ void UIRenderer::prepareScene(const RenderPassDescriptor&) {
 #endif
 }
 
-void UIRenderer::render(const RenderPassDescriptor& rp, const Rect& frame, CommandQueue*) {
+void UIRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
     ImDrawData* draw_data = ImGui::GetDrawData();
     const bool is_minimized = (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f);
     if (!is_minimized) {

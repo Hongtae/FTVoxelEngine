@@ -613,7 +613,7 @@ void RenderCommandEncoder::setResources(uint32_t index, std::shared_ptr<FV::Shad
                                     1,
                                     &ds,
                                     0,      // dynamic offsets
-                                    0);
+                                    nullptr);
         }
     };
     encoder->commands.push_back(command);

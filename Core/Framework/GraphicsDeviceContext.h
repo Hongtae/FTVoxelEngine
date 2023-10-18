@@ -1,7 +1,7 @@
 #pragma once
 #include "../include.h"
 #include <memory>
-#include <unordered_map>
+#include <vector>
 #include "GraphicsDevice.h"
 
 namespace FV {
@@ -14,14 +14,13 @@ namespace FV {
 
         static std::shared_ptr<GraphicsDeviceContext> makeDefault();
 
+        std::shared_ptr<CommandQueue> commandQueue(uint32_t flags = 0);
         std::shared_ptr<CommandQueue> renderQueue();
         std::shared_ptr<CommandQueue> computeQueue();
         std::shared_ptr<CommandQueue> copyQueue();
 
         std::shared_ptr<GPUBuffer> makeCPUAccessible(std::shared_ptr<GPUBuffer>);
     private:
-        std::vector<std::shared_ptr<CommandQueue>> renderQueues;
-        std::vector<std::shared_ptr<CommandQueue>> computeQueues;
-        std::vector<std::shared_ptr<CommandQueue>> copyQueues;
+        std::vector<std::shared_ptr<CommandQueue>> cachedQueues;
     };
 }

@@ -12,12 +12,13 @@ MeshRenderer::MeshRenderer()
 MeshRenderer::~MeshRenderer() {
 }
 
-void MeshRenderer::initialize(std::shared_ptr<CommandQueue> queue) {
+void MeshRenderer::initialize(std::shared_ptr<GraphicsDeviceContext>, std::shared_ptr<SwapChain> swapchain) {
     extern std::filesystem::path appResourcesRoot;
     // load shader
     auto vsPath = appResourcesRoot / "Shaders/sample.vert.spv";
     auto fsPath = appResourcesRoot / "Shaders/sample.frag.spv";
 
+    this->queue = swapchain->queue();
     auto device = queue->device();
     auto vertexShader = loadShader(vsPath, device.get());
     if (vertexShader.has_value() == false)
@@ -67,7 +68,7 @@ void MeshRenderer::finalize() {
 void MeshRenderer::update(float delta) {
 }
 
-void MeshRenderer::render(const RenderPassDescriptor& rp, const Rect& frame, CommandQueue* queue) {
+void MeshRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
 
     SceneState sceneState = { view, projection, transform.matrix4()};
 
@@ -93,10 +94,9 @@ void MeshRenderer::render(const RenderPassDescriptor& rp, const Rect& frame, Com
 }
 
 Model* MeshRenderer::loadModel(std::filesystem::path path,
-                               CommandQueue* queue,
                                PixelFormat colorFormat,
                                PixelFormat depthFormat) {
-    auto model = ::loadModel(path, queue);
+    auto model = ::loadModel(path, queue.get());
     if (model) {
         auto device = queue->device().get();
 

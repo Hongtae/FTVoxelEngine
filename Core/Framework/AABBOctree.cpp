@@ -96,7 +96,10 @@ uint32_t AABBOctreeLayer::rayTest(const Vector3& rayOrigin,
             }
             index++;
         } else {
-            index += node.strideToNextSibling;
+            if (node.isLeaf())
+                index++;
+            else
+                index += node.strideToNextSibling;
         }
     }
     return numHits;
@@ -250,6 +253,7 @@ AABBOctree::makeTree(uint32_t maxDepth,
 
     auto octrees = std::make_shared<AABBOctree>();
     octrees->root = std::move(node);
+    octrees->aabb = aabb;
     octrees->maxDepth = maxDepth;
     octrees->numDescendants = counter.numNodes;
     octrees->numLeafNodes = counter.numLeafNodes;

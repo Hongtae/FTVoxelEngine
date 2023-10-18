@@ -28,6 +28,7 @@ namespace FV {
                 Index strideToNextSibling;
                 Payload payload;
             };
+            uint32_t _padding;
             bool isLeaf() const { return (flags & FlagPayload) != 0; }
         };
 #pragma pack(pop)

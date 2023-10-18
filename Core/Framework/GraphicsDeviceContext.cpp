@@ -63,59 +63,31 @@ std::shared_ptr<GraphicsDeviceContext> GraphicsDeviceContext::makeDefault() {
     return nullptr;
 }
 
-std::shared_ptr<CommandQueue> GraphicsDeviceContext::renderQueue() {
-    if (renderQueues.empty()) {
-        if (auto queue = device->makeCommandQueue(CommandQueue::Render); queue) {
-            if (queue->flags() & CommandQueue::Render) {
-                renderQueues.push_back(queue);
-            }
-            if (queue->flags() & CommandQueue::Compute) {
-                computeQueues.push_back(queue);
-            }
-            copyQueues.push_back(queue);
-
-            FVASSERT(queue->flags() & CommandQueue::Render);
-
-            return queue;
-        }
+std::shared_ptr<CommandQueue> GraphicsDeviceContext::commandQueue(uint32_t flags) {
+    if (auto iter = std::find_if(
+        cachedQueues.begin(), cachedQueues.end(), [flags](auto& queue) {
+            return (queue->flags() & flags) == flags;
+        }); iter != cachedQueues.end()) {
+        return *iter;
     }
-    return renderQueues.front();
+
+    auto queue = device->makeCommandQueue(flags);
+    if (queue) {
+        cachedQueues.push_back(queue);
+    }
+    return queue;
+}
+
+std::shared_ptr<CommandQueue> GraphicsDeviceContext::renderQueue() {
+    return commandQueue(CommandQueue::Render);
 }
 
 std::shared_ptr<CommandQueue> GraphicsDeviceContext::computeQueue() {
-    if (computeQueues.empty()) {
-        if (auto queue = device->makeCommandQueue(CommandQueue::Compute); queue) {
-            if (queue->flags() & CommandQueue::Render) {
-                renderQueues.push_back(queue);
-            }
-            if (queue->flags() & CommandQueue::Compute) {
-                computeQueues.push_back(queue);
-            }
-            copyQueues.push_back(queue);
-
-            FVASSERT(queue->flags() & CommandQueue::Compute);
-
-            return queue;
-        }
-    }
-    return computeQueues.front();
+    return commandQueue(CommandQueue::Compute);
 }
 
 std::shared_ptr<CommandQueue> GraphicsDeviceContext::copyQueue() {
-    if (copyQueues.empty()) {
-        if (auto queue = device->makeCommandQueue(CommandQueue::Copy); queue) {
-            if (queue->flags() & CommandQueue::Render) {
-                renderQueues.push_back(queue);
-            }
-            if (queue->flags() & CommandQueue::Compute) {
-                computeQueues.push_back(queue);
-            }
-            copyQueues.push_back(queue);
-
-            return queue;
-        }
-    }
-    return copyQueues.front();
+    return commandQueue(CommandQueue::Copy);
 }
 
 std::shared_ptr<GPUBuffer> GraphicsDeviceContext::makeCPUAccessible(
