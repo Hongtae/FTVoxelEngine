@@ -127,10 +127,10 @@ void runTest(const Ray ray) {
                 if (t < rayResultNearDistance) {
                     // update position, data (payload)
                     const uint32_t p = e.payload;
-                    rayResultNearColor.r = float((p >> 24) & 0xff) / 255.0;
-                    rayResultNearColor.g = float((p >> 16) & 0xff) / 255.0;
-                    rayResultNearColor.b = float((p >> 8) & 0xff) / 255.0;
-                    rayResultNearColor.a = float(p & 0xff) / 255.0;
+                    rayResultNearColor.r = float(p & 0xff) / 255.0;
+                    rayResultNearColor.g = float((p >> 8) & 0xff) / 255.0;
+                    rayResultNearColor.b = float((p >> 16) & 0xff) / 255.0;
+                    rayResultNearColor.a = float((p >> 24) & 0xff) / 255.0;
                     rayResultNearDistance = t;
                 }
             }

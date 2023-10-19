@@ -229,7 +229,7 @@ public:
                             return triangles.at(i);
                         },
                         [&](uint64_t* indices, size_t s, const Vector3& p)->AABBOctree::Payload {
-                            return 0xffffffff;
+                            return Color::nonLinearYellow.rgba8().value;
                         });
                     Log::debug("voxelize done. (test)");
                     if (aabbOctree) {

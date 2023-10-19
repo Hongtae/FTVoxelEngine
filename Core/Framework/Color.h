@@ -7,7 +7,7 @@
 #pragma pack(push, 4)
 namespace FV {
     struct FVCORE_API Color {
-        union RGBA32  ///< 32bit int format (RGBA order).
+        union RGBA8  ///< 32bit int format (RGBA order).
         {
             struct {
                 uint8_t r, g, b, a;
@@ -15,7 +15,7 @@ namespace FV {
             uint8_t bytes[4];
             uint32_t value;
         };
-        union ARGB32  ///< 32bit int format (ARGB order).
+        union ARGB8  ///< 32bit int format (ARGB order).
         {
             struct {
                 uint8_t a, r, g, b;
@@ -31,13 +31,13 @@ namespace FV {
         Color(float _r, float _g, float _b, float _a = 1.0f)
             : r(_r), g(_g), b(_b), a(_a) {
         }
-        Color(RGBA32 rgba)
+        Color(RGBA8 rgba)
             : r(static_cast<float>(rgba.r) / 255.0f)
             , g(static_cast<float>(rgba.g) / 255.0f)
             , b(static_cast<float>(rgba.b) / 255.0f)
             , a(static_cast<float>(rgba.a) / 255.0f) {
         }
-        Color(ARGB32 argb)
+        Color(ARGB8 argb)
             : r(static_cast<float>(argb.r) / 255.0f)
             , g(static_cast<float>(argb.g) / 255.0f)
             , b(static_cast<float>(argb.b) / 255.0f)
@@ -57,8 +57,8 @@ namespace FV {
             float val[4];
         };
 
-        RGBA32 RGBA32Value() const {
-            RGBA32 val = {
+        RGBA8 rgba8() const {
+            RGBA8 val = {
                 static_cast<uint8_t>(std::clamp<int>(static_cast<int>(r * 255.0f), 0, 0xff)),
                 static_cast<uint8_t>(std::clamp<int>(static_cast<int>(g * 255.0f), 0, 0xff)),
                 static_cast<uint8_t>(std::clamp<int>(static_cast<int>(b * 255.0f), 0, 0xff)),
@@ -67,8 +67,8 @@ namespace FV {
             return val;
         }
 
-        ARGB32 ARGB32Value() const {
-            ARGB32 val = {
+        ARGB8 argb8() const {
+            ARGB8 val = {
                 static_cast<uint8_t>(std::clamp<int>(static_cast<int>(a * 255.0f), 0, 0xff)),
                 static_cast<uint8_t>(std::clamp<int>(static_cast<int>(r * 255.0f), 0, 0xff)),
                 static_cast<uint8_t>(std::clamp<int>(static_cast<int>(g * 255.0f), 0, 0xff)),
