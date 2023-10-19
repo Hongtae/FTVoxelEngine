@@ -45,6 +45,6 @@ namespace FV {
             return Vector4(a, b, c, d);
         }
 
-        std::optional<Vector3> rayTest(const Vector3& rayOrigin, const Vector3& rayDir) const;
+        float rayTest(const Vector3& rayOrigin, const Vector3& rayDir) const;
     };
 }

@@ -5,9 +5,9 @@ using namespace FV;
 
 constexpr auto epsilon = std::numeric_limits<float>::epsilon();
 
-std::optional<Vector3> Plane::rayTest(const Vector3& origin, const Vector3& dir) const {
+float Plane::rayTest(const Vector3& origin, const Vector3& dir) const {
     auto distance = dot(origin);
-    if (distance == 0) { return origin; }
+    if (distance == 0) { return 0.0f; }
 
     auto d = dir.normalized();
     auto denom = Vector3::dot(this->normal(), d);
@@ -15,7 +15,7 @@ std::optional<Vector3> Plane::rayTest(const Vector3& origin, const Vector3& dir)
     if (abs(denom) > epsilon) {
         float t = -distance / denom;
         if (t >= 0.0)
-            return origin + d * t;
+            return t;
     }
-    return {};
+    return -1.0f;
 }

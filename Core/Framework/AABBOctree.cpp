@@ -87,10 +87,10 @@ uint32_t AABBOctreeLayer::rayTest(const Vector3& rayOrigin,
         };
 
         auto r = aabb.rayTest(rayStart, rayDir);
-        if (r.has_value()) {
+        if (r >= 0.0f) {
             if (node.isLeaf()) {
                 numHits++;
-                Vector3 hitPoint = r.value().applying(quantize);
+                Vector3 hitPoint = (rayStart + rayDir * r).applying(quantize);
                 if (filter(RayHitResult{ hitPoint, node.payload }) == false)
                     break;
             }
@@ -363,9 +363,9 @@ uint64_t AABBOctree::rayTest(const Vector3& rayOrigin,
         std::function<bool(const RayHitResult&)> filter;
         uint64_t rayTest(const Vector3& start, const Vector3& dir) const {
             auto r = node.aabb().rayTest(start, dir);
-            if (r.has_value()) {
+            if (r >= 0.0f) {
                 if (node.subdivisions.empty()) {
-                    Vector3 hitPoint = r.value().applying(quantize);
+                    Vector3 hitPoint = (start + dir * r).applying(quantize);
                     if (filter(RayHitResult{ hitPoint, node.payload }) == false) {
                         continueRayTest = false;
                     }

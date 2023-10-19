@@ -72,11 +72,8 @@ void VolumeRenderer::finalize() {
     queue = nullptr;
 }
 
-static std::shared_ptr<AABBOctreeLayer> testLayer;
-
 void VolumeRenderer::setOctreeLayer(std::shared_ptr<AABBOctreeLayer> layer) {
     aabbOctreeLayerBuffer = nullptr;
-    testLayer = layer;
     if (layer) {
         FVASSERT_DEBUG(layer->aabb.isNull() == false);
 
@@ -127,29 +124,46 @@ void VolumeRenderer::render(const RenderPassDescriptor&, const Rect& frame) {
 
 #pragma pack(push, 1)
         struct PushConstantData {
-            Matrix4 transform;
+            Matrix4 inversedM;
+            Matrix4 inversedMVP;
+            Color ambientColor;
+            Color lightColor;
+            Vector3 lightDir;
             uint32_t width;
             uint32_t height;
             float depth;
         };
 #pragma pack(pop)
 
+        Vector3 lightDir = { 1, -1, 1 };
+        Color lightColor = { 1, 1, 1, 0.2 };
+        Color ambientColor = { 0.7, 0.7, 0.7, 1};
+
         uint32_t width = texture->width();
         uint32_t height = texture->height();
 
+        auto nodeTM = transform.matrix4();
         auto proj = projection;
         if (proj.matrix._34 != 0.0f) {
             auto f = projection.matrix._22;
             auto aspect = float(width) / float(height);
             proj.matrix._11 = f / aspect;
         }
+
         PushConstantData pcdata = {
-            view.matrix4().concatenating(proj.matrix).inverted(),
+            nodeTM.inverted(),
+            nodeTM
+                .concatenating(view.matrix4())
+                .concatenating(proj.matrix)
+                .inverted(),
+            ambientColor,
+            lightColor,
+            lightDir,
             width, height
         };
         pcdata.depth = [&] {
-            auto start4 = Vector4(0, 0, 0, 1).applying(pcdata.transform);
-            auto end4 = Vector4(0, 0, 1, 1).applying(pcdata.transform);
+            auto start4 = Vector4(0, 0, 0, 1).applying(pcdata.inversedMVP);
+            auto end4 = Vector4(0, 0, 1, 1).applying(pcdata.inversedMVP);
             auto start = Vector3(start4.x, start4.y, start4.z) / start4.w;
             auto end = Vector3(end4.x, end4.y, end4.z) / end4.w;
             return (end - start).magnitude();

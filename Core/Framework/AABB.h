@@ -90,7 +90,7 @@ namespace FV {
             return (max - min);
         }
 
-        std::optional<Vector3> rayTest(const Vector3& rayOrigin, const Vector3& rayDir) const;
+        float rayTest(const Vector3& rayOrigin, const Vector3& rayDir) const;
         bool overlapTest(const Plane& plane) const;
         bool overlapTest(const Triangle& tri) const;
         bool overlapTest(const AABB& aabb) const;

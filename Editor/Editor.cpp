@@ -337,6 +337,12 @@ public:
         Transform modelTransform = Transform();
 
         while (stop.stop_requested() == false) {
+            {
+                auto t = std::chrono::high_resolution_clock::now();
+                std::chrono::duration<double> d = t - timestamp;
+                timestamp = t;
+                delta = d.count();
+            }
 
             for (auto& renderer : this->renderers) {
                 renderer->update(delta);
@@ -390,10 +396,8 @@ public:
 
             auto t = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> d = t - timestamp;
-            timestamp = t;
-            delta = d.count();
 
-            auto interval = std::max(frameInterval - delta, 0.0);
+            auto interval = std::max(frameInterval - d.count(), 0.0);
             if (interval > 0.0) {
                 std::this_thread::sleep_for(std::chrono::duration<double>(interval));
             } else {

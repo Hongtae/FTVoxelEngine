@@ -71,9 +71,9 @@ uint32_t BVH::rayTest(const Vector3& rayOrigin, const Vector3& dir, std::functio
         };
 
         auto r = aabb.rayTest(rayStart, rayDir);
-        if (r.has_value()) {
+        if (r >= 0.0f) {
             numHits++;
-            Vector3 hitPoint = r.value().applying(quantize);
+            Vector3 hitPoint = (rayOrigin + dir * r).applying(quantize);
             if (filter(hitPoint) == false)
                 break;
             index++;

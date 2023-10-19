@@ -21,7 +21,7 @@ AABB::AABB(const Vector3& _min, const Vector3& _max)
     : min(_min), max(_max) {
 }
 
-std::optional<Vector3> AABB::rayTest(const Vector3& origin, const Vector3& dir) const {
+float AABB::rayTest(const Vector3& origin, const Vector3& dir) const {
     if (isNull()) return {};
 
     bool inside = true;
@@ -42,7 +42,7 @@ std::optional<Vector3> AABB::rayTest(const Vector3& origin, const Vector3& dir) 
         }
     }
     if (inside) {
-        return origin;
+        return 0.0f;
     }
     // calculate maxT to find intersection point.
     uint32_t plane = 0;
@@ -50,9 +50,9 @@ std::optional<Vector3> AABB::rayTest(const Vector3& origin, const Vector3& dir) 
     if (maxT.z > maxT.val[plane])	plane = 2;		// plane of axis Z
 
     //	if (maxT.val[plane] < 0)
-    //		return {};
+    //		return -1.0;
     if (((uint32_t&)maxT.val[plane]) & 0x80000000)	// negative
-        return {};
+        return -1.0;
 
     for (int i = 0; i < 3; ++i) {
         if (i != plane) {
@@ -65,7 +65,7 @@ std::optional<Vector3> AABB::rayTest(const Vector3& origin, const Vector3& dir) 
                 return {};
         }
     }
-    return coord;
+    return (coord - origin).magnitude();
 }
 
 bool AABB::overlapTest(const Plane& plane) const {
