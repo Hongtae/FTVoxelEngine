@@ -51,6 +51,7 @@
 #include "Framework/ShaderFunction.h"
 #include "Framework/ShaderModule.h"
 #include "Framework/ShaderResource.h"
+#include "Framework/Sphere.h"
 #include "Framework/SwapChain.h"
 #include "Framework/Texture.h"
 #include "Framework/Transform.h"

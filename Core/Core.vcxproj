@@ -271,6 +271,7 @@
     <ClInclude Include="Framework\ShaderFunction.h" />
     <ClInclude Include="Framework\ShaderModule.h" />
     <ClInclude Include="Framework\ShaderResource.h" />
+    <ClInclude Include="Framework\Sphere.h" />
     <ClInclude Include="Framework\SwapChain.h" />
     <ClInclude Include="Framework\Texture.h" />
     <ClInclude Include="Framework\Transform.h" />
