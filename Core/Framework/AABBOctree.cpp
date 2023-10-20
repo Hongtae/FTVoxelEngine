@@ -154,10 +154,14 @@ AABBOctree::makeTree(uint32_t maxDepth,
     if (aabb.isNull())
         return nullptr;
 
-    Vector3 scale = aabb.extents();
-    for (float& s : scale.val) {
-        if (s == 0.0f) s = 1.0;
-    }
+    Vector3 center = aabb.center();
+    Vector3 extents = aabb.extents();
+    float maxExtent = std::max({extents.x, extents.y, extents.z}) * 0.5f;
+
+    aabb.min = center - Vector3(maxExtent, maxExtent, maxExtent);
+    aabb.max = center + Vector3(maxExtent, maxExtent, maxExtent);
+
+    auto scale = aabb.extents();
 
     auto quantize = AffineTransform3::identity.scaled(scale).translated(aabb.min);
     auto normalize = quantize.inverted();

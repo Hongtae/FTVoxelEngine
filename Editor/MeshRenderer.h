@@ -25,6 +25,8 @@ public:
     ViewTransform view;
     ProjectionTransform projection;
     Transform transform;
+    Vector3 lightDir;
+
     std::shared_ptr<DepthStencilState> depthStencilState;
 
     AABB aabb;

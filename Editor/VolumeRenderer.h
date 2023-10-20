@@ -17,6 +17,7 @@ public:
     }
 
     void setOctreeLayer(std::shared_ptr<AABBOctreeLayer> layer);
+    const AABBOctreeLayer* layer() const { return aabbOctreeLayer.get(); }
 
     std::shared_ptr<AABBOctree> aabbOctree;
 
@@ -27,10 +28,12 @@ public:
     ViewTransform view;
     ProjectionTransform projection;
     Transform transform;
+    Vector3 lightDir;
 
     std::shared_ptr<CommandQueue> queue;
     struct { uint32_t x, y, z; } threadgroupSize;
 
 private:
+    std::shared_ptr<AABBOctreeLayer> aabbOctreeLayer;
     std::shared_ptr<GPUBuffer> aabbOctreeLayerBuffer;
 };

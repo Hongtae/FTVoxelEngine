@@ -207,6 +207,20 @@ public:
         }
         ImGui::End();
 
+        if (ImGui::Begin("Lighting")) {
+            static int rotate[2] = {};
+            if (ImGui::SliderInt2("Rotate-Roll/Yaw", rotate, 0, 359, nullptr, ImGuiSliderFlags_AlwaysClamp)) {
+                auto qz = Quaternion(Vector3(0, 0, 1), degreeToRadian((float)rotate[0]));
+                auto qy = Quaternion(Vector3(0, 1, 0), degreeToRadian((float)rotate[1]));
+                Vector3 v = { 0, 1, 0 };
+                v = v.applying(qz);
+                v = v.applying(qy);
+                meshRenderer->lightDir = v;
+                volumeRenderer->lightDir = v;
+            }
+        }
+        ImGui::End();
+
         if (ImGui::Begin("Voxelize")) {
 
             bool voxelizationInProgress = false;
@@ -234,6 +248,7 @@ public:
                     Log::debug("voxelize done. (test)");
                     if (aabbOctree) {
                         volumeRenderer->aabbOctree = aabbOctree;
+                        volumeRenderer->setOctreeLayer(nullptr);
                     }
                 } else {
                     Log::error("Invalid model");
@@ -251,17 +266,30 @@ public:
 
             auto aabbOctree = volumeRenderer->aabbOctree.get();
             if (aabbOctree) {
-                ImGui::Text(std::format("MaxDepth: {}", aabbOctree->maxDepth).c_str());
-                if (ImGui::Button("Make Layer Buffer")) {
-                    auto maxDepth = std::min(uint32_t(depth), aabbOctree->maxDepth);
-                    Log::info(std::format("make layer buffer. (maxDepth: {})", maxDepth));
+                int maxDepth = aabbOctree->maxDepth;
+                ImGui::Text(std::format("MaxDepth: {}", maxDepth).c_str());
+
+                static int layerDepth = 0;
+                if (layerDepth > maxDepth) layerDepth = maxDepth;
+
+                bool valueChanged = false;
+                if (ImGui::SliderInt("Layer Depth", &layerDepth, 0, maxDepth, nullptr, ImGuiSliderFlags_None)) {
+                    valueChanged = true;
+                }
+                if (volumeRenderer->layer() == nullptr) {
+                    valueChanged = true;
+                }
+
+                if (valueChanged) {
+                    auto depth = std::min(uint32_t(layerDepth), aabbOctree->maxDepth);
+                    Log::info(std::format("make layer buffer. (maxDepth: {})", depth));
 
                     auto start = std::chrono::high_resolution_clock::now();
                     auto layer = aabbOctree->makeLayer(depth);
                     auto end = std::chrono::high_resolution_clock::now();
                     auto elapsed = std::chrono::duration<double>(end - start);
                     Log::info(std::format(enUS_UTF8,
-                        "aabb-octree make layer with depth:{}, nodes:{:Ld} ({:Ld} bytes), elapsed: {}",
+                                          "aabb-octree make layer with depth:{}, nodes:{:Ld} ({:Ld} bytes), elapsed: {}",
                                           maxDepth,
                                           layer->data.size(),
                                           layer->data.size() * sizeof(AABBOctreeLayer::Node),

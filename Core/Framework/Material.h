@@ -19,7 +19,7 @@
 #include "GPUBuffer.h"
 #include "ShaderBindingSet.h"
 #include "MaterialSemantics.h"
-
+#include "Logger.h"
 
 namespace FV {
     struct MaterialProperty {
@@ -117,9 +117,44 @@ namespace FV {
         MaterialProperty(MaterialSemantic s, const Matrix4& v)
             : MaterialProperty(s, v.val) {
         }
-
         MaterialProperty()
             : semantic(MaterialSemantic::UserDefined), value(std::monostate{}) {
+        }
+
+        template <typename T, typename U, typename = std::enable_if_t<std::is_convertible_v<U, T>>>
+        std::vector<T> _mapVector(const std::vector<U>& vector) const {
+            std::vector<T> mapped;
+            mapped.reserve(vector.size());
+            for (auto v : vector) mapped.push_back(static_cast<T>(v));
+            return mapped;
+        }
+        template <typename T> std::vector<T> _mapVector(std::monostate) const {
+            Log::debug(std::format("MaterialProperty:{} has no value!", (int)semantic));
+            return {};
+        }
+        template <typename T>
+        std::vector<T> _mapVector(...) const {
+            Log::error(std::format("MaterialProperty:{} unable to cast value type: {}",
+                                   (int)semantic, typeid(T).name()));
+            return {};
+        }
+
+        template <typename T>
+        std::vector<T> map() const {
+            return std::visit(
+                [this](auto&& arg) { return _mapVector<T>(arg); }, value);
+        }
+
+        template <typename T, typename U, typename = std::enable_if_t<std::is_convertible_v<U, T>>>
+        std::true_type _convertible(const std::vector<U>&) const { return {}; }
+        template <typename T>
+        std::false_type _convertible(...) const { return {}; }
+
+        template <typename T>
+        bool isConvertible() const {
+            return std::visit(
+                [this](auto&& arg) {
+                    return decltype(_convertible<T>(arg))::value; }, value);
         }
     };
 

@@ -6,7 +6,8 @@ MeshRenderer::MeshRenderer()
     , projection{}
     , transform{}
     , aabb{}
-    , shader{} {
+    , shader{}
+    , lightDir{ 1, 0, 0 } {
 }
 
 MeshRenderer::~MeshRenderer() {
@@ -79,13 +80,22 @@ void MeshRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
     if (model && model->scenes.empty() == false) {
         //transform.rotate(Quaternion(Vector3(0, 1, 0), std::numbers::pi * delta * 0.4));
 
+        Vector3 lightColor = { 1, 1, 1 };
+        Vector3 ambientColor = { 0.3, 0.3, 0.3 };
+
         auto& scene = model->scenes.at(model->defaultSceneIndex);
         for (auto& node : scene.nodes)
             ForEachNode{ node }(
                 [&](auto& node) {
                     if (node.mesh.has_value()) {
-                        node.mesh.value().updateShadingProperties(&sceneState);
-                        node.mesh.value().encodeRenderCommand(encoder.get(), 1, 0);
+                        auto& mesh = node.mesh.value();
+                        if (auto material = mesh.material.get(); material) {
+                            material->setProperty(ShaderBindingLocation::pushConstant(64), lightDir);
+                            material->setProperty(ShaderBindingLocation::pushConstant(80), lightColor);
+                            material->setProperty(ShaderBindingLocation::pushConstant(96), ambientColor);
+                        }
+                        mesh.updateShadingProperties(&sceneState);
+                        mesh.encodeRenderCommand(encoder.get(), 1, 0);
                     }
                 });
     }
@@ -101,7 +111,6 @@ Model* MeshRenderer::loadModel(std::filesystem::path path,
         auto device = queue->device().get();
 
         // set user-defined property values (lighting)
-        Vector3 lightDir = { 1, -1, 1 };
         Vector3 lightColor = { 1, 1, 1 };
         Vector3 ambientColor = { 0.3, 0.3, 0.3 };
 
