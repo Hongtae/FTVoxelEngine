@@ -215,9 +215,9 @@ void loadMaterials(LoaderContext& context) {
         material->name = glTFMaterial.name;
 
         if (_stricmp(glTFMaterial.alphaMode.c_str(), "BLEND") == 0) {
-            material->attachments.front().blendState = BlendState::defaultAlpha;
+            material->attachments.front().blendState = BlendState::alphaBlend;
         } else {
-            material->attachments.front().blendState = BlendState::defaultOpaque;
+            material->attachments.front().blendState = BlendState::opaque;
         }
 
         if (glTFMaterial.doubleSided)

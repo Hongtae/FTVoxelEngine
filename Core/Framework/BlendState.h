@@ -52,13 +52,13 @@ namespace FV {
         ColorWriteMask writeMask = ColorWriteMaskAll;
 
         // preset
-        static const BlendState	defaultOpaque;
-        static const BlendState	defaultAlpha;
-        static const BlendState	defaultMultiply;
-        static const BlendState	defaultScreen;
-        static const BlendState	defaultDarken;
-        static const BlendState	defaultLighten;
-        static const BlendState	defaultLinearBurn;
-        static const BlendState	defaultLinearDodge;
+        static const BlendState	opaque;
+        static const BlendState	alphaBlend;
+        static const BlendState	multiply;
+        static const BlendState	screen;
+        static const BlendState	darken;
+        static const BlendState	lighten;
+        static const BlendState	linearBurn;
+        static const BlendState	linearDodge;
     };
 }

@@ -24,7 +24,7 @@ out gl_PerVertex
 void main() 
 {
 	gl_Position = pc.transform * vec4(inPos, 1.0);
-	outNormal = normalize(inNormal * mat3(pc.transform));
+	outNormal = normalize(inNormal);
 	outColor = vec3(1, 1, 1);
 	outTexCoord = inTexCoord;
 }

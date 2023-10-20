@@ -7,7 +7,7 @@ MeshRenderer::MeshRenderer()
     , transform{}
     , aabb{}
     , shader{}
-    , lightDir{ 1, 0, 0 } {
+    , lightDir{ 0, 1, 0 } {
 }
 
 MeshRenderer::~MeshRenderer() {

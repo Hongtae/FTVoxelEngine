@@ -6,7 +6,7 @@ VolumeRenderer::VolumeRenderer()
     : view{}
     , projection{}
     , transform{}
-    , lightDir{ 1, 0, 0 } {
+    , lightDir{ 0, 1, 0 } {
 }
 
 VolumeRenderer::~VolumeRenderer() {

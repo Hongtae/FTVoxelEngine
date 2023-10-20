@@ -2,7 +2,7 @@
 
 using namespace FV;
 
-const BlendState BlendState::defaultOpaque {
+const BlendState BlendState::opaque {
     false,
     BlendFactor::One,
     BlendFactor::One,
@@ -11,7 +11,7 @@ const BlendState BlendState::defaultOpaque {
     BlendOperation::Add
 };
 
-const BlendState BlendState::defaultAlpha {
+const BlendState BlendState::alphaBlend {
     true,
     BlendFactor::SourceAlpha,
     BlendFactor::OneMinusDestinationAlpha,
@@ -21,7 +21,7 @@ const BlendState BlendState::defaultAlpha {
     BlendOperation::Add
 };
 
-const BlendState BlendState::defaultMultiply {
+const BlendState BlendState::multiply {
     true,
     BlendFactor::Zero,
     BlendFactor::Zero,
@@ -31,7 +31,7 @@ const BlendState BlendState::defaultMultiply {
     BlendOperation::Add
 };
 
-const BlendState BlendState::defaultScreen {
+const BlendState BlendState::screen {
     true,
     BlendFactor::OneMinusDestinationColor,
     BlendFactor::OneMinusDestinationColor,
@@ -41,7 +41,7 @@ const BlendState BlendState::defaultScreen {
     BlendOperation::Add
 };
 
-const BlendState BlendState::defaultDarken {
+const BlendState BlendState::darken {
     true,
     BlendFactor::One,
     BlendFactor::One,
@@ -51,7 +51,7 @@ const BlendState BlendState::defaultDarken {
     BlendOperation::Min
 };
 
-const BlendState BlendState::defaultLighten {
+const BlendState BlendState::lighten {
     true,
     BlendFactor::One,
     BlendFactor::One,
@@ -61,7 +61,7 @@ const BlendState BlendState::defaultLighten {
     BlendOperation::Max
 };
 
-const BlendState BlendState::defaultLinearBurn {
+const BlendState BlendState::linearBurn {
     true,
     BlendFactor::One,
     BlendFactor::One,
@@ -71,7 +71,7 @@ const BlendState BlendState::defaultLinearBurn {
     BlendOperation::Subtract
 };
 
-const BlendState BlendState::defaultLinearDodge {
+const BlendState BlendState::linearDodge {
     true,
     BlendFactor::One,
     BlendFactor::One,

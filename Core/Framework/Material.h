@@ -223,7 +223,7 @@ namespace FV {
             BlendState blendState;
         };
         std::vector<RenderPassAttachment> attachments = {
-            { PixelFormat::RGBA8Unorm, BlendState::defaultAlpha }
+            { PixelFormat::RGBA8Unorm, BlendState::alphaBlend }
         };
         PixelFormat depthFormat = PixelFormat::Depth24Unorm_stencil8;
         TriangleFillMode triangleFillMode = TriangleFillMode::Fill;
