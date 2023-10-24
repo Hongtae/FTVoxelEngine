@@ -9,6 +9,8 @@ using namespace FV;
 struct LoaderContext {
     tinygltf::Model model;
     CommandQueue* queue;
+
+    std::shared_ptr<Texture> defaultTexture;
     std::shared_ptr<SamplerState> defaultSampler;
 
     std::vector<std::shared_ptr<GPUBuffer>> buffers;
@@ -213,6 +215,8 @@ void loadMaterials(LoaderContext& context) {
 
         auto material = std::make_shared<Material>();
         material->name = glTFMaterial.name;
+        material->defaultTexture = context.defaultTexture;
+        material->defaultSampler = context.defaultSampler;
 
         if (_stricmp(glTFMaterial.alphaMode.c_str(), "BLEND") == 0) {
             material->attachments.front().blendState = BlendState::alphaBlend;
@@ -436,6 +440,8 @@ void loadMeshes(LoaderContext& context) {
                 mesh.material = context.materials[glTFPrimitive.material];
             } else {
                 mesh.material = std::make_shared<Material>("default");
+                mesh.material->defaultTexture = context.defaultTexture;
+                mesh.material->defaultSampler = context.defaultSampler;
             }
 
             SceneNode meshNode = {};
@@ -563,6 +569,8 @@ std::shared_ptr<Model> loadModel(std::filesystem::path path, CommandQueue* queue
     if (result) {
         tinygltf::Model& model = context.model;
 
+        auto defaultImage = Image(1, 1, ImagePixelFormat::RGBA8, Color(1, 0, 1, 1).rgba8().bytes);
+        context.defaultTexture = defaultImage.makeTexture(queue, TextureUsageSampled | TextureUsageStorage);
         context.defaultSampler = queue->device()->makeSamplerState(
             {
                 SamplerAddressMode::Repeat,
@@ -689,6 +697,138 @@ std::vector<Triangle> Model::triangleList(int sceneIndex, GraphicsDeviceContext*
                     }
                 });
         return triangles;
+    }
+    return {};
+}
+
+std::vector<MaterialFace> Model::faceList(int sceneIndex, GraphicsDeviceContext* graphicsContext) const {
+    auto getMeshFaces = [&](const Mesh& mesh) -> std::vector<MaterialFace> {
+        if (mesh.primitiveType != PrimitiveType::Triangle &&
+            mesh.primitiveType != PrimitiveType::TriangleStrip)
+            return {};
+
+        std::vector<MaterialFace> faces;
+
+        std::vector<Vector3> positions;
+        std::vector<Vector2> uvs;
+        std::vector<Vector4> colors;
+
+        // positions
+        mesh.enumerateVertexBufferContent(
+            VertexAttributeSemantic::Position, graphicsContext,
+            [&](const void* data, VertexFormat format, uint32_t index)->bool {
+                if (format == VertexFormat::Float3) {
+                    positions.push_back(*(const Vector3*)data);
+                    return true;
+                }
+                return false;
+            });
+        // tex uvs
+        mesh.enumerateVertexBufferContent(
+            VertexAttributeSemantic::TextureCoordinates, graphicsContext,
+            [&](const void* data, VertexFormat format, uint32_t index)->bool {
+                if (format == VertexFormat::Float2) {
+                    uvs.push_back(*(const Vector2*)data);
+                    return true;
+                }
+                return false;
+            });
+        // vertex colors
+        mesh.enumerateVertexBufferContent(
+            VertexAttributeSemantic::Color, graphicsContext,
+            [&](const void* data, VertexFormat format, uint32_t index)->bool {
+                if (format == VertexFormat::Float3) {
+                    auto vector = *(const Vector3*)data;
+                    colors.push_back({ vector, 1.0f });
+                    return true;
+                } else if (format == VertexFormat::Float4) {
+                    colors.push_back(*(const Vector4*)data);
+                    return true;
+                }
+                return false;
+            });
+  
+        if (uvs.size() < positions.size())
+            uvs.resize(positions.size(), Vector2::zero);
+        if (colors.size() < positions.size())
+            colors.resize(positions.size(), Vector4(1, 1, 1, 1));
+
+        std::vector<uint32_t> indices;
+        if (mesh.indexBuffer) {
+            indices.reserve(mesh.indexCount);
+            mesh.enumerateIndexBufferContent(
+                graphicsContext,
+                [&](uint32_t index)->bool {
+                    indices.push_back(index);
+                    return true;
+                });
+        } else {
+            indices.reserve(positions.size());
+            for (int i = 0; i < positions.size(); ++i)
+                indices.push_back(i);
+        }
+
+        auto material = mesh.material.get();
+        if (mesh.primitiveType == PrimitiveType::TriangleStrip) {
+            auto numTris = indices.size() > 2 ? indices.size() - 2 : 0;
+            faces.reserve(numTris);
+
+            for (int i = 0; i < numTris; ++i) {
+                uint32_t idx[3] = {
+                    indices.at(i),
+                    indices.at(i + 1), 
+                    indices.at(i + 2)
+                };
+                if (i % 2)
+                    std::swap(idx[0], idx[1]);
+
+                MaterialFace face = {
+                    .vertex = {
+                        { positions.at(idx[0]), uvs.at(idx[0]), colors.at(idx[0]) },
+                        { positions.at(idx[1]), uvs.at(idx[1]), colors.at(idx[1]) },
+                        { positions.at(idx[2]), uvs.at(idx[2]), colors.at(idx[2]) },
+                    },
+                    .material = material,
+                };
+                faces.push_back(face);
+            }
+        } else {
+            auto numTris = indices.size() / 3;
+            faces.reserve(numTris);
+            for (int i = 0; i < numTris; ++i) {
+                uint32_t idx[3] = {
+                    indices.at(i * 3),
+                    indices.at(i * 3 + 1),
+                    indices.at(i * 3 + 2)
+                };
+
+                MaterialFace face = {
+                    .vertex = {
+                        { positions.at(idx[0]), uvs.at(idx[0]), colors.at(idx[0]) },
+                        { positions.at(idx[1]), uvs.at(idx[1]), colors.at(idx[1]) },
+                        { positions.at(idx[2]), uvs.at(idx[2]), colors.at(idx[2]) },
+                    },
+                    .material = material,
+                };
+                faces.push_back(face);
+            }
+        }
+        return faces;
+    };
+
+    if (sceneIndex >= 0 && sceneIndex < this->scenes.size()) {
+        std::vector<MaterialFace> faces;
+        auto& scene = this->scenes.at(sceneIndex);
+        for (auto& node : scene.nodes)
+            ForEachNodeConst{ node }(
+                [&](auto& node) {
+                    if (node.mesh.has_value()) {
+                        const Mesh& mesh = node.mesh.value();
+                        auto f = getMeshFaces(mesh);
+                        faces.insert(faces.end(), f.begin(), f.end());
+                    }
+                });
+        return faces;
     }
     return {};
 }

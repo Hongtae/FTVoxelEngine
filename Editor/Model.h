@@ -8,6 +8,16 @@
 
 using namespace FV;
 
+struct MaterialFace {
+    struct Vertex {
+        Vector3 pos;
+        Vector2 uv;
+        Vector4 color;
+    };
+    Vertex vertex[3];
+    Material* material;
+};
+
 struct Model {
     struct Scene {
         std::string name;
@@ -18,6 +28,7 @@ struct Model {
     int defaultSceneIndex;
 
     std::vector<Triangle> triangleList(int scene, GraphicsDeviceContext* graphicsContext) const;
+    std::vector<MaterialFace> faceList(int scene, GraphicsDeviceContext* graphicsContext) const;
 };
 
 struct ForEachNode {

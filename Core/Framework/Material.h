@@ -233,6 +233,9 @@ namespace FV {
         std::unordered_map<Semantic, Property> properties;
         std::unordered_map<BindingLocation, Property> userDefinedProperties;
 
+        std::shared_ptr<Texture> defaultTexture;
+        std::shared_ptr<SamplerState> defaultSampler;
+
         ShaderMap shader;
     };
 }

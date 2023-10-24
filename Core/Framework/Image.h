@@ -6,6 +6,7 @@
 #include <filesystem>
 #include "Texture.h"
 #include "CommandQueue.h"
+#include "Rect.h"
 
 namespace FV {
     enum class ImagePixelFormat {
@@ -46,7 +47,7 @@ namespace FV {
 
     class FVCORE_API Image : public std::enable_shared_from_this<Image> {
     public:
-        Image(uint32_t width, uint32_t height, ImagePixelFormat, const void* data);
+        Image(uint32_t width, uint32_t height, ImagePixelFormat, const void* data = nullptr);
         Image(const void* encoded, size_t);
         Image(const std::vector<uint8_t>& encodedData);
         Image(const std::filesystem::path& path);
@@ -65,7 +66,15 @@ namespace FV {
         std::shared_ptr<Image> resample(uint32_t width, uint32_t height, ImagePixelFormat format, ImageInterpolation interpolation) const;
 
         std::shared_ptr<Texture> makeTexture(CommandQueue*, uint32_t usage = TextureUsageSampled) const;
+        static std::shared_ptr<Image> fromTexture(std::shared_ptr<Texture> texture, CommandQueue*);
+
+        struct Pixel { double r, g, b, a; };
+        Pixel readPixel(uint32_t x, uint32_t y) const;
+        void writePixel(uint32_t x, uint32_t y, const Pixel&);
+        Pixel interpolate(const Rect& rect, ImageInterpolation) const;
+
     private:
+        Pixel _interpolate(float x1, float x2, float y1, float y2, ImageInterpolation) const;
         std::vector<uint8_t> data;
 
         struct _DecodeContext;

@@ -53,6 +53,6 @@ namespace FV {
 
     static_assert(sizeof(Float16) == 2, "float16 should be 2 bytes!");
 
-    inline Float16 abs(Float16 f) { return f.abs(); }
+    //inline Float16 abs(Float16 f) { return f.abs(); }
 }
 #pragma pack(pop)

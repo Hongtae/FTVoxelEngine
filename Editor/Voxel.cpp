@@ -8,11 +8,11 @@ std::shared_ptr<AABBOctree> voxelize(uint32_t maxDepth,
                                      uint64_t numTriangles,
                                      uint64_t baseIndex,
                                      TriangleQuery tq,
-                                     PayloadQuery pq) {
+                                     MaterialQuery mq) {
 
     auto start = std::chrono::high_resolution_clock::now();
 
-    auto octrees = AABBOctree::makeTree(maxDepth, numTriangles, baseIndex, tq, pq);
+    auto octrees = AABBOctree::makeTree(maxDepth, numTriangles, baseIndex, tq, mq);
 
     auto end = std::chrono::high_resolution_clock::now();
     auto elapsed = std::chrono::duration<double>(end - start);

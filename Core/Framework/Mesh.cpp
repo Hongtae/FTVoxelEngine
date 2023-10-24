@@ -741,6 +741,10 @@ uint32_t Mesh::bindMaterialTextures(MaterialSemantic semantic, const ShaderResou
                 }, it->second.value);
         }
     }
+
+    if (textures.empty() && material->defaultTexture)
+        textures.push_back(material->defaultTexture);
+
     if (textures.empty() == false) {
         uint32_t n = std::max(resource.count, uint32_t(textures.size()));
         bindingSet->setTextureArray(resource.binding, n, textures.data());
@@ -785,6 +789,10 @@ uint32_t Mesh::bindMaterialSamplers(MaterialSemantic semantic, const ShaderResou
                 }, it->second.value);
         }
     }
+
+    if (samplers.empty() && material->defaultSampler)
+        samplers.push_back(material->defaultSampler);
+
     if (samplers.empty() == false) {
         uint32_t n = std::max(resource.count, uint32_t(samplers.size()));
         bindingSet->setSamplerStateArray(resource.binding, n, samplers.data());

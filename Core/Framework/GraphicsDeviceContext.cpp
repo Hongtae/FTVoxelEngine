@@ -124,11 +124,13 @@ std::shared_ptr<GPUBuffer> GraphicsDeviceContext::makeCPUAccessible(
         cbuffer->addCompletedHandler(
             [cond] // copying cond to avoid destruction due to scope out
             {
+                std::unique_lock lock(std::get<0>(*cond));
                 std::get<1>(*cond).notify_all();
             });
-        cbuffer->commit();
 
         std::unique_lock lock(std::get<0>(*cond));
+        cbuffer->commit();
+
         if (auto status = std::get<1>(*cond)
             .wait_for(lock, std::chrono::duration<double>(timeout));
             status == std::cv_status::timeout) {

@@ -91,7 +91,7 @@ uint32_t AABBOctreeLayer::rayTest(const Vector3& rayOrigin,
             if (node.isLeaf()) {
                 numHits++;
                 Vector3 hitPoint = (rayStart + rayDir * r).applying(quantize);
-                if (filter(RayHitResult{ hitPoint, node.payload }) == false)
+                if (filter(RayHitResult{ hitPoint, &node }) == false)
                     break;
             }
             index++;
@@ -141,7 +141,7 @@ AABBOctree::makeTree(uint32_t maxDepth,
                      uint64_t numTriangles,
                      uint64_t baseIndex,
                      TriangleQuery triangleQuery,
-                     PayloadQuery payloadQuery) {
+                     MaterialQuery materialQuery) {
     std::vector<Triangle> triangles;
     triangles.reserve(numTriangles);
 
@@ -186,7 +186,7 @@ AABBOctree::makeTree(uint32_t maxDepth,
         uint32_t maxDepth;
         std::vector<uint64_t> triangles; // overlapped-triangles
         TriangleQuery& triangleQuery;
-        PayloadQuery& payloadQuery;
+        MaterialQuery& materialQuery;
         void operator() (int depthLevel, std::vector<uint64_t>& buffer, Counter& counter) {
             if (depthLevel <= 0) return;
 
@@ -218,12 +218,23 @@ AABBOctree::makeTree(uint32_t maxDepth,
                         buffer.push_back(t);
                 }
                 if (buffer.empty() == false) {
-                    child.payload = payloadQuery(buffer.data(), buffer.size(), child.center);
                     if (depthLevel > 1) {
-                        Subdivider div{ child, maxDepth, buffer, triangleQuery, payloadQuery };
+                        Subdivider div{ child, maxDepth, buffer, triangleQuery, materialQuery };
                         div(depthLevel - 1, buffer, counter);
                     } else {
                         counter.numLeafNodes++;
+                    }
+                    if (child.subdivisions.empty()) {
+                        child.material = materialQuery(buffer.data(), buffer.size(), child.center);
+                    } else {
+                        child.material = child.subdivisions.front().material;
+                        Vector4 color = { 0, 0, 0, 0 };
+                        for (auto& s : child.subdivisions) {
+                            auto c = Color(s.color).vector4();
+                            color += c;
+                        }
+                        color = color / float(child.subdivisions.size());
+                        child.color = Color(color).rgba8();
                     }
                     node.subdivisions.push_back(child);
                     counter.numNodes++;
@@ -233,20 +244,17 @@ AABBOctree::makeTree(uint32_t maxDepth,
         }
     };
 
-    TriangleQuery normalizedTriangleQuery = [&](uint64_t index) -> const Triangle& {
+    TriangleQuery normalizedTriangleQuery = [&](uint64_t index) -> Triangle {
         FVASSERT_DEBUG(index >= baseIndex);
         return triangles.at(index - baseIndex);
     };
-    PayloadQuery quantizedTrianglePayloadQuery = [&](uint64_t* indices, size_t size, const Vector3& position) -> AABBOctree::Payload {
-        return payloadQuery(indices, size, position.applying(quantize));
+    MaterialQuery quantizedTriangleMaterialQuery = [&](uint64_t* indices, size_t size, const Vector3& position) -> AABBOctree::Material {
+        return materialQuery(indices, size, position.applying(quantize));
     };
 
     Node node = { Vector3(0.5f, 0.5f, 0.5f), 0, 0, {} };
-    node.payload = payloadQuery(triangleIndices.data(), triangleIndices.size(),
-                                node.center.applying(quantize));
-
     auto sub = Subdivider{ node, maxDepth, std::move(triangleIndices),
-        normalizedTriangleQuery, quantizedTrianglePayloadQuery };
+        normalizedTriangleQuery, quantizedTriangleMaterialQuery };
 
     std::vector<uint64_t> buffer;
     Counter counter{ 0, 0 };
@@ -254,6 +262,20 @@ AABBOctree::makeTree(uint32_t maxDepth,
     if (counter.numLeafNodes == 0)
         counter.numLeafNodes = 1; // root
     counter.numNodes += 1; // root
+
+    if (node.subdivisions.empty()) {
+        node.material = materialQuery(triangleIndices.data(), triangleIndices.size(),
+                                      node.center.applying(quantize));
+    } else {
+        node.material = node.subdivisions.front().material;
+        Vector4 color = { 0, 0, 0, 0 };
+        for (auto& s : node.subdivisions) {
+            auto c = Color(s.color).vector4();
+            color += c;
+        }
+        color = color / float(node.subdivisions.size());
+        node.color = Color(color).rgba8();
+    }
 
     auto octrees = std::make_shared<AABBOctree>();
     octrees->root = std::move(node);
@@ -280,8 +302,8 @@ std::shared_ptr<AABBOctreeLayer> AABBOctree::makeLayer(uint32_t maxDepth) const 
             n.depth = node.depth;
             n.flags = 0;
             if (node.subdivisions.empty() || node.depth >= maxDepth) {
-                n.flags |= AABBOctreeLayer::FlagPayload;
-                n.payload = node.payload;
+                n.flags |= AABBOctreeLayer::FlagMaterial;
+                n.material = node.material;
             } else {
                 for (auto& sub : node.subdivisions) {
                     MakeLayerNodeArray{ sub, maxDepth }(nodes);
@@ -370,7 +392,7 @@ uint64_t AABBOctree::rayTest(const Vector3& rayOrigin,
             if (r >= 0.0f) {
                 if (node.subdivisions.empty()) {
                     Vector3 hitPoint = (start + dir * r).applying(quantize);
-                    if (filter(RayHitResult{ hitPoint, node.payload }) == false) {
+                    if (filter(RayHitResult{ hitPoint, &node }) == false) {
                         continueRayTest = false;
                     }
                     return 1;
