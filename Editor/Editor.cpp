@@ -161,6 +161,113 @@ public:
         }
     }
 
+    void voxelize(int depth) {
+        auto model = meshRenderer->model.get();
+        if (model) {
+            auto faces = model->faceList(model->defaultSceneIndex, graphicsContext.get());
+            std::unordered_map<Texture*, std::shared_ptr<Image>> cpuAccessibleImages;
+
+            auto aabbOctree = ::voxelize(
+                depth, faces.size(), 0,
+                [&](uint64_t i)-> Triangle {
+                    return {
+                        faces.at(i).vertex[0].pos,
+                        faces.at(i).vertex[1].pos,
+                        faces.at(i).vertex[2].pos
+                    };
+                },
+                [&](uint64_t* indices, size_t s, const Vector3& p)->AABBOctree::Material {
+                    Vector4 colors = { 0, 0, 0, 0 };
+                    for (int i = 0; i < s; ++i) {
+                        uint64_t index = indices[i];
+                        MaterialFace face = faces.at(index);
+
+                        auto plane = Plane(face.vertex[0].pos,
+                                           face.vertex[1].pos,
+                                           face.vertex[2].pos);
+                        Vector3 hitpoint = p;
+                        if (auto r = plane.rayTest(p, p + plane.normal()) >= 0.0f) {
+                            hitpoint = p + plane.normal() * r;
+                        } else if (auto r = plane.rayTest(p, p - plane.normal()) >= 0.0f) {
+                            hitpoint = p - plane.normal() * r;
+                        }
+                        auto uvw = Triangle{
+                            face.vertex[0].pos,
+                            face.vertex[1].pos,
+                            face.vertex[2].pos
+                        }.barycentric(hitpoint);
+
+                        Vector4 vertexColor =
+                            face.vertex[0].color * uvw.x +
+                            face.vertex[1].color * uvw.y +
+                            face.vertex[2].color * uvw.z;
+
+                        Image* textureImage = nullptr;
+                        if (face.material) {
+                            // find texture
+                            std::shared_ptr<Texture> texture = nullptr;
+                            if (auto iter = face.material->properties.find(MaterialSemantic::BaseColorTexture);
+                                iter != face.material->properties.end()) {
+                                texture = std::visit(
+                                    [&](auto&& args)->std::shared_ptr<Texture> {
+                                        using T = std::decay_t<decltype(args)>;
+                                        if constexpr (std::is_same_v<T, MaterialProperty::TextureArray>) {
+                                            return args.front();
+                                        } else if constexpr (std::is_same_v<T, MaterialProperty::CombinedTextureSamplerArray>) {
+                                            return args.front().texture;
+                                        }
+                                        return nullptr;
+                                    }, iter->second.value);
+                            }
+                            if (texture == nullptr)
+                                texture = face.material->defaultTexture;
+                            
+                            if (texture) {
+                                std::shared_ptr<Image> image = nullptr;
+                                if (auto iter = cpuAccessibleImages.find(texture.get()); iter != cpuAccessibleImages.end()) {
+                                    image = iter->second;
+                                } else {
+                                    // download image
+                                    auto buffer = this->graphicsContext->makeCPUAccessible(texture);
+                                    if (buffer) {
+                                        image = Image::fromTextureBuffer(
+                                            buffer,
+                                            texture->width(), texture->height(),
+                                            texture->pixelFormat());
+                                    }
+                                    cpuAccessibleImages[texture.get()] = image;
+                                }
+                                textureImage = image.get();
+                            }
+                        }
+                        if (textureImage) {
+                            Vector2 uv =
+                                face.vertex[0].uv * uvw.x +
+                                face.vertex[1].uv * uvw.y +
+                                face.vertex[2].uv * uvw.z;
+                            auto x = (uv.x - floor(uv.x)) * float(textureImage->width - 1);
+                            auto y = (uv.y - floor(uv.y)) * float(textureImage->height - 1);
+                            auto pixel = textureImage->readPixel(x, y);
+                            Vector4 c = { float(pixel.r), float(pixel.g), float(pixel.b), float(pixel.a) };
+                            colors += c;
+                        } else {
+                            colors += vertexColor;
+                        }
+                    }
+                    colors = colors / float(s);
+                    return { Color(colors).rgba8(), 0 };
+                });
+            Log::debug("voxelize done. (test)");
+            if (aabbOctree) {
+                volumeRenderer->aabbOctree = aabbOctree;
+                volumeRenderer->setOctreeLayer(nullptr);
+            }
+        } else {
+            Log::error("Invalid model");
+            messageBox("Model is not loaded.");
+        }
+    }
+
     bool openPopupModal = false;
     void messageBox(const std::string& mesg) {
         popupMessage = mesg;
@@ -233,78 +340,7 @@ public:
 
             if (ImGui::Button("Convert")) {
                 // voxelize..
-                auto model = meshRenderer->model.get();
-                if (model) {
-                    auto faces = model->faceList(model->defaultSceneIndex, graphicsContext.get());
-                    std::unordered_map<Texture*, std::shared_ptr<Image>> cpuAccessibleImages;
-
-                    auto aabbOctree = voxelize(
-                        depth, faces.size(), 0,
-                        [&](uint64_t i)-> Triangle {
-                            return {
-                                faces.at(i).vertex[0].pos,
-                                faces.at(i).vertex[1].pos,
-                                faces.at(i).vertex[2].pos
-                            };
-                        },
-                        [&](uint64_t* indices, size_t s, const Vector3& p)->AABBOctree::Material {
-                            Vector4 colors = { 0, 0, 0, 0 };
-                            for (int i = 0; i < s; ++i) {
-                                uint64_t index = indices[i];
-                                MaterialFace face = faces.at(index);
-
-                                auto plane = Plane(face.vertex[0].pos,
-                                                   face.vertex[1].pos,
-                                                   face.vertex[2].pos);
-                                Vector3 hitpoint = p;
-                                if (auto r = plane.rayTest(p, p + plane.normal()) >= 0.0f) {
-                                    hitpoint = p + plane.normal() * r;
-                                } else if (auto r = plane.rayTest(p, p - plane.normal()) >= 0.0f) {
-                                    hitpoint = p - plane.normal() * r;
-                                }
-                                auto uvw = Triangle{
-                                    face.vertex[0].pos,
-                                    face.vertex[1].pos,
-                                    face.vertex[2].pos
-                                }.barycentric(hitpoint);
-
-                                Vector4 vertexColor =
-                                    face.vertex[0].color * uvw.x +
-                                    face.vertex[1].color * uvw.y +
-                                    face.vertex[2].color * uvw.z;
-
-                                Image* textureImage = nullptr;
-                                if (face.material) {
-                                    // read texture
-                                    FVASSERT_DEBUG("READ-TEXTURE");
-                                    Texture* texture = nullptr;
-
-                                    if (texture) {  
-                                        if (cpuAccessibleImages.find(texture) == cpuAccessibleImages.end()) {
-                                            // download image
-                                            FVASSERT_DEBUG("DOWNLOAD-TEXTURE");
-                                        }
-                                    }
-                                }
-                                if (textureImage) {
-                                    Vector4 c = { 1, 0, 1, 1 }; // test
-                                    colors += c;
-                                } else {
-                                    colors += vertexColor;
-                                }
-                            }
-                            colors = colors / float(s);
-                            return { Color(colors).rgba8(), 0};
-                        });
-                    Log::debug("voxelize done. (test)");
-                    if (aabbOctree) {
-                        volumeRenderer->aabbOctree = aabbOctree;
-                        volumeRenderer->setOctreeLayer(nullptr);
-                    }
-                } else {
-                    Log::error("Invalid model");
-                    messageBox("Model is not loaded.");
-                }
+                voxelize(depth);
             }
             ImGui::EndDisabled();
 

@@ -66,7 +66,7 @@ namespace FV {
         std::shared_ptr<Image> resample(uint32_t width, uint32_t height, ImagePixelFormat format, ImageInterpolation interpolation) const;
 
         std::shared_ptr<Texture> makeTexture(CommandQueue*, uint32_t usage = TextureUsageSampled) const;
-        static std::shared_ptr<Image> fromTexture(std::shared_ptr<Texture> texture, CommandQueue*);
+        static std::shared_ptr<Image> fromTextureBuffer(std::shared_ptr<GPUBuffer>, uint32_t width, uint32_t height, PixelFormat);
 
         struct Pixel { double r, g, b, a; };
         Pixel readPixel(uint32_t x, uint32_t y) const;

@@ -20,6 +20,10 @@ namespace FV {
         std::shared_ptr<CommandQueue> copyQueue();
 
         std::shared_ptr<GPUBuffer> makeCPUAccessible(std::shared_ptr<GPUBuffer>);
+        std::shared_ptr<GPUBuffer> makeCPUAccessible(std::shared_ptr<Texture>);
+
+        constexpr static double deviceWaitTimeout = 2.0;
+
     private:
         std::vector<std::shared_ptr<CommandQueue>> cachedQueues;
     };

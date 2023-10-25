@@ -114,8 +114,6 @@ std::shared_ptr<GPUBuffer> GraphicsDeviceContext::makeCPUAccessible(
         auto cond = std::make_shared<
             std::tuple<std::mutex, std::condition_variable>>();
 
-        constexpr double timeout = 2.0;
-
         auto cbuffer = queue->makeCommandBuffer();
         auto encoder = cbuffer->makeCopyCommandEncoder();
 
@@ -132,7 +130,7 @@ std::shared_ptr<GPUBuffer> GraphicsDeviceContext::makeCPUAccessible(
         cbuffer->commit();
 
         if (auto status = std::get<1>(*cond)
-            .wait_for(lock, std::chrono::duration<double>(timeout));
+            .wait_for(lock, std::chrono::duration<double>(deviceWaitTimeout));
             status == std::cv_status::timeout) {
             Log::error(
                 "The operation timed out. Device did not respond to the command.");
@@ -141,6 +139,65 @@ std::shared_ptr<GPUBuffer> GraphicsDeviceContext::makeCPUAccessible(
 
         if (stgBuffer->contents() != nullptr) {
             return stgBuffer;
+        }
+    }
+    return nullptr;
+}
+
+std::shared_ptr<GPUBuffer> GraphicsDeviceContext::makeCPUAccessible(
+    std::shared_ptr<Texture> texture) {
+    if (texture == nullptr) {
+        Log::warning("Invalid texture! texture should not be null!");
+        return nullptr;
+    }
+
+    auto pixelFormat = texture->pixelFormat();
+    uint32_t bpp = pixelFormatBytesPerPixel(pixelFormat);
+    uint32_t width = texture->width();
+    uint32_t height = texture->height();
+    auto bufferLength = width * height * bpp;
+
+    auto queue = copyQueue();
+    if (queue == nullptr) {
+        Log::error("[FATAL] Unable to make command queue!");
+        throw std::runtime_error("Unable to make command queue!");
+    }
+
+    if (auto buffer = device->makeBuffer(bufferLength,
+                                         GPUBuffer::StorageModeShared,
+                                         CPUCacheModeDefault);
+        buffer != nullptr) {
+
+        auto cond = std::make_shared<
+            std::tuple<std::mutex, std::condition_variable>>();
+
+        auto cbuffer = queue->makeCommandBuffer();
+        auto encoder = cbuffer->makeCopyCommandEncoder();
+
+        encoder->copy(texture, TextureOrigin{ 0, 0, 0, 0, 0 },
+                      buffer, BufferImageOrigin{ 0, width, height },
+                      TextureSize{ width, height, 1 });
+        encoder->endEncoding();
+        cbuffer->addCompletedHandler(
+            [cond] // copying cond to avoid destruction due to scope out
+            {
+                std::unique_lock lock(std::get<0>(*cond));
+                std::get<1>(*cond).notify_all();
+            });
+
+        std::unique_lock lock(std::get<0>(*cond));
+        cbuffer->commit();
+
+        if (auto status = std::get<1>(*cond)
+            .wait_for(lock, std::chrono::duration<double>(deviceWaitTimeout));
+            status == std::cv_status::timeout) {
+            Log::error(
+                "The operation timed out. Device did not respond to the command.");
+            return nullptr;
+        }
+
+        if (buffer->contents() != nullptr) {
+            return buffer;
         }
     }
     return nullptr;

@@ -583,7 +583,7 @@ std::shared_ptr<Texture> Image::makeTexture(CommandQueue* queue, uint32_t usage)
             width,
             height,
             1, 1, 1, 1,
-            TextureUsageCopyDestination | usage
+            TextureUsageCopyDestination | TextureUsageCopySource | usage
         });
     if (texture == nullptr)
         return nullptr;
@@ -629,12 +629,21 @@ std::shared_ptr<Texture> Image::makeTexture(CommandQueue* queue, uint32_t usage)
     return texture;
 }
 
-std::shared_ptr<Image> Image::fromTexture(std::shared_ptr<Texture> texture, CommandQueue* queue) {
-    ImagePixelFormat imageFormat = ImagePixelFormat::Invalid;
+std::shared_ptr<Image> Image::fromTextureBuffer(std::shared_ptr<GPUBuffer> buffer,
+                                                uint32_t width, uint32_t height,
+                                                PixelFormat pixelFormat) {
+    if (buffer == nullptr) {
+        Log::error("Texture buffer should not be null");
+        return nullptr;
+    }
+    if (width < 1 || height < 1) {
+        Log::error("Invalid texture dimensions");
+        return nullptr;
+    }
 
+    ImagePixelFormat imageFormat = ImagePixelFormat::Invalid;
     std::function<RawColorValue(const void*)> getPixel = nullptr;
-    auto textureFormat = texture->pixelFormat();
-    switch (textureFormat) {
+    switch (pixelFormat) {
     case PixelFormat::R8Unorm:
     case PixelFormat::R8Uint:
         imageFormat = ImagePixelFormat::R8;
@@ -884,63 +893,30 @@ std::shared_ptr<Image> Image::fromTexture(std::shared_ptr<Texture> texture, Comm
 
     if (getPixel == nullptr) {
         Log::error(std::format("Unsupported texture format! ({:d})",
-                               (int)textureFormat));
+                               (int)pixelFormat));
         return nullptr;
     }
     FVASSERT_DEBUG(imageFormat != ImagePixelFormat::Invalid);
 
-    uint32_t bpp = pixelFormatBytesPerPixel(textureFormat);
-    uint32_t width = texture->width();
-    uint32_t height = texture->height();
+    uint32_t bpp = pixelFormatBytesPerPixel(pixelFormat);
     auto bufferLength = width * height * bpp;
 
-    auto device = queue->device();
+    if (buffer->length() >= bufferLength) {
+        uint8_t* p = (uint8_t*)buffer->contents();
+        if (p) {
+            auto image = std::make_shared<Image>(width, height, imageFormat);
+            for (uint32_t y = 0; y < height; ++y) {
+                for (uint32_t x = 0; x < width; ++x) {
+                    auto c = getPixel(p);
+                    p = p + bpp;
 
-    // create buffer
-    auto buffer = device->makeBuffer(bufferLength,
-                                        GPUBuffer::StorageModeShared,
-                                        CPUCacheModeDefault);
-    if (buffer == nullptr) {
-        Log::error("Unable to make GPUBuffer");
-        return nullptr;
-    }
-
-    auto cond = std::make_shared<std::tuple<std::mutex, std::condition_variable>>();
-    constexpr double timeout = 2.0;
-
-    auto cbuffer = queue->makeCommandBuffer();
-    auto encoder = cbuffer->makeCopyCommandEncoder();
-
-    encoder->copy(texture, TextureOrigin{ 0, 0, 0, 0, 0 },
-                  buffer, BufferImageOrigin{ 0, width, height },
-                  TextureSize{ width, height, 1 });
-    encoder->endEncoding();
-    cbuffer->addCompletedHandler(
-        [cond] {
-            std::unique_lock lock(std::get<0>(*cond));
-            std::get<1>(*cond).notify_all();  
-        });
-    std::unique_lock lock(std::get<0>(*cond));
-    cbuffer->commit();
-
-    if (auto status = std::get<1>(*cond)
-        .wait_for(lock, std::chrono::duration<double>(timeout));
-        status == std::cv_status::timeout) {
-        Log::error(
-            "The operation timed out. Device did not respond to the command.");
-        return nullptr;
-    }
-    uint8_t* p = (uint8_t*)buffer->contents();
-    FVASSERT_DEBUG(p);
-
-    auto image = std::make_shared<Image>(width, height, imageFormat);
-    for (uint32_t y = 0; y < height; ++y) {
-        for (uint32_t x = 0; x < width; ++x) {
-            auto c = getPixel(p);
-            p = p + bpp;
-
-            image->writePixel(x, y, { c.r, c.g, c.b, c.a });
+                    image->writePixel(x, y, { c.r, c.g, c.b, c.a });
+                }
+            }
+            return image;
+        } else {
+            Log::error("Buffer is not accessible!");
         }
     }
-    return image;
+    return nullptr;
 }
