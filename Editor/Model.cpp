@@ -448,7 +448,6 @@ void loadMeshes(LoaderContext& context) {
             meshNode.mesh = mesh;
             node.children.push_back(meshNode);
         }
-        cbuffer->commit();
 
         while (node.mesh.has_value() == false && node.children.size() == 1) {
             node = node.children.front();
@@ -456,6 +455,7 @@ void loadMeshes(LoaderContext& context) {
 
         context.meshes.at(index) = node;
     }
+    cbuffer->commit();
 }
 
 SceneNode loadNode(const tinygltf::Node& node, LoaderContext& context) {
