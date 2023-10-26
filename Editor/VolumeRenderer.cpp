@@ -122,8 +122,72 @@ void VolumeRenderer::setOctreeLayer(std::shared_ptr<AABBOctreeLayer> layer) {
     }
 }
 
+void VolumeRenderer::prepareScene(const RenderPassDescriptor&, const ViewTransform& v, const ProjectionTransform& p) {
+    this->view = v;
+    this->projection = p;
+
+    if (texture) {
+        uint32_t width = texture->width();
+        uint32_t height = texture->height();
+
+        auto proj = p;
+        if (proj.matrix._34 != 0.0f) {
+            auto f = p.matrix._22;
+            auto aspect = float(width) / float(height);
+            proj.matrix._11 = f / aspect;
+        }
+        this->projection = proj;
+    }
+}
+
+float VolumeRenderer::bestFitDepth() const {
+    if (aabbOctreeLayer && texture) {
+        auto aabb = aabbOctreeLayer->aabb;
+        Vector3 aabbCornerVertices[8] = {
+            {aabb.min.x, aabb.min.y, aabb.min.z},
+            {aabb.max.x, aabb.min.y, aabb.min.z},
+            {aabb.min.x, aabb.max.y, aabb.min.z},
+            {aabb.max.x, aabb.max.y, aabb.min.z},
+            {aabb.min.x, aabb.min.y, aabb.max.z},
+            {aabb.max.x, aabb.min.y, aabb.max.z},
+            {aabb.min.x, aabb.max.y, aabb.max.z},
+            {aabb.max.x, aabb.max.y, aabb.max.z},
+        };
+        uint32_t width = texture->width();
+        uint32_t height = texture->height();
+
+        auto nodeTM = transform.matrix4();
+        auto mvp = nodeTM.concatenating(view.matrix4()).concatenating(projection.matrix);
+
+        for (auto& v : aabbCornerVertices) {
+            auto v2 = Vector4(v, 1.0).apply(mvp);
+            v = Vector3(v2.x, v2.y, v2.z) / v2.w;
+        }
+        struct { float minX, maxX, minY, maxY; } ndcMinMaxPoint = {
+            aabbCornerVertices[0].x,
+            aabbCornerVertices[0].x,
+            aabbCornerVertices[0].y,
+            aabbCornerVertices[0].y,
+        };
+        for (int i = 1; i < 8; ++i) {
+            const auto& v = aabbCornerVertices[i];
+            ndcMinMaxPoint.minX = std::min(ndcMinMaxPoint.minX, v.x);
+            ndcMinMaxPoint.maxX = std::max(ndcMinMaxPoint.maxX, v.x);
+            ndcMinMaxPoint.minY = std::min(ndcMinMaxPoint.minY, v.y);
+            ndcMinMaxPoint.maxY = std::max(ndcMinMaxPoint.maxY, v.y);
+        }
+        auto pixelsX = (ndcMinMaxPoint.maxX - ndcMinMaxPoint.minX) * float(width - 1) * 0.5f;
+        auto pixelsY = (ndcMinMaxPoint.maxY - ndcMinMaxPoint.minY) * float(height - 1) * 0.5f;
+        auto effectivePixels = std::max(pixelsX, pixelsY);
+        if (effectivePixels > 1.0) {
+            return std::log2(effectivePixels);
+        }
+    }
+    return 0.0f;
+}
+
 void VolumeRenderer::render(const RenderPassDescriptor&, const Rect& frame) {
-    if (aabbOctreeLayerBuffer) {
+    if (aabbOctreeLayerBuffer && texture) {
 
 #pragma pack(push, 1)
         struct PushConstantData {
@@ -145,18 +209,11 @@ void VolumeRenderer::render(const RenderPassDescriptor&, const Rect& frame) {
         uint32_t height = texture->height();
 
         auto nodeTM = transform.matrix4();
-        auto proj = projection;
-        if (proj.matrix._34 != 0.0f) {
-            auto f = projection.matrix._22;
-            auto aspect = float(width) / float(height);
-            proj.matrix._11 = f / aspect;
-        }
-
         PushConstantData pcdata = {
             nodeTM.inverted(),
             nodeTM
                 .concatenating(view.matrix4())
-                .concatenating(proj.matrix)
+                .concatenating(projection.matrix)
                 .inverted(),
             ambientColor,
             lightColor,

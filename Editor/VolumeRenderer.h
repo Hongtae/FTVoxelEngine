@@ -9,15 +9,13 @@ public:
     void initialize(std::shared_ptr<GraphicsDeviceContext>, std::shared_ptr<SwapChain>) override;
     void finalize() override;
 
+    void prepareScene(const RenderPassDescriptor&, const ViewTransform& v, const ProjectionTransform& p) override;
     void render(const RenderPassDescriptor&, const Rect&) override;
-
-    void prepareScene(const RenderPassDescriptor&, const ViewTransform& v, const ProjectionTransform& p) override {
-        this->view = v;
-        this->projection = p;
-    }
 
     void setOctreeLayer(std::shared_ptr<AABBOctreeLayer> layer);
     const AABBOctreeLayer* layer() const { return aabbOctreeLayer.get(); }
+
+    float bestFitDepth() const;
 
     std::shared_ptr<AABBOctree> aabbOctree;
 

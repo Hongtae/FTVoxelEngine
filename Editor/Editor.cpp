@@ -351,10 +351,22 @@ public:
             }
             ImGui::EndDisabled();
 
+            if (depth > 10) {
+                ImGui::SameLine();
+                ImGui::Text("(UNSAFE)");
+            }
+
             auto aabbOctree = volumeRenderer->aabbOctree.get();
             if (aabbOctree) {
+
                 int maxDepth = aabbOctree->maxDepth;
-                ImGui::Text(std::format("MaxDepth: {}", maxDepth).c_str());
+                float bestFitDepth = volumeRenderer->bestFitDepth();
+                ImGui::Text(std::format("MaxDepth: {}, BestFit: {:.1f}", maxDepth, bestFitDepth).c_str());
+
+                static bool autoFit = false;
+                ImGui::SameLine();
+                if (ImGui::Checkbox("Auto Fit", &autoFit)) {}
+                ImGui::BeginDisabled(autoFit);
 
                 static int layerDepth = 0;
                 if (layerDepth > maxDepth) layerDepth = maxDepth;
@@ -362,6 +374,12 @@ public:
                 bool valueChanged = false;
                 if (ImGui::SliderInt("Layer Depth", &layerDepth, 0, maxDepth, nullptr, ImGuiSliderFlags_None)) {
                     valueChanged = true;
+                } else if (autoFit) {
+                    int bf = std::min((int)std::lround(bestFitDepth), maxDepth);
+                    if (layerDepth != bf) {
+                        layerDepth = bf;
+                        valueChanged = true;
+                    }
                 }
                 if (volumeRenderer->layer() == nullptr) {
                     valueChanged = true;
@@ -383,10 +401,11 @@ public:
                                           elapsed.count()));
                     volumeRenderer->setOctreeLayer(layer);
                 }
+                ImGui::EndDisabled();
             }
-            ImGui::Text("Volume Image");
+
             auto texture = volumeRenderer->texture;
-            ImGui::Text(std::format("width:{}, height:{}",
+            ImGui::Text(std::format("Volume Image ({} x {})",
                                     texture->width(), texture->height()).c_str());
             ImGui::Image(uiRenderer->textureID(texture.get()), ImVec2(
                 texture->width(), texture->height()));
