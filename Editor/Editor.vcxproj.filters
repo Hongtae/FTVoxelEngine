@@ -173,5 +173,11 @@
     <None Include="Resources\Shaders\sample.frag">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="Resources\Shaders\sample_notex.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Resources\Shaders\sample_notex.frag">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

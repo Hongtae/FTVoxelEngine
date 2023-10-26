@@ -9,16 +9,13 @@ layout (push_constant) uniform Constants
 	vec3 ambientColor;
 } pc;
 
-layout (binding = 1) uniform sampler2D tex;
-
 layout (location = 0) in vec3 inNormal;
-layout (location = 1) in vec2 inTexCoord;
-
+layout (location = 1) in vec4 inColor;
 layout (location = 0) out vec4 outFragColor;
 
 void main() 
 {
     float lum = max(dot(inNormal, normalize(-pc.lightDir)), 0.0);
 	vec3 color = mix(pc.ambientColor, pc.lightColor * lum, 0.7);
-    outFragColor = texture(tex, inTexCoord) * vec4(color, 1.0);
+    outFragColor = inColor * vec4(color, 1.0);
 }

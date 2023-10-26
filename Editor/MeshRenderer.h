@@ -31,6 +31,7 @@ public:
 
     AABB aabb;
     MaterialShaderMap shader;
+    MaterialShaderMap shaderNoTex;
     std::shared_ptr<Model> model;
     std::shared_ptr<CommandQueue> queue;
 };

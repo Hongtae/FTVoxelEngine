@@ -924,11 +924,34 @@ uint32_t Mesh::bindShaderUniformBuffer(ShaderUniformSemantic semantic,
     case ShaderUniformSemantic::ProjectionMatrix:
         return bindMatrix4(sceneState.projection.matrix);
         break;
+    case ShaderUniformSemantic::ViewProjectionMatrix:
+        return bindMatrix4(sceneState.view.matrix4()
+                           .concatenating(sceneState.projection.matrix));
+        break;
     case ShaderUniformSemantic::ModelViewProjectionMatrix:
-        return bindMatrix4(
-            sceneState.model.concatenating(
-                sceneState.view.matrix4().concatenating(
-                    sceneState.projection.matrix)));
+        return bindMatrix4(sceneState.model
+                           .concatenating(sceneState.view.matrix4())
+                           .concatenating(sceneState.projection.matrix));
+        break;
+    case ShaderUniformSemantic::InverseModelMatrix:
+        return bindMatrix4(sceneState.model.inverted());
+        break;
+    case ShaderUniformSemantic::InverseViewMatrix:
+        return bindMatrix4(sceneState.view.matrix4().inverted());
+        break;
+    case ShaderUniformSemantic::InverseProjectionMatrix:
+        return bindMatrix4(sceneState.projection.matrix.inverted());
+        break;
+    case ShaderUniformSemantic::InverseViewProjectionMatrix:
+        return bindMatrix4(sceneState.view.matrix4()
+                           .concatenating(sceneState.projection.matrix)
+                           .inverted());
+        break;
+    case ShaderUniformSemantic::InverseModelViewProjectionMatrix:
+        return bindMatrix4(sceneState.model
+                           .concatenating(sceneState.view.matrix4())
+                           .concatenating(sceneState.projection.matrix)
+                           .inverted());
         break;
     default:
         Log::error("Not implemented yet!");

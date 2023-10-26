@@ -14,33 +14,46 @@ MeshRenderer::~MeshRenderer() {
 }
 
 void MeshRenderer::initialize(std::shared_ptr<GraphicsDeviceContext>, std::shared_ptr<SwapChain> swapchain) {
-    extern std::filesystem::path appResourcesRoot;
-    // load shader
-    auto vsPath = appResourcesRoot / "Shaders/sample.vert.spv";
-    auto fsPath = appResourcesRoot / "Shaders/sample.frag.spv";
 
     this->queue = swapchain->queue();
     auto device = queue->device();
-    auto vertexShader = loadShader(vsPath, device.get());
-    if (vertexShader.has_value() == false)
-        throw std::runtime_error("failed to load shader");
-    auto fragmentShader = loadShader(fsPath, device.get());
-    if (fragmentShader.has_value() == false)
-        throw std::runtime_error("failed to load shader");
 
-    struct PushConstantBuffer {
-        Matrix4 transform;
-        Vector3 lightDir;
-        Vector3 color;
+    auto loadShader = [device](std::filesystem::path path)->std::optional<MaterialShaderMap::Function> {
+        if (Shader shader(path); shader.validate()) {
+            Log::info(std::format("Shader description: \"{}\"", path.generic_u8string()));
+            printShaderReflection(shader);
+            if (auto module = device->makeShaderModule(shader); module) {
+                auto names = module->functionNames();
+                auto fn = module->makeFunction(names.front());
+                return MaterialShaderMap::Function { fn, shader.descriptors() };
+            }
+        }
+        throw std::runtime_error("failed to load shader");
+        return {};
+    };
+
+    extern std::filesystem::path appResourcesRoot;
+    // load shader
+
+    this->shader.functions = {
+        loadShader(appResourcesRoot / "Shaders/sample.vert.spv").value(),
+        loadShader(appResourcesRoot / "Shaders/sample.frag.spv").value()
+    };
+
+    this->shaderNoTex.functions = {
+        loadShader(appResourcesRoot / "Shaders/sample.vert.spv").value(),
+        loadShader(appResourcesRoot / "Shaders/sample.frag.spv").value()
     };
 
     // setup shader binding
     this->shader.resourceSemantics = {
         { ShaderBindingLocation{ 0, 1, 0}, MaterialSemantic::BaseColorTexture },
-        { ShaderBindingLocation::pushConstant(0), ShaderUniformSemantic::ModelViewProjectionMatrix },
-        //{ ShaderBindingLocation::pushConstant(64), MaterialSemantic::UserDefined },
-        //{ ShaderBindingLocation::pushConstant(80), MaterialSemantic::UserDefined },
-        //{ ShaderBindingLocation::pushConstant(96), MaterialSemantic::UserDefined },
+        { ShaderBindingLocation::pushConstant(0), ShaderUniformSemantic::ModelMatrix },
+        { ShaderBindingLocation::pushConstant(64), ShaderUniformSemantic::ViewProjectionMatrix },
+    };
+    this->shaderNoTex.resourceSemantics = {
+        { ShaderBindingLocation::pushConstant(0), ShaderUniformSemantic::ModelMatrix },
+        { ShaderBindingLocation::pushConstant(64), ShaderUniformSemantic::ViewProjectionMatrix },
     };
 
     this->shader.inputAttributeSemantics = {
@@ -48,7 +61,11 @@ void MeshRenderer::initialize(std::shared_ptr<GraphicsDeviceContext>, std::share
         { 1, VertexAttributeSemantic::Normal },
         { 2, VertexAttributeSemantic::TextureCoordinates },
     };
-    this->shader.functions = { vertexShader.value(), fragmentShader.value() };
+    this->shaderNoTex.inputAttributeSemantics = {
+        { 0, VertexAttributeSemantic::Position },
+        { 1, VertexAttributeSemantic::Normal },
+        { 2, VertexAttributeSemantic::Color },
+    };
 
     this->depthStencilState = device->makeDepthStencilState(
         {
@@ -90,9 +107,9 @@ void MeshRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
                     if (node.mesh.has_value()) {
                         auto& mesh = node.mesh.value();
                         if (auto material = mesh.material.get(); material) {
-                            material->setProperty(ShaderBindingLocation::pushConstant(64), lightDir);
-                            material->setProperty(ShaderBindingLocation::pushConstant(80), lightColor);
-                            material->setProperty(ShaderBindingLocation::pushConstant(96), ambientColor);
+                            material->setProperty(ShaderBindingLocation::pushConstant(128), lightDir);
+                            material->setProperty(ShaderBindingLocation::pushConstant(144), lightColor);
+                            material->setProperty(ShaderBindingLocation::pushConstant(160), ambientColor);
                         }
                         mesh.updateShadingProperties(&sceneState);
                         mesh.encodeRenderCommand(encoder.get(), 1, 0);
@@ -121,12 +138,13 @@ Model* MeshRenderer::loadModel(std::filesystem::path path,
                         if (node.mesh.has_value()) {
                             auto& mesh = node.mesh.value();
                             if (auto material = mesh.material.get(); material) {
-                                material->shader = this->shader;
+                                if (material->properties.contains(MaterialSemantic::BaseColorTexture)) {
+                                    material->shader = this->shader;
+                                } else {
+                                    material->shader = this->shaderNoTex;
+                                }
                                 material->attachments.front().format = colorFormat;
                                 material->depthFormat = depthFormat;
-                                material->setProperty(ShaderBindingLocation::pushConstant(64), lightDir);
-                                material->setProperty(ShaderBindingLocation::pushConstant(80), lightColor);
-                                material->setProperty(ShaderBindingLocation::pushConstant(96), ambientColor);
                             }
 
                             PipelineReflection reflection = {};
@@ -144,6 +162,8 @@ Model* MeshRenderer::loadModel(std::filesystem::path path,
 
         AABB aabb = {};
         if (model && model->scenes.empty() == false) {
+            if (model->defaultSceneIndex < 0)
+                model->defaultSceneIndex = 0;
             auto& scene = model->scenes.at(model->defaultSceneIndex);
             for (auto& node : scene.nodes) {
                 aabb.combine(node.aabb);

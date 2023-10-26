@@ -21,7 +21,9 @@ struct LoaderContext {
     std::vector<SamplerDescriptor> samplerDescriptors;
 };
 
-std::shared_ptr<GPUBuffer> makeBuffer(CommandBuffer* cbuffer, size_t length, const void* data,
+std::shared_ptr<GPUBuffer> makeBuffer(CommandBuffer* cbuffer,
+                                      size_t length,
+                                      const void* data,
                                       GPUBuffer::StorageMode storageMode = GPUBuffer::StorageModePrivate,
                                       CPUCacheMode cpuCacheMode = CPUCacheModeDefault) {
     FVASSERT(length > 0);
@@ -296,6 +298,12 @@ void loadMeshes(LoaderContext& context) {
         SceneNode node = {};
         node.name = glTFMesh.name;
 
+        std::vector<Vector3> positions;
+        std::vector<uint32_t> indices;
+
+        bool hasVertexNormal = false;
+        bool hasVertexColor = false;
+
         for (auto& glTFPrimitive : glTFMesh.primitives) {
             Mesh mesh = {};
             std::unordered_map<int, Mesh::VertexBuffer> vertexBuffers;
@@ -308,9 +316,8 @@ void loadMeshes(LoaderContext& context) {
                 uint32_t vertexStride = glTFAccessor.ByteStride(glTFBufferView);
                 uint32_t bufferOffset = glTFBufferView.byteOffset;
                 uint32_t attribOffset = 0;
-                if (glTFAccessor.byteOffset < vertexStride) // interleaved
-                {
-                    attribOffset = glTFAccessor.byteOffset;
+                if (glTFAccessor.byteOffset < vertexStride) {
+                    attribOffset = glTFAccessor.byteOffset; // interleaved
                 } else {
                     bufferOffset += glTFAccessor.byteOffset;
                 }
@@ -353,22 +360,27 @@ void loadMeshes(LoaderContext& context) {
                         const uint8_t* ptr = glTFBuffer.data.data();
                         ptr += bufferOffset + attribOffset;
                         AABB aabb = {};
+                        positions.clear();
+                        positions.reserve(glTFAccessor.count);
                         for (size_t i = 0; i < glTFAccessor.count; ++i) {
                             const Vector3* p = reinterpret_cast<const Vector3*>(ptr);
+                            positions.push_back(*p);
                             aabb.expand(*p);
                             ptr += vertexStride;
                         }
                         mesh.aabb = aabb;
                     }
-                } else if (_stricmp(attributeName.c_str(), "NORMAL") == 0)
+                } else if (_stricmp(attributeName.c_str(), "NORMAL") == 0) {
                     attribute.semantic = VertexAttributeSemantic::Normal;
-                else if (_stricmp(attributeName.c_str(), "TANGENT") == 0)
+                    hasVertexNormal = true;
+                } else if (_stricmp(attributeName.c_str(), "TANGENT") == 0)
                     attribute.semantic = VertexAttributeSemantic::Tangent;
                 else if (_stricmp(attributeName.c_str(), "TEXCOORD_0") == 0)
                     attribute.semantic = VertexAttributeSemantic::TextureCoordinates;
-                else if (_stricmp(attributeName.c_str(), "COLOR_0") == 0)
+                else if (_stricmp(attributeName.c_str(), "COLOR_0") == 0) {
                     attribute.semantic = VertexAttributeSemantic::Color;
-                else {
+                    hasVertexColor = true;
+                }  else {
                     Log::warning(std::format("Unhandled vertex buffer attribute: {}",
                                              attributeName));
                 }
@@ -382,6 +394,7 @@ void loadMeshes(LoaderContext& context) {
                 mesh.primitiveType = PrimitiveType::Point;
                 break;
             case TINYGLTF_MODE_LINE:
+            case TINYGLTF_MODE_LINE_LOOP:
                 mesh.primitiveType = PrimitiveType::Line;
                 break;
             case TINYGLTF_MODE_LINE_STRIP:
@@ -394,9 +407,12 @@ void loadMeshes(LoaderContext& context) {
                 mesh.primitiveType = PrimitiveType::TriangleStrip;
                 break;
             default:
-                throw std::runtime_error("Unknown primitive type");
+                //throw std::runtime_error("Unknown primitive type");
+                Log::error(std::format(
+                    "Unsupported primitive type: {}", glTFPrimitive.mode));
+                continue;
             }
-
+            
             if (glTFPrimitive.indices >= 0) {
                 auto& glTFAccessor = model.accessors[glTFPrimitive.indices];
                 auto& glTFBufferView = model.bufferViews[glTFAccessor.bufferView];
@@ -407,33 +423,117 @@ void loadMeshes(LoaderContext& context) {
                 mesh.indexBuffer = context.buffers[glTFBufferView.buffer];
                 mesh.indexBufferBaseVertexIndex = 0;
 
+                indices.reserve(glTFAccessor.count);
+                uint8_t* p = ((uint8_t*)glTFBuffer.data.data()) + mesh.indexBufferByteOffset;
+
                 switch (glTFAccessor.componentType) {
                 case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: // convert to uint16
                     do {
                         FVASSERT(glTFAccessor.count > 0);
-                        size_t size = glTFAccessor.count * 2;
-
                         std::vector<uint16_t> indexData;
                         indexData.reserve(glTFAccessor.count);
-                        std::transform(glTFBuffer.data.begin(),
-                                       glTFBuffer.data.end(),
-                                       std::back_inserter(indexData),
-                                       [](auto n)->uint16_t {return n; });
+                        for (int i = 0; i < glTFAccessor.count; ++i) {
+                            indexData.push_back(p[i]);
+                            indices.push_back(p[i]);
+                        }
 
                         auto buffer = makeBuffer(cbuffer.get(), indexData.size() * 2,
                                                  indexData.data());
                         FVASSERT(buffer);
                         mesh.indexBuffer = buffer;
                         mesh.indexType = IndexType::UInt16;
+                        mesh.indexBufferByteOffset = 0;
+
                     } while (0);
                     break;
                 case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
                     mesh.indexType = IndexType::UInt16;
+                    for (int i = 0; i < glTFAccessor.count; ++i) {
+                        uint16_t index = ((uint16_t*)p)[i];
+                        indices.push_back(index);
+                    }
                     break;
                 case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
                     mesh.indexType = IndexType::UInt32;
+                    for (int i = 0; i < glTFAccessor.count; ++i) {
+                        uint32_t index = ((uint32_t*)p)[i];
+                        indices.push_back(index);
+                    }
                     break;
                 }
+            } else {
+                indices.reserve(positions.size());
+                for (int i = 0; i < positions.size(); ++i)
+                    indices.push_back(i);
+            }
+
+            if (hasVertexNormal == false) {
+                std::vector<Vector3> normals(positions.size(), Vector3(0, 0, 0));
+
+                auto generateFaceNormal = [&](uint32_t i0, uint32_t i1, uint32_t i2) {
+                    const Vector3& p0 = positions.at(i0);
+                    const Vector3& p1 = positions.at(i1);
+                    const Vector3& p2 = positions.at(i2);
+                    auto u = p1 - p0;
+                    auto v = p2 - p0;
+                    auto normal = Vector3::cross(u, v).normalized();
+                    normals.at(i0) += normal;
+                    normals.at(i1) += normal;
+                    normals.at(i2) += normal;
+                };
+
+                switch (mesh.primitiveType) {
+                case PrimitiveType::Triangle:
+                    for (int i = 0; (i+2) < indices.size(); i += 3) {
+                        generateFaceNormal(indices.at(i),
+                                           indices.at(i + 1),
+                                           indices.at(i + 2));
+                    }
+                    break;
+                case PrimitiveType::TriangleStrip:
+                    for (int i = 0; (i+2) < indices.size(); ++i) {
+                        if (i % 2) {
+                            generateFaceNormal(indices.at(i + 1),
+                                               indices.at(i),
+                                               indices.at(i + 2));
+                        } else {
+                            generateFaceNormal(indices.at(i),
+                                               indices.at(i + 1),
+                                               indices.at(i + 2));
+                        }
+                    }
+                    break;
+                }
+                for (auto& normal : normals)
+                    normal.normalize();
+
+                auto buffer = makeBuffer(cbuffer.get(), normals.size() * sizeof(Vector3), normals.data());
+                Mesh::VertexAttribute attribute = {
+                    VertexAttributeSemantic::Normal,
+                    VertexFormat::Float3,
+                    0,
+                    "Normal"
+                };
+                Mesh::VertexBuffer vb = {
+                    0, sizeof(Vector3), normals.size(),
+                    buffer, { attribute }
+                };
+                mesh.vertexBuffers.push_back(vb);
+            }
+            if (hasVertexColor == false) {
+                std::vector<Vector4> colors(positions.size(), Vector4(1, 1, 1, 1));
+                auto buffer = makeBuffer(cbuffer.get(), colors.size() * sizeof(Vector4), colors.data());
+                Mesh::VertexAttribute attribute = {
+                    VertexAttributeSemantic::Color,
+                    VertexFormat::Float4,
+                    0,
+                    "Color"
+                };
+                Mesh::VertexBuffer vb = {
+                    0, sizeof(Vector4), colors.size(),
+                    buffer, { attribute }
+                };
+                mesh.vertexBuffers.push_back(vb);
             }
 
             if (glTFPrimitive.material >= 0) {
@@ -595,19 +695,6 @@ std::shared_ptr<Model> loadModel(std::filesystem::path path, CommandQueue* queue
         return output;
     }
     return nullptr;
-}
-
-std::optional<MaterialShaderMap::Function> loadShader(std::filesystem::path path, GraphicsDevice* device) {
-    if (Shader shader(path); shader.validate()) {
-        Log::info(std::format("Shader description: \"{}\"", path.generic_u8string()));
-        printShaderReflection(shader);
-        if (auto module = device->makeShaderModule(shader); module) {
-            auto names = module->functionNames();
-            auto fn = module->makeFunction(names.front());
-            return MaterialShaderMap::Function { fn, shader.descriptors() };
-        }
-    }
-    return {};
 }
 
 std::vector<Triangle> Model::triangleList(int sceneIndex, GraphicsDeviceContext* graphicsContext) const {

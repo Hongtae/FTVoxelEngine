@@ -225,6 +225,9 @@ bool RenderCommandEncoder::Encoder::encode(VkCommandBuffer commandBuffer) {
     VkRect2D scissorRect = { {0, 0}, {frameWidth, frameHeight} };
     vkCmdSetScissor(commandBuffer, 0, 1, &scissorRect);
 
+    // VK_DYNAMIC_STATE_LINE_WIDTH 
+    vkCmdSetLineWidth(commandBuffer, 1.0f);
+
     // VK_DYNAMIC_STATE_DEPTH_TEST_ENABLE
     vkCmdSetDepthTestEnable(commandBuffer, VK_FALSE);
 

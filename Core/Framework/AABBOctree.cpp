@@ -264,6 +264,7 @@ AABBOctree::makeTree(uint32_t maxDepth,
     counter.numNodes += 1; // root
 
     if (node.subdivisions.empty()) {
+        triangleIndices = std::move(sub.triangles); // restore triangles
         node.material = materialQuery(triangleIndices.data(), triangleIndices.size(),
                                       node.center.applying(quantize));
     } else {

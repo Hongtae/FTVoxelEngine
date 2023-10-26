@@ -350,7 +350,7 @@ bool Shader::compile() {
             out.binding = compiler.get_decoration(resource.id, spv::DecorationBinding);
             out.name = compiler.get_name(resource.id).c_str();
             out.stride = compiler.get_decoration(resource.id, spv::DecorationArrayStride);
-            out.enabled = active.find(resource.id) != active.end();
+            out.enabled = active.contains(resource.id);
             out.stages = stage;
             out.access = access;
 
@@ -489,7 +489,7 @@ bool Shader::compile() {
             attr.location = location;
             attr.name = name;
             attr.type = dataType;
-            attr.enabled = active.find(resource.id) != active.end();
+            attr.enabled = active.contains(resource.id);
             return attr;
         };
         // stage inputs
