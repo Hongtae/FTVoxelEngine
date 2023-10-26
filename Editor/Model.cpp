@@ -542,6 +542,9 @@ void loadMeshes(LoaderContext& context) {
                 mesh.material = std::make_shared<Material>("default");
                 mesh.material->defaultTexture = context.defaultTexture;
                 mesh.material->defaultSampler = context.defaultSampler;
+                mesh.material->setProperty(MaterialSemantic::BaseColor, Color::white);
+                mesh.material->setProperty(MaterialSemantic::Metallic, 1.0);
+                mesh.material->setProperty(MaterialSemantic::Roughness, 1.0);
             }
 
             SceneNode meshNode = {};

@@ -4,8 +4,7 @@ layout (location = 0) in vec3 inPos;
 layout (location = 1) in vec3 inNormal;
 layout (location = 2) in vec4 inColor;
 
-layout (push_constant) uniform Constants 
-{
+layout (push_constant) uniform Constants {
 	layout(row_major) mat4 model;
 	layout(row_major) mat4 vp;
 	vec3 lightDir;
@@ -16,14 +15,12 @@ layout (push_constant) uniform Constants
 layout (location = 0) out vec3 outNormal;
 layout (location = 1) out vec4 outColor;
 
-out gl_PerVertex 
-{
+out gl_PerVertex {
     vec4 gl_Position;
 	float gl_PointSize;
 };
 
-void main() 
-{
+void main() {
 	mat4 tm = pc.model * pc.vp;
 	outNormal = normalize((vec4(inNormal, 0) * pc.model).xyz);
 	outColor = inColor;

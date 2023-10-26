@@ -203,7 +203,18 @@ public:
                             face.vertex[2].color * uvw.z;
 
                         Image* textureImage = nullptr;
+                        Vector4 baseColor = { 1, 1, 1, 1 };
+
                         if (face.material) {
+                            if (auto it = face.material->properties.find(MaterialSemantic::BaseColor);
+                                it != face.material->properties.end()) {
+                                auto floats = it->second.map<float>();
+                                if (floats.size() >= 4) {
+                                    baseColor = { floats[0], floats[1], floats[2], floats[3] };
+                                } else if (floats.size() == 3) {
+                                    baseColor = { floats[0], floats[1], floats[2], 1.0f };
+                                }
+                            }
                             // find texture
                             std::shared_ptr<Texture> texture = nullptr;
                             if (auto iter = face.material->properties.find(MaterialSemantic::BaseColorTexture);
@@ -219,8 +230,8 @@ public:
                                         return nullptr;
                                     }, iter->second.value);
                             }
-                            if (texture == nullptr)
-                                texture = face.material->defaultTexture;
+                            //if (texture == nullptr)
+                            //    texture = face.material->defaultTexture;
                             
                             if (texture) {
                                 std::shared_ptr<Image> image = nullptr;
@@ -249,9 +260,9 @@ public:
                             auto y = (uv.y - floor(uv.y)) * float(textureImage->height - 1);
                             auto pixel = textureImage->readPixel(x, y);
                             Vector4 c = { float(pixel.r), float(pixel.g), float(pixel.b), float(pixel.a) };
-                            colors += c;
+                            colors += c * baseColor;
                         } else {
-                            colors += vertexColor;
+                            colors += vertexColor * baseColor;
                         }
                     }
                     colors = colors / float(s);

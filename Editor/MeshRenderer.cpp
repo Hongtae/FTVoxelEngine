@@ -41,17 +41,23 @@ void MeshRenderer::initialize(std::shared_ptr<GraphicsDeviceContext>, std::share
     };
 
     this->shaderNoTex.functions = {
-        loadShader(appResourcesRoot / "Shaders/sample.vert.spv").value(),
-        loadShader(appResourcesRoot / "Shaders/sample.frag.spv").value()
+        loadShader(appResourcesRoot / "Shaders/sample_notex.vert.spv").value(),
+        loadShader(appResourcesRoot / "Shaders/sample_notex.frag.spv").value()
     };
 
     // setup shader binding
     this->shader.resourceSemantics = {
+        { ShaderBindingLocation{ 0, 0, 0}, MaterialSemantic::BaseColor },
+        { ShaderBindingLocation{ 0, 0, 16}, MaterialSemantic::Metallic },
+        { ShaderBindingLocation{ 0, 0, 20}, MaterialSemantic::Roughness },
         { ShaderBindingLocation{ 0, 1, 0}, MaterialSemantic::BaseColorTexture },
         { ShaderBindingLocation::pushConstant(0), ShaderUniformSemantic::ModelMatrix },
         { ShaderBindingLocation::pushConstant(64), ShaderUniformSemantic::ViewProjectionMatrix },
     };
     this->shaderNoTex.resourceSemantics = {
+        { ShaderBindingLocation{ 0, 0, 0}, MaterialSemantic::BaseColor },
+        { ShaderBindingLocation{ 0, 0, 16}, MaterialSemantic::Metallic },
+        { ShaderBindingLocation{ 0, 0, 20}, MaterialSemantic::Roughness },
         { ShaderBindingLocation::pushConstant(0), ShaderUniformSemantic::ModelMatrix },
         { ShaderBindingLocation::pushConstant(64), ShaderUniformSemantic::ViewProjectionMatrix },
     };
@@ -98,7 +104,7 @@ void MeshRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
         //transform.rotate(Quaternion(Vector3(0, 1, 0), std::numbers::pi * delta * 0.4));
 
         Vector3 lightColor = { 1, 1, 1 };
-        Vector3 ambientColor = { 0.3, 0.3, 0.3 };
+        Vector3 ambientColor = { 0.7, 0.7, 0.7 };
 
         auto& scene = model->scenes.at(model->defaultSceneIndex);
         for (auto& node : scene.nodes)
@@ -126,10 +132,6 @@ Model* MeshRenderer::loadModel(std::filesystem::path path,
     auto model = ::loadModel(path, queue.get());
     if (model) {
         auto device = queue->device().get();
-
-        // set user-defined property values (lighting)
-        Vector3 lightColor = { 1, 1, 1 };
-        Vector3 ambientColor = { 0.3, 0.3, 0.3 };
 
         for (auto& scene : model->scenes) {
             for (auto& node : scene.nodes) {
