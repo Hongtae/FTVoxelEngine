@@ -64,30 +64,39 @@ namespace FV::Vulkan {
 
     inline VkFormat getVertexFormat(VertexFormat fmt) {
         switch (fmt) {
+        case VertexFormat::UChar:                   return VK_FORMAT_R8_UINT;
         case VertexFormat::UChar2:				    return VK_FORMAT_R8G8_UINT;
         case VertexFormat::UChar3: 				    return VK_FORMAT_R8G8B8_UINT;
         case VertexFormat::UChar4: 				    return VK_FORMAT_R8G8B8A8_UINT;
+        case VertexFormat::Char:                    return VK_FORMAT_R8_SINT;
         case VertexFormat::Char2: 				    return VK_FORMAT_R8G8_SINT;
         case VertexFormat::Char3: 				    return VK_FORMAT_R8G8B8_SINT;
         case VertexFormat::Char4: 				    return VK_FORMAT_R8G8B8A8_SINT;
+        case VertexFormat::UCharNormalized:         return VK_FORMAT_R8_UNORM;
         case VertexFormat::UChar2Normalized: 		return VK_FORMAT_R8G8_UNORM;
         case VertexFormat::UChar3Normalized: 		return VK_FORMAT_R8G8B8_UNORM;
         case VertexFormat::UChar4Normalized: 		return VK_FORMAT_R8G8B8A8_UNORM;
+        case VertexFormat::CharNormalized:          return VK_FORMAT_R8_SNORM;
         case VertexFormat::Char2Normalized: 		return VK_FORMAT_R8G8_SNORM;
         case VertexFormat::Char3Normalized: 		return VK_FORMAT_R8G8B8_SNORM;
         case VertexFormat::Char4Normalized: 		return VK_FORMAT_R8G8B8A8_SNORM;
+        case VertexFormat::UShort:                  return VK_FORMAT_R16_UINT;
         case VertexFormat::UShort2: 				return VK_FORMAT_R16G16_UINT;
         case VertexFormat::UShort3: 				return VK_FORMAT_R16G16B16_UINT;
         case VertexFormat::UShort4: 				return VK_FORMAT_R16G16B16A16_UINT;
+        case VertexFormat::Short:                   return VK_FORMAT_R16_SINT;
         case VertexFormat::Short2: 				    return VK_FORMAT_R16G16_SINT;
         case VertexFormat::Short3: 				    return VK_FORMAT_R16G16B16_SINT;
         case VertexFormat::Short4: 				    return VK_FORMAT_R16G16B16A16_SINT;
+        case VertexFormat::UShortNormalized:        return VK_FORMAT_R16_UNORM;
         case VertexFormat::UShort2Normalized: 	    return VK_FORMAT_R16G16_UNORM;
         case VertexFormat::UShort3Normalized: 	    return VK_FORMAT_R16G16B16_UNORM;
         case VertexFormat::UShort4Normalized: 	    return VK_FORMAT_R16G16B16A16_UNORM;
+        case VertexFormat::ShortNormalized:         return VK_FORMAT_R16_SNORM;
         case VertexFormat::Short2Normalized: 		return VK_FORMAT_R16G16_SNORM;
         case VertexFormat::Short3Normalized: 		return VK_FORMAT_R16G16B16_SNORM;
         case VertexFormat::Short4Normalized: 		return VK_FORMAT_R16G16B16A16_SNORM;
+        case VertexFormat::Half:                    return VK_FORMAT_R16_SFLOAT;
         case VertexFormat::Half2: 				    return VK_FORMAT_R16G16_SFLOAT;
         case VertexFormat::Half3: 				    return VK_FORMAT_R16G16B16_SFLOAT;
         case VertexFormat::Half4: 				    return VK_FORMAT_R16G16B16A16_SFLOAT;

@@ -335,19 +335,117 @@ void loadMeshes(LoaderContext& context) {
                 attribute.offset = attribOffset;
                 attribute.semantic = VertexAttributeSemantic::UserDefined;
                 attribute.format = VertexFormat::Invalid;
+                if (glTFAccessor.componentType == TINYGLTF_COMPONENT_TYPE_DOUBLE) {
+                    Log::error("Vertex component type for Double(Float64) is not supported!");
+                    continue;
+                }
+
                 switch (glTFAccessor.type) {
+                case TINYGLTF_TYPE_SCALAR:
+                    switch (glTFAccessor.componentType) {
+                    case TINYGLTF_COMPONENT_TYPE_BYTE:
+                        attribute.format = glTFAccessor.normalized ? VertexFormat::CharNormalized : VertexFormat::Char;
+                        break;
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+                        attribute.format = glTFAccessor.normalized ? VertexFormat::UCharNormalized : VertexFormat::UChar;
+                        break;
+                    case TINYGLTF_COMPONENT_TYPE_SHORT:
+                        attribute.format = glTFAccessor.normalized ? VertexFormat::ShortNormalized : VertexFormat::Short;
+                        break;
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                        attribute.format = glTFAccessor.normalized ? VertexFormat::UShortNormalized : VertexFormat::UShort;
+                        break;
+                    case TINYGLTF_COMPONENT_TYPE_INT:
+                        attribute.format = VertexFormat::Int;
+                        break;
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+                        attribute.format = VertexFormat::UInt;
+                        break;
+                    case TINYGLTF_COMPONENT_TYPE_FLOAT:
+                        attribute.format = VertexFormat::Float;
+                        break;
+                    }
+                    break;
                 case TINYGLTF_TYPE_VEC2:
-                    attribute.format = VertexFormat::Float2;
+                    switch (glTFAccessor.componentType) {
+                    case TINYGLTF_COMPONENT_TYPE_BYTE:
+                        attribute.format = glTFAccessor.normalized ? VertexFormat::Char2Normalized : VertexFormat::Char2;
+                        break;
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+                        attribute.format = glTFAccessor.normalized ? VertexFormat::UChar2Normalized : VertexFormat::UChar2;
+                        break;
+                    case TINYGLTF_COMPONENT_TYPE_SHORT:
+                        attribute.format = glTFAccessor.normalized ? VertexFormat::Short2Normalized : VertexFormat::Short2;
+                        break;
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                        attribute.format = glTFAccessor.normalized ? VertexFormat::UShort2Normalized : VertexFormat::UShort2;
+                        break;
+                    case TINYGLTF_COMPONENT_TYPE_INT:
+                        attribute.format = VertexFormat::Int2;
+                        break;
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+                        attribute.format = VertexFormat::UInt2;
+                        break;
+                    case TINYGLTF_COMPONENT_TYPE_FLOAT:
+                        attribute.format = VertexFormat::Float2;
+                        break;
+                    }
                     break;
                 case TINYGLTF_TYPE_VEC3:
-                    attribute.format = VertexFormat::Float3;
+                    switch (glTFAccessor.componentType) {
+                    case TINYGLTF_COMPONENT_TYPE_BYTE:
+                        attribute.format = glTFAccessor.normalized ? VertexFormat::Char3Normalized : VertexFormat::Char3;
+                        break;
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+                        attribute.format = glTFAccessor.normalized ? VertexFormat::UChar3Normalized : VertexFormat::UChar3;
+                        break;
+                    case TINYGLTF_COMPONENT_TYPE_SHORT:
+                        attribute.format = glTFAccessor.normalized ? VertexFormat::Short3Normalized : VertexFormat::Short3;
+                        break;
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                        attribute.format = glTFAccessor.normalized ? VertexFormat::UShort3Normalized : VertexFormat::UShort3;
+                        break;
+                    case TINYGLTF_COMPONENT_TYPE_INT:
+                        attribute.format = VertexFormat::Int3;
+                        break;
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+                        attribute.format = VertexFormat::UInt3;
+                        break;
+                    case TINYGLTF_COMPONENT_TYPE_FLOAT:
+                        attribute.format = VertexFormat::Float3;
+                        break;
+                    }
                     break;
                 case TINYGLTF_TYPE_VEC4:
-                    attribute.format = VertexFormat::Float4;
+                    switch (glTFAccessor.componentType) {
+                    case TINYGLTF_COMPONENT_TYPE_BYTE:
+                        attribute.format = glTFAccessor.normalized ? VertexFormat::Char4Normalized : VertexFormat::Char4;
+                        break;
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+                        attribute.format = glTFAccessor.normalized ? VertexFormat::UChar4Normalized : VertexFormat::UChar4;
+                        break;
+                    case TINYGLTF_COMPONENT_TYPE_SHORT:
+                        attribute.format = glTFAccessor.normalized ? VertexFormat::Short4Normalized : VertexFormat::Short4;
+                        break;
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                        attribute.format = glTFAccessor.normalized ? VertexFormat::UShort4Normalized : VertexFormat::UShort4;
+                        break;
+                    case TINYGLTF_COMPONENT_TYPE_INT:
+                        attribute.format = VertexFormat::Int4;
+                        break;
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+                        attribute.format = VertexFormat::UInt4;
+                        break;
+                    case TINYGLTF_COMPONENT_TYPE_FLOAT:
+                        attribute.format = VertexFormat::Float4;
+                        break;
+                    }
                     break;
-                default:
+                }
+                if (attribute.format == VertexFormat::Invalid) {
                     Log::error(std::format("Unhandled vertex attribute type: {}",
                                            glTFAccessor.type));
+                    continue;
                 }
 
                 // Note: 
@@ -383,9 +481,9 @@ void loadMeshes(LoaderContext& context) {
                 }  else {
                     Log::warning(std::format("Unhandled vertex buffer attribute: {}",
                                              attributeName));
+                    continue;
                 }
                 buffer.attributes.push_back(attribute);
-
                 mesh.vertexBuffers.push_back(buffer);
             }
 
@@ -833,13 +931,80 @@ std::vector<MaterialFace> Model::faceList(int sceneIndex, GraphicsDeviceContext*
         mesh.enumerateVertexBufferContent(
             VertexAttributeSemantic::Color, graphicsContext,
             [&](const void* data, VertexFormat format, uint32_t index)->bool {
-                if (format == VertexFormat::Float3) {
-                    auto vector = *(const Vector3*)data;
-                    colors.push_back({ vector, 1.0f });
+
+                auto getVector4 = []<typename T>(const T* value, int num) -> Vector4 {
+                    Vector4 v = { 0, 0, 0, 1 };
+                    constexpr float inv = 1.0f / float(std::numeric_limits<T>::max());
+                    for (int i = 0; i < num && i < 4; ++i)
+                        v.val[i] = float(value[i]) * inv;
+                    return v;
+                };
+
+                switch (format) {
+                case VertexFormat::Char3:
+                case VertexFormat::Char3Normalized:
+                    colors.push_back(getVector4((const int8_t*)data, 3));
                     return true;
-                } else if (format == VertexFormat::Float4) {
+                    break;
+                case VertexFormat::Char4:
+                case VertexFormat::Char4Normalized:
+                    colors.push_back(getVector4((const int8_t*)data, 4));
+                    return true;
+                    break;
+                case VertexFormat::UChar3:
+                case VertexFormat::UChar3Normalized:
+                    colors.push_back(getVector4((const uint8_t*)data, 3));
+                    return true;
+                    break;
+                case VertexFormat::UChar4:
+                case VertexFormat::UChar4Normalized:
+                    colors.push_back(getVector4((const uint8_t*)data, 4));
+                    return true;
+                    break;
+                case VertexFormat::Short3:
+                case VertexFormat::Short3Normalized:
+                    colors.push_back(getVector4((const int16_t*)data, 3));
+                    return true;
+                    break;
+                case VertexFormat::Short4:
+                case VertexFormat::Short4Normalized:
+                    colors.push_back(getVector4((const int16_t*)data, 4));
+                    return true;
+                    break;
+                case VertexFormat::UShort3:
+                case VertexFormat::UShort3Normalized:
+                    colors.push_back(getVector4((const uint16_t*)data, 3));
+                    return true;
+                    break;
+                case VertexFormat::UShort4:
+                case VertexFormat::UShort4Normalized:
+                    colors.push_back(getVector4((const uint16_t*)data, 4));
+                    return true;
+                    break;
+                case VertexFormat::Int3:
+                    colors.push_back(getVector4((const int32_t*)data, 3));
+                    return true;
+                    break;
+                case VertexFormat::Int4:
+                    colors.push_back(getVector4((const int32_t*)data, 4));
+                    return true;
+                    break;
+                case VertexFormat::UInt3:
+                    colors.push_back(getVector4((const uint32_t*)data, 3));
+                    return true;
+                    break;
+                case VertexFormat::UInt4:
+                    colors.push_back(getVector4((const uint32_t*)data, 4));
+                    return true;
+                    break;
+                case VertexFormat::Float3:
+                    colors.push_back({ *(const Vector3*)data, 1.0f});
+                    return true;
+                    break;
+                case VertexFormat::Float4:
                     colors.push_back(*(const Vector4*)data);
                     return true;
+                    break;
                 }
                 return false;
             });

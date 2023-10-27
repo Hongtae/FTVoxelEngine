@@ -6,38 +6,47 @@ namespace FV {
     enum class VertexFormat {
         Invalid = 0,
 
+        UChar,
         UChar2,
         UChar3,
         UChar4,
 
+        Char,
         Char2,
         Char3,
         Char4,
 
+        UCharNormalized,
         UChar2Normalized,
         UChar3Normalized,
         UChar4Normalized,
 
+        CharNormalized,
         Char2Normalized,
         Char3Normalized,
         Char4Normalized,
 
+        UShort,
         UShort2,
         UShort3,
         UShort4,
 
+        Short,
         Short2,
         Short3,
         Short4,
 
+        UShortNormalized,
         UShort2Normalized,
         UShort3Normalized,
         UShort4Normalized,
 
+        ShortNormalized,
         Short2Normalized,
         Short3Normalized,
         Short4Normalized,
 
+        Half,
         Half2,
         Half3,
         Half4,
