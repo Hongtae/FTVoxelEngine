@@ -157,10 +157,7 @@ namespace FV {
                 Vector3(-1,  1,  1),    // far left top
             };
             auto mat = this->matrix().inverted();
-            for (auto& v : vec) {
-                auto v2 = Vector4(v.x, v.y, v.z, 1.0f).applying(mat);
-                v = Vector3(v2.x, v2.y, v2.z) / v2.w;
-            }
+            for (auto& v : vec) { v.apply(mat); }
 
             auto makePlane = [](const Vector3& v1, const Vector3& v2, const Vector3& v3)->Vector4 {
                 auto n = Vector3::cross(v2 - v1, v3 - v1).normalized();
@@ -183,7 +180,6 @@ namespace FV {
                 this->rightPlane = makePlane(vec[0], vec[4], vec[1]);
             }
         }
-
 
         bool isSphereInside(const Vector3& center, float radius) const {
             if (radius < 0.0f) return false;

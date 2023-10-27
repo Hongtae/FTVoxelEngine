@@ -1,5 +1,6 @@
 #include "Vector2.h"
 #include "Vector3.h"
+#include "Vector4.h"
 #include "Matrix3.h"
 #include "AffineTransform3.h"
 #include "Quaternion.h"
@@ -42,6 +43,13 @@ Vector3 Vector3::applying(const Quaternion& q) const {
     uv *= (2.0f * q.w);
     uuv *= 2.0f;
     return (*this) + uv + uuv;
+}
+
+Vector3 Vector3::applying(const Matrix4& m, float w) const {
+    auto v = Vector4(x, y, z, w).applying(m);
+    if (w == 0.0f)
+        return Vector3(v.x, v.y, v.z);
+    return Vector3(v.x, v.y, v.z) / v.w;
 }
 
 Vector3 Vector3::normalized() const {
