@@ -659,7 +659,7 @@ void loadMeshes(LoaderContext& context) {
     cbuffer->commit();
 }
 
-SceneNode loadNode(const tinygltf::Node& node, LoaderContext& context) {
+SceneNode loadNode(const tinygltf::Node& node, const Matrix4& baseTM, LoaderContext& context) {
     const auto& model = context.model;
     SceneNode output = {};
     output.name = node.name;
@@ -673,39 +673,12 @@ SceneNode loadNode(const tinygltf::Node& node, LoaderContext& context) {
         else
             output.children.push_back(mesh);
     }
-    if (node.matrix.size() == 16) {
-        Matrix4 mat;
-        for (int i = 0; i < 16; ++i)
-            mat.val[i] = float(node.matrix[i]);
-        // decompose!
-        Vector3 scale = {
-            mat.row1().magnitude(),
-            mat.row2().magnitude(),
-            mat.row3().magnitude()
-        };
-        output.scale = scale;
-        constexpr auto ulpOfOne = std::numeric_limits<float>::epsilon();
-        if (fabs(scale.x) > ulpOfOne &&
-            fabs(scale.y) > ulpOfOne &&
-            fabs(scale.z) > ulpOfOne) {
-            Matrix3 matrix3 = {
-                Vector3(mat._11, mat._12, mat._13) / scale.x,
-                Vector3(mat._21, mat._22, mat._23) / scale.y,
-                Vector3(mat._31, mat._32, mat._33) / scale.z
-            };
-            float x = sqrt(std::max(0.0f, 1.0f + matrix3._11 - matrix3._22 - matrix3._33)) * 0.5f;
-            float y = sqrt(std::max(0.0f, 1.0f - matrix3._11 + matrix3._22 - matrix3._33)) * 0.5f;
-            float z = sqrt(std::max(0.0f, 1.0f - matrix3._11 - matrix3._22 + matrix3._33)) * 0.5f;
-            float w = sqrt(std::max(0.0f, 1.0f + matrix3._11 + matrix3._22 + matrix3._33)) * 0.5f;
-            x = copysign(x, matrix3._23 - matrix3._32);
-            y = copysign(y, matrix3._31 - matrix3._13);
-            z = copysign(z, matrix3._12 - matrix3._21);
 
-            output.transform = {
-                Quaternion(x, y, z, w),
-                Vector3(mat._41, mat._42, mat._43)
-            };
-        }
+    Matrix4 nodeTM = Matrix4::identity;
+
+    if (node.matrix.size() == 16) {
+        for (int i = 0; i < 16; ++i)
+            nodeTM.val[i] = float(node.matrix[i]);
     } else {
         Quaternion rotation = Quaternion::identity;
         Vector3 scale = { 1, 1, 1 };
@@ -722,14 +695,34 @@ SceneNode loadNode(const tinygltf::Node& node, LoaderContext& context) {
             for (int i = 0; i < 3; ++i)
                 translation.val[i] = float(node.translation[i]);
         }
-        output.transform = { rotation, translation };
-        output.scale = scale;
+        nodeTM = AffineTransform3::identity
+            .scaled(scale)
+            .rotated(rotation)
+            .translated(translation)
+            .matrix4();
     }
+
+    Matrix4 worldTM = nodeTM.concatenating(baseTM);
+
+    // remove scale component.
+    auto decompose = [](const Matrix4& mat) -> std::tuple<Transform, Vector3> {
+        auto affine = AffineTransform3(mat);
+        Vector3 scale = { 1, 1, 1 };
+        Quaternion quat = Quaternion::identity;
+        affine.decompose(scale, quat);
+        return { Transform(quat, affine.translation), scale };
+    };
+
+    Transform baseTrans = std::get<0>(decompose(baseTM));
+
+    auto ts = decompose(worldTM);
+    output.transform = std::get<0>(ts).concatenating(baseTrans.inverted());
+    output.scale = std::get<1>(ts);
 
     output.children.reserve(node.children.size());
     for (auto index : node.children) {
         auto& child = model.nodes.at(index);
-        auto node = loadNode(child, context);
+        auto node = loadNode(child, worldTM, context);
         output.children.push_back(node);
     }
     return output;
@@ -743,7 +736,7 @@ Model::Scene loadScene(const tinygltf::Scene& scene, LoaderContext& context) {
     output.nodes.reserve(scene.nodes.size());
     for (auto index : scene.nodes) {
         auto& glTFNode = model.nodes.at(index);
-        auto node = loadNode(glTFNode, context);
+        auto node = loadNode(glTFNode, Matrix4::identity, context);
         output.nodes.push_back(node);
     }
     return output;
