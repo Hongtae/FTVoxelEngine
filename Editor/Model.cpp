@@ -543,8 +543,8 @@ void loadMeshes(LoaderContext& context) {
                 mesh.material->defaultTexture = context.defaultTexture;
                 mesh.material->defaultSampler = context.defaultSampler;
                 mesh.material->setProperty(MaterialSemantic::BaseColor, Color::white);
-                mesh.material->setProperty(MaterialSemantic::Metallic, 1.0);
-                mesh.material->setProperty(MaterialSemantic::Roughness, 1.0);
+                mesh.material->setProperty(MaterialSemantic::Metallic, 1.0f);
+                mesh.material->setProperty(MaterialSemantic::Roughness, 1.0f);
             }
 
             SceneNode meshNode = {};
@@ -701,7 +701,7 @@ std::shared_ptr<Model> loadModel(std::filesystem::path path, CommandQueue* queue
 }
 
 std::vector<Triangle> Model::triangleList(int sceneIndex, GraphicsDeviceContext* graphicsContext) const {
-    auto getMeshTriangles = [&](const Mesh& mesh) -> std::vector<Triangle> {
+    auto getMeshTriangles = [&](const Mesh& mesh, const Matrix4& transform) -> std::vector<Triangle> {
         if (mesh.primitiveType != PrimitiveType::Triangle &&
             mesh.primitiveType != PrimitiveType::TriangleStrip)
             return {};
@@ -714,7 +714,8 @@ std::vector<Triangle> Model::triangleList(int sceneIndex, GraphicsDeviceContext*
             graphicsContext,
             [&](const void* data, VertexFormat format, uint32_t index)->bool {
                 if (format == VertexFormat::Float3) {
-                    positions.push_back(*(const Vector3*)data);
+                    Vector3 v = *(const Vector3*)data;
+                    positions.push_back(v.applying(transform, 1.0));
                     return true;
                 }
                 return false;
@@ -779,10 +780,14 @@ std::vector<Triangle> Model::triangleList(int sceneIndex, GraphicsDeviceContext*
         auto& scene = this->scenes.at(sceneIndex);
         for (auto& node : scene.nodes)
             ForEachNodeConst{ node }(
-                [&](auto& node) {
+                [&](auto& node, const Transform& trans) {
                     if (node.mesh.has_value()) {
                         const Mesh& mesh = node.mesh.value();
-                        auto tris = getMeshTriangles(mesh);
+                        Matrix4 tm = AffineTransform3::identity
+                            .scaled(node.scale).matrix4()
+                            .concatenating(trans.matrix4());
+
+                        auto tris = getMeshTriangles(mesh, tm);
                         triangles.insert(triangles.end(), tris.begin(), tris.end());
                     }
                 });
@@ -792,7 +797,7 @@ std::vector<Triangle> Model::triangleList(int sceneIndex, GraphicsDeviceContext*
 }
 
 std::vector<MaterialFace> Model::faceList(int sceneIndex, GraphicsDeviceContext* graphicsContext) const {
-    auto getMeshFaces = [&](const Mesh& mesh) -> std::vector<MaterialFace> {
+    auto getMeshFaces = [&](const Mesh& mesh, const Matrix4& transform) -> std::vector<MaterialFace> {
         if (mesh.primitiveType != PrimitiveType::Triangle &&
             mesh.primitiveType != PrimitiveType::TriangleStrip)
             return {};
@@ -808,7 +813,8 @@ std::vector<MaterialFace> Model::faceList(int sceneIndex, GraphicsDeviceContext*
             VertexAttributeSemantic::Position, graphicsContext,
             [&](const void* data, VertexFormat format, uint32_t index)->bool {
                 if (format == VertexFormat::Float3) {
-                    positions.push_back(*(const Vector3*)data);
+                    Vector3 v = *(const Vector3*)data;
+                    positions.push_back(v.applying(transform, 1.0));
                     return true;
                 }
                 return false;
@@ -911,10 +917,14 @@ std::vector<MaterialFace> Model::faceList(int sceneIndex, GraphicsDeviceContext*
         auto& scene = this->scenes.at(sceneIndex);
         for (auto& node : scene.nodes)
             ForEachNodeConst{ node }(
-                [&](auto& node) {
+                [&](auto& node, const Transform& trans) {
                     if (node.mesh.has_value()) {
                         const Mesh& mesh = node.mesh.value();
-                        auto f = getMeshFaces(mesh);
+                        Matrix4 tm = AffineTransform3::identity
+                            .scaled(node.scale).matrix4()
+                            .concatenating(trans.matrix4());
+
+                        auto f = getMeshFaces(mesh, tm);
                         faces.insert(faces.end(), f.begin(), f.end());
                     }
                 });

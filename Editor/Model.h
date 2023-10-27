@@ -33,21 +33,36 @@ struct Model {
 
 struct ForEachNode {
     SceneNode& node;
+    const Transform transform = Transform::identity;
     void operator()(std::function<void(SceneNode&)> fn) {
         fn(node);
         for (auto& child : node.children)
-            ForEachNode{ child }(fn);
+            ForEachNode{ child, Transform::identity }(fn);
+    }
+    void operator()(std::function<void(SceneNode&, const Transform&)> fn) {
+        auto trans = node.transform.concatenating(transform);
+        fn(node, trans);
+        for (auto& child : node.children)
+            ForEachNode{ child, trans }(fn);
     }
 };
 
 struct ForEachNodeConst {
     const SceneNode& node;
+    const Transform transform = Transform::identity;
     void operator()(std::function<void(const SceneNode&)> fn) {
         fn(node);
         for (auto& child : node.children)
-            ForEachNodeConst{ child }(fn);
+            ForEachNodeConst{ child, Transform::identity }(fn);
+    }
+    void operator()(std::function<void(const SceneNode&, const Transform&)> fn) {
+        auto trans = node.transform.concatenating(transform);
+        fn(node, trans);
+        for (auto& child : node.children)
+            ForEachNodeConst{ child, trans }(fn);
     }
 };
+
 
 std::shared_ptr<Model> loadModel(std::filesystem::path path, FV::CommandQueue* queue);
 std::optional<FV::MaterialShaderMap::Function> loadShader(std::filesystem::path path, FV::GraphicsDevice* device);

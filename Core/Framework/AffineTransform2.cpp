@@ -3,7 +3,7 @@
 using namespace FV;
 
 const AffineTransform2 AffineTransform2::identity = {
-    Matrix2::identity, Vector2::zero
+    Matrix2(1, 0, 0, 1), Vector2(0, 0)
 };
 
 Matrix3 AffineTransform2::matrix3() const {

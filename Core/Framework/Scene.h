@@ -24,15 +24,16 @@ namespace FV {
     struct FVCORE_API SceneNode {
         std::string name;
         std::optional<Mesh> mesh;
-        AABB aabb;
 
         Vector3 scale = Vector3(1, 1, 1);
         Transform transform = Transform::identity;
 
         std::vector<SceneNode> children;
 
+        Matrix4 transformMatrix() const;
+
         void draw(RenderCommandEncoder*, const SceneState&) const;
-        void updateAABB();
+        AABB aabb() const;
     };
 
     class FVCORE_API Scene {

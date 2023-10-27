@@ -14,21 +14,29 @@ void SceneNode::draw(RenderCommandEncoder* encoder, const SceneState& state) con
     }
 }
 
-void SceneNode::updateAABB() {
-    this->aabb = {};
+Matrix4 SceneNode::transformMatrix() const {
+    return AffineTransform3::identity
+        .scaled(this->scale)
+        .matrix4()
+        .concatenating(this->transform.matrix4());
+}
+
+AABB SceneNode::aabb() const {
+    AABB aabb = {};
     if (mesh) {
-        this->aabb = mesh.value().aabb;
+        aabb = mesh.value().aabb;
     }
+    
     for (auto& child : children) {
-        child.updateAABB();
-        this->aabb.combine(child.aabb);
+        auto aabb2 = child.aabb();
+        aabb.combine(aabb2);
     }
+    aabb.apply(transformMatrix());
+    return aabb;
 }
 
 Scene::Scene() {
-
 }
 
 Scene::~Scene() {
-
 }

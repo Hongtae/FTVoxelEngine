@@ -50,6 +50,19 @@ namespace FV {
             return *this;
         }
 
+        AABB applying(const Matrix3& transform) const;
+        AABB applying(const Matrix4& transform) const;
+
+        AABB& apply(const Matrix3& transform) {
+            *this = applying(transform);
+            return *this;
+        }
+
+        AABB& apply(const Matrix4& transform) {
+            *this = applying(transform);
+            return *this;
+        }
+
         AABB intersection(const AABB& other) const {
             if (isNull() || other.isNull()) {
                 return {};

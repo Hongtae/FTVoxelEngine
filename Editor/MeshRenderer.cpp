@@ -93,14 +93,13 @@ void MeshRenderer::update(float delta) {
 }
 
 void MeshRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
-
-    SceneState sceneState = { view, projection, transform.matrix4()};
-
-    auto buffer = queue->makeCommandBuffer();
-    auto encoder = buffer->makeRenderCommandEncoder(rp);
-    encoder->setDepthStencilState(depthStencilState);
-
     if (model && model->scenes.empty() == false) {
+        SceneState sceneState = { view, projection, transform.matrix4() };
+
+        auto buffer = queue->makeCommandBuffer();
+        auto encoder = buffer->makeRenderCommandEncoder(rp);
+        encoder->setDepthStencilState(depthStencilState);
+
         //transform.rotate(Quaternion(Vector3(0, 1, 0), std::numbers::pi * delta * 0.4));
 
         Vector3 lightColor = { 1, 1, 1 };
@@ -109,7 +108,7 @@ void MeshRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
         auto& scene = model->scenes.at(model->defaultSceneIndex);
         for (auto& node : scene.nodes)
             ForEachNode{ node }(
-                [&](auto& node) {
+                [&](auto& node, const Transform& trans) {
                     if (node.mesh.has_value()) {
                         auto& mesh = node.mesh.value();
                         if (auto material = mesh.material.get(); material) {
@@ -117,13 +116,18 @@ void MeshRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
                             material->setProperty(ShaderBindingLocation::pushConstant(144), lightColor);
                             material->setProperty(ShaderBindingLocation::pushConstant(160), ambientColor);
                         }
-                        mesh.updateShadingProperties(&sceneState);
+                        auto sceneStateLocal = sceneState;
+                        sceneStateLocal.model = AffineTransform3::identity
+                            .scaled(node.scale).matrix4()
+                            .concatenating(trans.matrix4());
+
+                        mesh.updateShadingProperties(&sceneStateLocal);
                         mesh.encodeRenderCommand(encoder.get(), 1, 0);
                     }
                 });
+        encoder->endEncoding();
+        buffer->commit();
     }
-    encoder->endEncoding();
-    buffer->commit();
 }
 
 Model* MeshRenderer::loadModel(std::filesystem::path path,
@@ -158,7 +162,6 @@ Model* MeshRenderer::loadModel(std::filesystem::path path,
                             }
                         }
                     });
-                node.updateAABB();
             }
         }
 
@@ -168,7 +171,7 @@ Model* MeshRenderer::loadModel(std::filesystem::path path,
                 model->defaultSceneIndex = 0;
             auto& scene = model->scenes.at(model->defaultSceneIndex);
             for (auto& node : scene.nodes) {
-                aabb.combine(node.aabb);
+                aabb.combine(node.aabb());
             }
         }
         this->aabb = aabb;

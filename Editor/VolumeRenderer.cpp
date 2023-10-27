@@ -159,10 +159,8 @@ float VolumeRenderer::bestFitDepth() const {
         auto nodeTM = transform.matrix4();
         auto mvp = nodeTM.concatenating(view.matrix4()).concatenating(projection.matrix);
 
-        for (auto& v : aabbCornerVertices) {
-            auto v2 = Vector4(v, 1.0).apply(mvp);
-            v = Vector3(v2.x, v2.y, v2.z) / v2.w;
-        }
+        for (auto& v : aabbCornerVertices) { v.apply(mvp, 1.0);}
+
         struct { float minX, maxX, minY, maxY; } ndcMinMaxPoint = {
             aabbCornerVertices[0].x,
             aabbCornerVertices[0].x,

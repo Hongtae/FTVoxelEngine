@@ -21,6 +21,46 @@ AABB::AABB(const Vector3& _min, const Vector3& _max)
     : min(_min), max(_max) {
 }
 
+AABB AABB::applying(const Matrix3& transform) const {
+    if (isNull())
+        return {};
+    AABB aabb = {};
+    Vector3 verts[8] = {
+        {min.x, min.y, min.z},
+        {max.x, min.y, min.z},
+        {min.x, max.y, min.z},
+        {max.x, max.y, min.z},
+        {min.x, min.y, max.z},
+        {max.x, min.y, max.z},
+        {min.x, max.y, max.z},
+        {max.x, max.y, max.z},
+    };
+    for (const auto& v : verts) {
+        aabb.expand(v.applying(transform));
+    }
+    return aabb;
+}
+
+AABB AABB::applying(const Matrix4& transform) const {
+    if (isNull())
+        return {};
+    AABB aabb = {};
+    Vector3 verts[8] = {
+        {min.x, min.y, min.z},
+        {max.x, min.y, min.z},
+        {min.x, max.y, min.z},
+        {max.x, max.y, min.z},
+        {min.x, min.y, max.z},
+        {max.x, min.y, max.z},
+        {min.x, max.y, max.z},
+        {max.x, max.y, max.z},
+    };
+    for (const auto& v : verts) {
+        aabb.expand(v.applying(transform, 1.0));
+    }
+    return aabb;
+}
+
 float AABB::rayTest(const Vector3& origin, const Vector3& dir) const {
     if (isNull()) return {};
 
