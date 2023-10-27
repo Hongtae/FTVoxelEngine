@@ -74,6 +74,27 @@ AffineTransform3& AffineTransform3::concatenate(const AffineTransform3& rhs) {
     return *this;
 }
 
+bool AffineTransform3::decompose(Vector3& scale, Quaternion& rotation) const {
+    Vector3 s = { matrix3.row1().magnitude(),
+                  matrix3.row2().magnitude(),
+                  matrix3.row3().magnitude() };
+    if (s.x * s.y * s.z == 0.0) return false;
+
+    Matrix3 mat = Matrix3(matrix3.row1() / s.x,
+                          matrix3.row2() / s.y,
+                          matrix3.row3() / s.z);
+
+    float x = sqrt(std::max(0.0f, 1.0f + mat._11 - mat._22 - mat._33)) * 0.5f;
+    float y = sqrt(std::max(0.0f, 1.0f - mat._11 + mat._22 - mat._33)) * 0.5f;
+    float z = sqrt(std::max(0.0f, 1.0f - mat._11 - mat._22 + mat._33)) * 0.5f;
+    float w = sqrt(std::max(0.0f, 1.0f + mat._11 + mat._22 + mat._33)) * 0.5f;
+    x = copysign(x, mat._23 - mat._32);
+    y = copysign(y, mat._31 - mat._13);
+    z = copysign(z, mat._12 - mat._21);
+
+    rotation = Quaternion(x, y, z, w);
+    return true;
+}
 
 bool AffineTransform3::operator==(const AffineTransform3& rhs) const {
     return matrix3 == rhs.matrix3 && translation == rhs.translation;

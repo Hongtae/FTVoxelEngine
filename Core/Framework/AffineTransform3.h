@@ -53,6 +53,8 @@ namespace FV {
         AffineTransform3 concatenating(const AffineTransform3& rhs) const;
         AffineTransform3& concatenate(const AffineTransform3& rhs);
 
+        bool decompose(Vector3& scale, Quaternion& rotation) const;
+
         bool operator==(const AffineTransform3& rhs) const;
     };
 }
