@@ -78,28 +78,77 @@ AffineTransform3& AffineTransform3::concatenate(const AffineTransform3& rhs) {
 }
 
 bool AffineTransform3::decompose(Vector3& scale, Quaternion& rotation) const {
-    Vector3 row1 = matrix3.row1();
-    Vector3 row2 = matrix3.row2();
-    Vector3 row3 = matrix3.row3();
-    Vector3 s = { row1.magnitude(),
-                  row2.magnitude(),
-                  row3.magnitude() };
-    if (s.x * s.y * s.z == 0.0) return false;
+    constexpr float epsilon = std::numeric_limits<float>::epsilon();
 
-    Matrix3 mat = Matrix3(row1 / s.x,
-                          row2 / s.y,
-                          row3 / s.z);
+    if (abs(matrix3.determinant()) < epsilon)
+        return false;
 
-    float x = sqrt(std::max(0.0f, 1.0f + mat._11 - mat._22 - mat._33)) * 0.5f;
-    float y = sqrt(std::max(0.0f, 1.0f - mat._11 + mat._22 - mat._33)) * 0.5f;
-    float z = sqrt(std::max(0.0f, 1.0f - mat._11 - mat._22 + mat._33)) * 0.5f;
-    float w = sqrt(std::max(0.0f, 1.0f + mat._11 + mat._22 + mat._33)) * 0.5f;
-    x = copysign(x, mat._23 - mat._32);
-    y = copysign(y, mat._31 - mat._13);
-    z = copysign(z, mat._12 - mat._21);
+    Vector3 row[3] = {
+        matrix3.row1(),
+        matrix3.row2(),
+        matrix3.row3(),
+    };
 
-    rotation = Quaternion(x, y, z, w);
-    scale = s;
+    float skewYZ, skewXZ, skewXY;
+
+    // get scale-x and normalize row-1
+    scale.x = row[0].magnitude();
+    row[0] = row[0] / scale.x;
+
+    // xy shear
+    skewXY = Vector3::dot(row[0], row[1]);
+    row[1] = row[1] + row[0] * -skewXY;
+
+    // get scale-y, normalize row-2
+    scale.y = row[1].magnitude();
+    row[1] = row[1] / scale.y;
+    skewXY /= scale.y;
+
+    // xz, yz shear
+    skewXZ = Vector3::dot(row[0], row[2]);
+    row[2] = row[2] + row[0] * -skewXZ;
+    skewYZ = Vector3::dot(row[1], row[2]);
+    row[2] = row[2] + row[1] * -skewYZ;
+
+    // get scale-z, normalize row-3
+    scale.z = row[2].magnitude();
+    row[2] = row[2] / scale.z;
+    skewXZ /= scale.z;
+    skewYZ /= scale.z;
+
+    //Vector3 skew = { skewYZ, skewXZ, skewXY };
+
+    // check coordindate system flip
+    Vector3 pdum3 = Vector3::cross(row[1], row[2]);
+    if (Vector3::dot(row[0], pdum3) < 0.0f) {
+        scale *= -1.0f;
+        row[0] *= -1.0f;
+        row[1] *= -1.0f;
+        row[2] *= -1.0f;
+    }
+
+    float t = row[0].x + row[1].y + row[2].z;
+    if (t > 0.0f) {
+        float root = sqrt(t + 1.0f);
+        rotation.w = 0.5f * root;
+        root = 0.5f / root;
+        rotation.x = root * (row[1].z - row[2].y);
+        rotation.y = root * (row[2].x - row[0].z);
+        rotation.z = root * (row[0].y - row[1].x);
+    } else {
+        int i = 0;
+        if (row[1].y > row[0].x) { i = 1; }
+        if (row[2].z > row[i].val[i]) { i = 2; }
+        int j = (i + 1) % 3;
+        int k = (j + 1) % 3;
+
+        float root = sqrt(row[i].val[i] - row[j].val[j] - row[k].val[k] + 1.0f);
+        rotation.val[i] = 0.5f * root;
+        root = 0.5f / root;
+        rotation.val[j] = root * (row[i].val[j] + row[j].val[i]);
+        rotation.val[k] = root * (row[i].val[k] + row[k].val[i]);
+        rotation.w = root * (row[j].val[k] - row[k].val[j]);
+    }
     return true;
 }
 

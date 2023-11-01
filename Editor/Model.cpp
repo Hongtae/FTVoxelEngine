@@ -695,6 +695,7 @@ SceneNode loadNode(const tinygltf::Node& node, const Matrix4& baseTM, LoaderCont
             for (int i = 0; i < 3; ++i)
                 translation.val[i] = float(node.translation[i]);
         }
+        // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#transformations
         nodeTM = AffineTransform3::identity
             .scaled(scale)
             .rotated(rotation)
@@ -713,13 +714,21 @@ SceneNode loadNode(const tinygltf::Node& node, const Matrix4& baseTM, LoaderCont
         return { Transform(quat, affine.translation), scale };
     };
 
-    Transform baseTrans = std::get<0>(decompose(baseTM));
+    auto base = decompose(baseTM);
+    Transform baseTrans = std::get<0>(base);
 
     auto ts = decompose(worldTM);
     output.transform = std::get<0>(ts).concatenating(baseTrans.inverted());
     output.scale = std::get<1>(ts);
 
-    output.children.reserve(node.children.size());
+    // update mesh node transform
+    for (auto& node : output.children) {
+        ForEachNode{ node }([&](auto& node) {
+            node.scale = std::get<1>(ts);
+        });
+    }
+
+    output.children.reserve(output.children.size() + node.children.size());
     for (auto index : node.children) {
         auto& child = model.nodes.at(index);
         auto node = loadNode(child, worldTM, context);

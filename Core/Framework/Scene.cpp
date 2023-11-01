@@ -25,13 +25,15 @@ AABB SceneNode::aabb() const {
     AABB aabb = {};
     if (mesh) {
         aabb = mesh.value().aabb;
+        // apply local-scale
+        aabb.apply(AffineTransform3::identity.scaled(scale).matrix4());
     }
     
     for (auto& child : children) {
         auto aabb2 = child.aabb();
         aabb.combine(aabb2);
     }
-    aabb.apply(transformMatrix());
+    aabb.apply(transform.matrix4());
     return aabb;
 }
 
