@@ -309,9 +309,7 @@ bool Mesh::buildPipelineState(GraphicsDevice* device, PipelineReflection* rep) {
         std::vector<RenderPipelineColorAttachmentDescriptor> attachments;
         for (uint32_t index = 0; index < material->attachments.size(); ++index) {
             auto& att = material->attachments.at(index);
-            if (att.format != PixelFormat::Invalid) {
-                attachments.push_back({ index, att.format, att.blendState });
-            }
+            attachments.push_back({ index, att.format, att.blendState });
         }
         return attachments;
     }();
