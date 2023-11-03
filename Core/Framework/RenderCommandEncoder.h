@@ -31,7 +31,7 @@ namespace FV {
     public:
         virtual ~RenderCommandEncoder() {}
 
-        virtual void setResources(uint32_t set, std::shared_ptr<ShaderBindingSet>) = 0;
+        virtual void setResource(uint32_t set, std::shared_ptr<ShaderBindingSet>) = 0;
         virtual void setViewport(const Viewport&) = 0;
         virtual void setScissorRect(const ScissorRect&) = 0;
         virtual void setRenderPipelineState(std::shared_ptr<RenderPipelineState> state) = 0;

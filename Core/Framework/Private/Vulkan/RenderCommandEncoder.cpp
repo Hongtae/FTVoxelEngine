@@ -585,7 +585,7 @@ void RenderCommandEncoder::drawIndexed(uint32_t indexCount, IndexType indexType,
     }
 }
 
-void RenderCommandEncoder::setResources(uint32_t index, std::shared_ptr<FV::ShaderBindingSet> set) {
+void RenderCommandEncoder::setResource(uint32_t index, std::shared_ptr<FV::ShaderBindingSet> set) {
     std::shared_ptr<DescriptorSet> descriptorSet = nullptr;
     if (set) {
         auto bindingSet = std::dynamic_pointer_cast<ShaderBindingSet>(set);

@@ -9,7 +9,7 @@ namespace FV {
     public:
         virtual ~ComputeCommandEncoder() {}
 
-        virtual void setResources(uint32_t set, std::shared_ptr<ShaderBindingSet>) = 0;
+        virtual void setResource(uint32_t set, std::shared_ptr<ShaderBindingSet>) = 0;
         virtual void setComputePipelineState(std::shared_ptr<ComputePipelineState>) = 0;
 
         virtual void pushConstant(uint32_t stages, uint32_t offset, uint32_t size, const void*) = 0;

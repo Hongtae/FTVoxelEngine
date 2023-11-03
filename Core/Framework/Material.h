@@ -156,6 +156,43 @@ namespace FV {
                 [this](auto&& arg) {
                     return decltype(_convertible<T>(arg))::value; }, value);
         }
+
+        struct UnderlyingData {
+            const void* data;
+            size_t elementSize;
+            size_t count;
+        };
+        UnderlyingData underlyingData() const {
+            return std::visit(
+                [](auto&& arg) -> UnderlyingData {
+                    using T = std::decay_t<decltype(arg)>;
+                    if constexpr (std::is_same_v<T, MaterialProperty::Buffer>)
+                        return { arg.data(), sizeof(T::value_type), arg.size() };
+                    else if constexpr (std::is_same_v<T, MaterialProperty::Int8Array>)
+                        return { arg.data(), sizeof(T::value_type), arg.size() };
+                    else if constexpr (std::is_same_v<T, MaterialProperty::UInt8Array>)
+                        return { arg.data(), sizeof(T::value_type), arg.size() };
+                    else if constexpr (std::is_same_v<T, MaterialProperty::Int16Array>)
+                        return { arg.data(), sizeof(T::value_type), arg.size() };
+                    else if constexpr (std::is_same_v<T, MaterialProperty::UInt16Array>)
+                        return { arg.data(), sizeof(T::value_type), arg.size() };
+                    else if constexpr (std::is_same_v<T, MaterialProperty::Int32Array>)
+                        return { arg.data(), sizeof(T::value_type), arg.size() };
+                    else if constexpr (std::is_same_v<T, MaterialProperty::UInt32Array>)
+                        return { arg.data(), sizeof(T::value_type), arg.size() };
+                    else if constexpr (std::is_same_v<T, MaterialProperty::Int64Array>)
+                        return { arg.data(), sizeof(T::value_type), arg.size() };
+                    else if constexpr (std::is_same_v<T, MaterialProperty::UInt64Array>)
+                        return { arg.data(), sizeof(T::value_type), arg.size() };
+                    else if constexpr (std::is_same_v<T, MaterialProperty::HalfArray>)
+                        return { arg.data(), sizeof(T::value_type), arg.size() };
+                    else if constexpr (std::is_same_v<T, MaterialProperty::FloatArray>)
+                        return { arg.data(), sizeof(T::value_type), arg.size() };
+                    else if constexpr (std::is_same_v<T, MaterialProperty::DoubleArray>)
+                        return { arg.data(), sizeof(T::value_type), arg.size() };
+                    return { nullptr, 0, 0 };
+                }, value);
+        }
     };
 
     struct MaterialShaderMap {

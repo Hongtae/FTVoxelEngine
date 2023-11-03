@@ -100,7 +100,7 @@ void ComputeCommandEncoder::signalSemaphoreValue(std::shared_ptr<FV::GPUSemaphor
     encoder->semaphores.push_back(semaphore);
 }
 
-void ComputeCommandEncoder::setResources(uint32_t index, std::shared_ptr<FV::ShaderBindingSet> set) {
+void ComputeCommandEncoder::setResource(uint32_t index, std::shared_ptr<FV::ShaderBindingSet> set) {
     std::shared_ptr<DescriptorSet> descriptorSet = nullptr;
     if (set) {
         auto bindingSet = std::dynamic_pointer_cast<ShaderBindingSet>(set);

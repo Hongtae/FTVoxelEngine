@@ -53,7 +53,7 @@ namespace FV::Vulkan {
         void waitSemaphoreValue(std::shared_ptr<FV::GPUSemaphore>, uint64_t) override;
         void signalSemaphoreValue(std::shared_ptr<FV::GPUSemaphore>, uint64_t) override;
 
-        void setResources(uint32_t set, std::shared_ptr<FV::ShaderBindingSet>) override;
+        void setResource(uint32_t set, std::shared_ptr<FV::ShaderBindingSet>) override;
         void setComputePipelineState(std::shared_ptr<FV::ComputePipelineState>) override;
 
         void pushConstant(uint32_t stages, uint32_t offset, uint32_t size, const void*) override;

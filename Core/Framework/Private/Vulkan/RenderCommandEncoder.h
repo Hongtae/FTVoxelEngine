@@ -60,7 +60,7 @@ namespace FV::Vulkan {
         void waitSemaphoreValue(std::shared_ptr<FV::GPUSemaphore>, uint64_t) override;
         void signalSemaphoreValue(std::shared_ptr<FV::GPUSemaphore>, uint64_t) override;
 
-        void setResources(uint32_t set, std::shared_ptr<FV::ShaderBindingSet>) override;
+        void setResource(uint32_t set, std::shared_ptr<FV::ShaderBindingSet>) override;
 
         void setViewport(const Viewport&) override;
         void setScissorRect(const ScissorRect&) override;

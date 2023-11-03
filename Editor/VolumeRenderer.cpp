@@ -229,7 +229,7 @@ void VolumeRenderer::render(const RenderPassDescriptor&, const Rect& frame) {
         auto cbuffer = queue->makeCommandBuffer();
         auto encoder = cbuffer->makeComputeCommandEncoder();
         encoder->setComputePipelineState(pipelineState);
-        encoder->setResources(0, bindingSet);
+        encoder->setResource(0, bindingSet);
         encoder->pushConstant(uint32_t(ShaderStage::Compute), 0, sizeof(pcdata), &pcdata);
         encoder->dispatch(width / threadgroupSize.x,
                           height / threadgroupSize.y,

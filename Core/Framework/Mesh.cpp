@@ -704,6 +704,9 @@ void Mesh::updateShadingProperties(const SceneState* sceneState) {
 }
 
 uint32_t Mesh::bindMaterialTextures(MaterialSemantic semantic, const ShaderResource& resource, ShaderBindingSet* bindingSet) const {
+    auto material = this->material.get();
+    FVASSERT_DEBUG(material);
+
     MaterialProperty::TextureArray textures;
 
     if (semantic != MaterialSemantic::UserDefined) {
@@ -744,7 +747,7 @@ uint32_t Mesh::bindMaterialTextures(MaterialSemantic semantic, const ShaderResou
         textures.push_back(material->defaultTexture);
 
     if (textures.empty() == false) {
-        uint32_t n = std::max(resource.count, uint32_t(textures.size()));
+        uint32_t n = std::min(resource.count, uint32_t(textures.size()));
         bindingSet->setTextureArray(resource.binding, n, textures.data());
         return n;
     }
@@ -752,6 +755,9 @@ uint32_t Mesh::bindMaterialTextures(MaterialSemantic semantic, const ShaderResou
 }
 
 uint32_t Mesh::bindMaterialSamplers(MaterialSemantic semantic, const ShaderResource& resource, ShaderBindingSet* bindingSet) const {
+    auto material = this->material.get();
+    FVASSERT_DEBUG(material);
+
     MaterialProperty::SamplerArray samplers;
 
     if (semantic != MaterialSemantic::UserDefined) {
@@ -792,7 +798,7 @@ uint32_t Mesh::bindMaterialSamplers(MaterialSemantic semantic, const ShaderResou
         samplers.push_back(material->defaultSampler);
 
     if (samplers.empty() == false) {
-        uint32_t n = std::max(resource.count, uint32_t(samplers.size()));
+        uint32_t n = std::min(resource.count, uint32_t(samplers.size()));
         bindingSet->setSamplerStateArray(resource.binding, n, samplers.data());
         return n;
     }
@@ -806,57 +812,20 @@ uint32_t Mesh::bindMaterialProperty(MaterialSemantic semantic,
                                     uint32_t itemOffset,
                                     uint8_t* buffer, size_t length) const {
     auto material = this->material.get();
-    if (material == nullptr)
-        return 0;
+    FVASSERT_DEBUG(material);
 
-    struct PropertyData {
-        const void* data;
-        size_t elementSize;
-        size_t count;
-    } data = { nullptr, 0, 0 };
-
-    auto getPropertyData = [](const MaterialProperty& prop)-> PropertyData {
-        return std::visit(
-            [](auto&& arg) -> PropertyData {
-                using T = std::decay_t<decltype(arg)>;
-                if constexpr (std::is_same_v<T, MaterialProperty::Buffer>)
-                    return { arg.data(), sizeof(T::value_type), arg.size() };
-                else if constexpr (std::is_same_v<T, MaterialProperty::Int8Array>)
-                    return { arg.data(), sizeof(T::value_type), arg.size() };
-                else if constexpr (std::is_same_v<T, MaterialProperty::UInt8Array>)
-                    return { arg.data(), sizeof(T::value_type), arg.size() };
-                else if constexpr (std::is_same_v<T, MaterialProperty::Int16Array>)
-                    return { arg.data(), sizeof(T::value_type), arg.size() };
-                else if constexpr (std::is_same_v<T, MaterialProperty::UInt16Array>)
-                    return { arg.data(), sizeof(T::value_type), arg.size() };
-                else if constexpr (std::is_same_v<T, MaterialProperty::Int32Array>)
-                    return { arg.data(), sizeof(T::value_type), arg.size() };
-                else if constexpr (std::is_same_v<T, MaterialProperty::UInt32Array>)
-                    return { arg.data(), sizeof(T::value_type), arg.size() };
-                else if constexpr (std::is_same_v<T, MaterialProperty::Int64Array>)
-                    return { arg.data(), sizeof(T::value_type), arg.size() };
-                else if constexpr (std::is_same_v<T, MaterialProperty::UInt64Array>)
-                    return { arg.data(), sizeof(T::value_type), arg.size() };
-                else if constexpr (std::is_same_v<T, MaterialProperty::HalfArray>)
-                    return { arg.data(), sizeof(T::value_type), arg.size() };
-                else if constexpr (std::is_same_v<T, MaterialProperty::FloatArray>)
-                    return { arg.data(), sizeof(T::value_type), arg.size() };
-                else if constexpr (std::is_same_v<T, MaterialProperty::DoubleArray>)
-                    return { arg.data(), sizeof(T::value_type), arg.size() };
-                return { nullptr, 0, 0 };
-            }, prop.value);
-    };
+    MaterialProperty::UnderlyingData data = {};
 
     if (semantic != MaterialSemantic::UserDefined) {
         if (auto it = material->properties.find(semantic);
             it != material->properties.end()) {
-            data = getPropertyData(it->second);
+            data = it->second.underlyingData();
         }
     }
     if (data.count == 0) {
         if (auto it = material->userDefinedProperties.find(location);
             it != material->userDefinedProperties.end()) {
-            data = getPropertyData(it->second);
+            data = it->second.underlyingData();
         }
     }
 
@@ -964,10 +933,10 @@ bool Mesh::encodeRenderCommand(RenderCommandEncoder* encoder,
     if (pipelineState && vertexBuffers.empty() == false && material) {
         encoder->setRenderPipelineState(pipelineState);
         encoder->setFrontFacing(material->frontFace);
-        encoder->setCullMode(CullMode::None);
+        encoder->setCullMode(material->cullMode);
 
         for (auto& rb : resourceBindings) {
-            encoder->setResources(rb.index, rb.bindingSet);
+            encoder->setResource(rb.index, rb.bindingSet);
         }
         if (pushConstants.empty() == false) {
             // VUID-vkCmdPushConstants-offset-01796
