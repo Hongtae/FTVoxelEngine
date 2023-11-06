@@ -27,8 +27,8 @@ namespace FV::Vulkan {
 
         std::shared_ptr<FV::CommandQueue> makeCommandQueue(uint32_t) override;
 
-        std::shared_ptr<FV::RenderPipelineState> makeRenderPipeline(const RenderPipelineDescriptor&, PipelineReflection*) override;
-        std::shared_ptr<FV::ComputePipelineState> makeComputePipeline(const ComputePipelineDescriptor&, PipelineReflection*) override;
+        std::shared_ptr<FV::RenderPipelineState> makeRenderPipelineState(const RenderPipelineDescriptor&, PipelineReflection*) override;
+        std::shared_ptr<FV::ComputePipelineState> makeComputePipelineState(const ComputePipelineDescriptor&, PipelineReflection*) override;
         std::shared_ptr<FV::DepthStencilState> makeDepthStencilState(const DepthStencilDescriptor&) override;
 
         std::shared_ptr<FV::ShaderModule> makeShaderModule(const FV::Shader&) override;

@@ -1051,7 +1051,7 @@ std::shared_ptr<FV::GPUSemaphore> GraphicsDevice::makeSemaphore() {
     return std::make_shared<TimelineSemaphore>(shared_from_this(), semaphore);
 }
 
-std::shared_ptr<FV::RenderPipelineState> GraphicsDevice::makeRenderPipeline(const RenderPipelineDescriptor& desc, PipelineReflection* reflection) {
+std::shared_ptr<FV::RenderPipelineState> GraphicsDevice::makeRenderPipelineState(const RenderPipelineDescriptor& desc, PipelineReflection* reflection) {
     VkResult err = VK_SUCCESS;
 
     VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
@@ -1474,7 +1474,7 @@ std::shared_ptr<FV::RenderPipelineState> GraphicsDevice::makeRenderPipeline(cons
     return pipelineState;
 }
 
-std::shared_ptr<FV::ComputePipelineState> GraphicsDevice::makeComputePipeline(const ComputePipelineDescriptor& desc, PipelineReflection* reflection) {
+std::shared_ptr<FV::ComputePipelineState> GraphicsDevice::makeComputePipelineState(const ComputePipelineDescriptor& desc, PipelineReflection* reflection) {
     VkResult err = VK_SUCCESS;
 
     VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;

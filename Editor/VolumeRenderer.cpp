@@ -39,7 +39,7 @@ void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc, std::
     ComputePipelineDescriptor desc = { fn };
     desc.disableOptimization = true;
     PipelineReflection reflection = {};
-    pipelineState = device->makeComputePipeline(desc, &reflection);
+    pipelineState = device->makeComputePipelineState(desc, &reflection);
     if (pipelineState) {
         printPipelineReflection(reflection, Log::Level::Debug);
     }

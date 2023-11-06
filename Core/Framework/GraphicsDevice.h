@@ -24,8 +24,8 @@ namespace FV {
         virtual std::shared_ptr<ShaderModule> makeShaderModule(const Shader&) = 0;
         virtual std::shared_ptr<ShaderBindingSet> makeShaderBindingSet(const ShaderBindingSetLayout&) = 0;
 
-        virtual std::shared_ptr<RenderPipelineState> makeRenderPipeline(const RenderPipelineDescriptor&, PipelineReflection* reflection) = 0;
-        virtual std::shared_ptr<ComputePipelineState> makeComputePipeline(const ComputePipelineDescriptor&, PipelineReflection* reflection) = 0;
+        virtual std::shared_ptr<RenderPipelineState> makeRenderPipelineState(const RenderPipelineDescriptor&, PipelineReflection* reflection) = 0;
+        virtual std::shared_ptr<ComputePipelineState> makeComputePipelineState(const ComputePipelineDescriptor&, PipelineReflection* reflection) = 0;
 
         virtual std::shared_ptr<DepthStencilState> makeDepthStencilState(const DepthStencilDescriptor&) = 0;
 

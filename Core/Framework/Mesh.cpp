@@ -319,9 +319,9 @@ bool Mesh::buildPipelineState(GraphicsDevice* device, PipelineReflection* rep) {
     pipelineDescriptor.rasterizationEnabled = true;
 
     PipelineReflection reflection = {};
-    auto pso = device->makeRenderPipeline(pipelineDescriptor, &reflection);
+    auto pso = device->makeRenderPipelineState(pipelineDescriptor, &reflection);
     if (pso == nullptr) {
-        Log::error("GraphicsDevice::makeRenderPipeline() failed.");
+        Log::error("GraphicsDevice::makeRenderPipelineState() failed.");
         return false;
     }
 
