@@ -338,6 +338,9 @@
     <ClInclude Include="Framework\Sphere.h">
       <Filter>Framework</Filter>
     </ClInclude>
+    <ClInclude Include="Framework\VoxelModel.h">
+      <Filter>Framework</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -545,6 +548,9 @@
       <Filter>Framework</Filter>
     </ClCompile>
     <ClCompile Include="Framework\AABBOctree.cpp">
+      <Filter>Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\VoxelModel.cpp">
       <Filter>Framework</Filter>
     </ClCompile>
   </ItemGroup>

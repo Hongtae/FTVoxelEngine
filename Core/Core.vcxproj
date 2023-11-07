@@ -284,6 +284,7 @@
     <ClInclude Include="Framework\ViewProjection.h" />
     <ClInclude Include="Framework\VirtualKey.h" />
     <ClInclude Include="Framework\AABBOctree.h" />
+    <ClInclude Include="Framework\VoxelModel.h" />
     <ClInclude Include="Framework\Window.h" />
     <ClInclude Include="FVCore.h" />
     <ClInclude Include="include.h" />
@@ -357,6 +358,7 @@
     <ClCompile Include="Framework\Vector3.cpp" />
     <ClCompile Include="Framework\Vector4.cpp" />
     <ClCompile Include="Framework\AABBOctree.cpp" />
+    <ClCompile Include="Framework\VoxelModel.cpp" />
     <ClCompile Include="Framework\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
