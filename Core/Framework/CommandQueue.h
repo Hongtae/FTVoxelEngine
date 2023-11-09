@@ -1,6 +1,5 @@
 #pragma once
 #include "../include.h"
-#include <memory>
 #include "RenderPass.h"
 #include "CommandBuffer.h"
 #include "SwapChain.h"

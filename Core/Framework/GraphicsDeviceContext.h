@@ -1,6 +1,5 @@
 #pragma once
 #include "../include.h"
-#include <memory>
 #include <vector>
 #include "GraphicsDevice.h"
 

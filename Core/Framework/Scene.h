@@ -1,9 +1,6 @@
 #pragma once
 #include "../include.h"
-#include <string>
-#include <optional>
 #include <vector>
-#include <limits>
 #include "ViewProjection.h"
 #include "Quaternion.h"
 #include "Vector3.h"

@@ -2,7 +2,6 @@
 #include "../include.h"
 #include <mutex>
 #include <thread>
-#include <memory>
 #include <vector>
 
 #include "AudioDevice.h"

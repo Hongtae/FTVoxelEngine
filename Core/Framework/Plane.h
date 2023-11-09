@@ -1,6 +1,5 @@
 #pragma once
 #include "../include.h"
-#include <optional>
 #include "Vector3.h"
 #include "Vector4.h"
 

@@ -1,8 +1,6 @@
 #pragma once
 #include "../include.h"
 #include <vector>
-#include <functional>
-#include <string>
 #include <filesystem>
 #include "Texture.h"
 #include "CommandQueue.h"

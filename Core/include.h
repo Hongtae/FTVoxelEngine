@@ -124,9 +124,19 @@
 #include <utility>
 #include <stdexcept>
 #include <type_traits>
+#include <algorithm>
+#include <optional>
+#include <functional>
+#include <numeric>
+#include <limits>
+#include <concepts>
+#include <compare>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <format>
+#include <string>
+#include <cmath>
 
 #ifdef _MSC_VER
 #define FV_TRAP() __debugbreak()

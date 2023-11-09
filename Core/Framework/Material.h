@@ -2,9 +2,7 @@
 #include "../include.h"
 #include <vector>
 #include <variant>
-#include <optional>
 #include <unordered_map>
-#include <functional>
 #include "RenderPass.h"
 #include "RenderPipeline.h"
 #include "Vector2.h"

@@ -1,9 +1,7 @@
 #pragma once
 #include "../include.h"
 #include <numbers>
-#include <type_traits>
 #include "Vector4.h"
-#include <format>
 
 #pragma pack(push, 4)
 namespace FV {

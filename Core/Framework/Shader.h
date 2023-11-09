@@ -1,7 +1,6 @@
 #pragma once
 #include "../include.h"
 #include <vector>
-#include <cstdint>
 #include <filesystem>
 #include "ShaderResource.h"
 

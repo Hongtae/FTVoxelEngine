@@ -1,6 +1,5 @@
 #pragma once
 #include "../include.h"
-#include <functional>
 #include <unordered_map>
 #include <mutex>
 #include <future>

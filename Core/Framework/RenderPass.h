@@ -1,8 +1,8 @@
 #pragma once
 #include "../include.h"
+#include <vector>
 #include "Color.h"
 #include "Texture.h"
-#include <vector>
 
 namespace FV {
     struct RenderPassAttachmentDescriptor {

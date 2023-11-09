@@ -1,8 +1,5 @@
 #pragma once
 #include "../include.h"
-#include <cstdlib>
-#include <cmath>
-#include <algorithm>
 #include "Vector2.h"
 
 #ifndef NOMINMAX

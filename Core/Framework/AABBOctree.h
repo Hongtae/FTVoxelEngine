@@ -1,9 +1,6 @@
 #pragma once
 #include "../include.h"
-#include <algorithm>
-#include <optional>
 #include <vector>
-#include <functional>
 #include "Vector3.h"
 #include "AABB.h"
 #include "Triangle.h"

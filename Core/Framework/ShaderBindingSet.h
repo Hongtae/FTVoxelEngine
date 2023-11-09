@@ -1,10 +1,10 @@
 #pragma once
 #include "../include.h"
+#include <vector>
 #include "GPUBuffer.h"
 #include "Texture.h"
 #include "Sampler.h"
 #include "Shader.h"
-#include <vector>
 
 namespace FV {
     struct ShaderBinding {

@@ -1,6 +1,5 @@
 #pragma once
 #include "../include.h"
-#include <functional>
 #include "RenderCommandEncoder.h"
 #include "ComputeCommandEncoder.h"
 #include "CopyCommandEncoder.h"

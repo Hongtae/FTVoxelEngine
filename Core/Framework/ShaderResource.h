@@ -1,8 +1,7 @@
 #pragma once
 #include "../include.h"
-#include "Texture.h"
-#include <string>
 #include <vector>
+#include "Texture.h"
 
 namespace FV {
     enum class ShaderDataType {

@@ -1,7 +1,6 @@
 #pragma once
 #include "../include.h"
 #include <unordered_map>
-#include <functional>
 
 namespace FV {
     enum class MaterialSemantic {

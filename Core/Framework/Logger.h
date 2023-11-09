@@ -1,10 +1,7 @@
 #pragma once
 #include "../include.h"
-#include <memory>
 #include <map>
 #include <vector>
-#include <string>
-#include <format>
 
 namespace FV {
     class Logger : public std::enable_shared_from_this<Logger> {

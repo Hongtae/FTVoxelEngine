@@ -1,6 +1,5 @@
 #pragma once
 #include "../include.h"
-#include <format>
 
 #pragma pack(push, 4)
 namespace FV {
