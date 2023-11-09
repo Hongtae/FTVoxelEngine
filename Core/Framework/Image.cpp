@@ -23,51 +23,51 @@ namespace {
     }
 
     using RawColorValue = struct { double r, g, b, a; };
-    template <typename T> using enable_if_arithmetic_t = std::enable_if_t<std::is_arithmetic_v<T>>;
     // T = stored pixel component type, Q = quantization constant
-    template <typename T, double Q = std::numeric_limits<T>::max(), typename = enable_if_arithmetic_t<T>>
+    template <typename T, double Q = std::numeric_limits<T>::max()> requires std::is_arithmetic_v<T>
     void writePixelR(uint8_t* data, size_t offset, const RawColorValue& value) {
         T color[] = { T(value.r * Q) };
         memcpy(&data[offset], color, sizeof(color));
     }
-    template <typename T, double Q = std::numeric_limits<T>::max(), typename = enable_if_arithmetic_t<T>>
+    template <typename T, double Q = std::numeric_limits<T>::max()> requires std::is_arithmetic_v<T>
     void writePixelRG(uint8_t* data, size_t offset, const RawColorValue& value) {
         T color[] = { T(value.r * Q), T(value.g * Q) };
         memcpy(&data[offset], color, sizeof(color));
     }
-    template <typename T, double Q = std::numeric_limits<T>::max(), typename = enable_if_arithmetic_t<T>>
+    template <typename T, double Q = std::numeric_limits<T>::max()> requires std::is_arithmetic_v<T>
     void writePixelRGB(uint8_t* data, size_t offset, const RawColorValue& value) {
         T color[] = { T(value.r * Q), T(value.g * Q), T(value.b * Q) };
         memcpy(&data[offset], color, sizeof(color));
     }
-    template <typename T, double Q = std::numeric_limits<T>::max(), typename = enable_if_arithmetic_t<T>>
+    template <typename T, double Q = std::numeric_limits<T>::max()> requires std::is_arithmetic_v<T>
     void writePixelRGBA(uint8_t* data, size_t offset, const RawColorValue& value) {
         T color[] = { T(value.r * Q), T(value.g * Q), T(value.b * Q), T(value.a * Q) };
         memcpy(&data[offset], color, sizeof(color));
     }
+
     // T = stored pixel component type, N = normalization constant
-    template <typename T, double N = 1.0 / double(std::numeric_limits<T>::max()), typename = enable_if_arithmetic_t<T>>
+    template <typename T, double N = 1.0 / double(std::numeric_limits<T>::max())> requires std::is_arithmetic_v<T>
     RawColorValue readPixelR(const uint8_t* data, size_t offset) {
         const T* color = (const T*)&data[offset];
         return { color[0] * N, 0.0, 0.0, 1.0 };
     }
-    template <typename T, double N = 1.0 / double(std::numeric_limits<T>::max()), typename = enable_if_arithmetic_t<T>>
+    template <typename T, double N = 1.0 / double(std::numeric_limits<T>::max())> requires std::is_arithmetic_v<T>
     RawColorValue readPixelRG(const uint8_t* data, size_t offset) {
         const T* color = (const T*)&data[offset];
         return { color[0] * N, color[1] * N, 0.0, 1.0 };
     }
-    template <typename T, double N = 1.0 / double(std::numeric_limits<T>::max()), typename = enable_if_arithmetic_t<T>>
+    template <typename T, double N = 1.0 / double(std::numeric_limits<T>::max())> requires std::is_arithmetic_v<T>
     RawColorValue readPixelRGB(const uint8_t* data, size_t offset) {
         const T* color = (const T*)&data[offset];
         return { color[0] * N, color[1] * N, color[2] * N, 1.0 };
     }
-    template <typename T, double N = 1.0 / double(std::numeric_limits<T>::max()), typename = enable_if_arithmetic_t<T>>
+    template <typename T, double N = 1.0 / double(std::numeric_limits<T>::max())> requires std::is_arithmetic_v<T>
     RawColorValue readPixelRGBA(const uint8_t* data, size_t offset) {
         const T* color = (const T*)&data[offset];
         return { color[0] * N, color[1] * N, color[2] * N, color[3] * N };
     }
 
-    template <typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+    template <typename T> requires std::integral<T>
     inline double fixedToDouble(T value) {
         if (std::numeric_limits<T>::is_signed)
             return std::max(double(value) / double(std::numeric_limits<T>::max() - 1), -1.0);

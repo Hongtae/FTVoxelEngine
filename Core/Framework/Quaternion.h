@@ -7,13 +7,11 @@
 
 #pragma pack(push, 4)
 namespace FV {
-    template <typename T,
-        typename = std::enable_if_t<std::is_floating_point_v<T>>>
+    template <typename T> requires std::floating_point<T>
     inline constexpr T radianToDegree(T r) {
         return r * T(180.0 / std::numbers::pi);
     }
-    template <typename T,
-        typename = std::enable_if_t<std::is_floating_point_v<T>>>
+    template <typename T> requires std::floating_point<T>
     inline constexpr T degreeToRadian(T d) {
         return d * T(std::numbers::pi / 180.0);
     }

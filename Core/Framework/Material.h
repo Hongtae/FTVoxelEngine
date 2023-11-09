@@ -121,7 +121,7 @@ namespace FV {
             : semantic(MaterialSemantic::UserDefined), value(std::monostate{}) {
         }
 
-        template <typename T, typename U, typename = std::enable_if_t<std::is_convertible_v<U, T>>>
+        template <typename T, typename U> requires std::convertible_to<U, T>
         std::vector<T> _mapVector(const std::vector<U>& vector) const {
             std::vector<T> mapped;
             mapped.reserve(vector.size());
@@ -142,19 +142,22 @@ namespace FV {
         template <typename T>
         std::vector<T> map() const {
             return std::visit(
-                [this](auto&& arg) { return _mapVector<T>(arg); }, value);
+                [this](auto&& arg) {
+                    return _mapVector<T>(arg); 
+                }, value);
         }
-
-        template <typename T, typename U, typename = std::enable_if_t<std::is_convertible_v<U, T>>>
-        std::true_type _convertible(const std::vector<U>&) const { return {}; }
-        template <typename T>
-        std::false_type _convertible(...) const { return {}; }
 
         template <typename T>
         bool isConvertible() const {
             return std::visit(
                 [this](auto&& arg) {
-                    return decltype(_convertible<T>(arg))::value; }, value);
+                    using U = std::decay_t<decltype(arg)>;
+                    constexpr bool convertible = requires {
+                        requires std::convertible_to<U::value_type, T>;
+                    };
+                    if constexpr (convertible) return true;
+                    return false;
+                }, value);
         }
 
         struct UnderlyingData {
