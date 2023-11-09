@@ -1,9 +1,7 @@
 #pragma once
 #include "../include.h"
-#include <algorithm>
-#include <optional>
 #include <vector>
-#include <functional>
+#include <bit>
 #include "Vector3.h"
 #include "AABB.h"
 #include "AABBOctree.h"
@@ -21,7 +19,7 @@ namespace FV {
 
 #pragma pack(push, 1)
         struct Node {
-            uint16_t center[3];
+            uint16_t x, y, z;
             uint8_t depth;
             uint8_t flags;
             uint32_t advance;
@@ -34,9 +32,7 @@ namespace FV {
                 for (int i = 0; i < depth; ++i)
                     halfExtent = halfExtent * 0.5f;
                 Vector3 ext = Vector3(halfExtent, halfExtent, halfExtent);
-                Vector3 center = Vector3(float(this->center[0]),
-                                         float(this->center[1]),
-                                         float(this->center[2])) * q;
+                Vector3 center = Vector3(float(x), float(y), float(z)) * q;
                 return { center - ext, center + ext };
             }
             AABB aabb(const AABB& volume) const {
@@ -55,31 +51,123 @@ namespace FV {
         AABB aabb;
     };
 
-    struct FVCORE_API VolumeTree {
-        Vector3 center;
-        uint32_t depth; // aabb-extent-exponent
+    struct Voxel {
+        Color::RGBA8 color;
+        uint16_t metallic;
+        uint16_t roughness;
 
-        constexpr static int maxDepth = 10; // 2^(10*3) = 2^30
+        bool operator==(const Voxel& other) const {
+            return color.value == other.color.value &&
+                metallic == other.metallic &&
+                roughness == other.roughness;
+        }
+    };
 
-        struct {
-            Color::RGBA8 color;
-            int materialIndex;
-        };
+    struct FVCORE_API VoxelOctree {
+        Voxel value;
+        VoxelOctree* subdivisions[8] = {};
 
-        AABB aabb() const;
-        AABB aabb(const AABB& volume) const {
-            AABB aabb = this->aabb();
-            auto extents = volume.extents();
-            return {
-                aabb.min * extents + volume.min,
-                aabb.max * extents + volume.min
-            };
+        static constexpr auto maxDepth = 10U; // 2^(10*3)
+
+        bool isLeafNode() const {
+            for (auto p : subdivisions)
+                if (p) return false;
+            return true;
         }
 
-        VolumeTree* subdivisions[8];
-        
-        VolumeArray makeArray(const AABB& volume, int depthLevels) const;
-        size_t numberOfDescendants() const;
+        static constexpr float halfExtent(uint32_t depth) {
+            uint32_t exp = (126 - std::clamp(depth, 0U, 125U)) << 23;
+            return std::bit_cast<float>(exp);
+        }
+
+        size_t numDescendants() const {
+            size_t n = 1;
+            for (auto p : subdivisions) {
+                if (p)
+                    n += p->numDescendants();
+            }
+            return n;
+        }
+
+        template <typename T> requires std::is_invocable_v<T, const Vector3&, uint32_t, const VoxelOctree&>
+        void enumerate(const Vector3& center, uint32_t depth, uint32_t numDepthLevels, T&& fn) const {
+            fn(center, depth, *this);
+            if (numDepthLevels > 0) {
+                float halfExtent = halfExtent(depth);
+                auto pivot = center - Vector3(halfExtent, halfExtent, halfExtent) * 0.5f;
+
+                for (int i = 0; i < 8; ++i) {
+                    auto node = subdivisions[i];
+                    if (node == nullptr) continue;
+
+                    const int x = i & 1;
+                    const int y = (i >> 1) & 1;
+                    const int z = (i >> 2) & 1;
+
+                    Vector3 pt = pivot;
+                    pt.x += halfExtent * x;
+                    pt.y += halfExtent * y;
+                    pt.z += halfExtent * z;
+                    node->enumerate(pt, depth+1, numDepthLevels-1, std::forward<T>(fn));
+                }
+            }
+        }
+
+        VolumeArray makeArray(const AABB& aabb, uint32_t maxDepth) const;
+    };
+
+    class VoxelOctreeBuilder {
+    public:
+        ~VoxelOctreeBuilder() {}
+
+        using VolumeId = uint64_t;
+        virtual bool overlapTest(const AABB&, VolumeId) = 0;
+        virtual Voxel value(const AABB&, VolumeId) = 0;
+    };
+
+    class FVCORE_API VoxelModel {
+    public:
+        VoxelModel(const AABB& aabb, int depth);
+        ~VoxelModel();
+
+        void update(uint32_t x, uint32_t y, uint32_t z, std::function<void(VoxelOctree&)>);
+
+        VoxelOctree& emplace(uint32_t x, uint32_t y, uint32_t z, VoxelOctree&& item);
+        const VoxelOctree* lookup(uint32_t x, uint32_t y, uint32_t z) const;
+
+        int enumerateLevel(int depth, std::function<void(const AABB&, const VoxelOctree&)>) const;
+
+        const VoxelOctree* root() const { return _root; }
+        size_t resolution() const { return 1ULL << maxDepth; }
+
+        void optimize();
+
+        struct ForEachNode {
+            VoxelOctree* node;
+            void forward(std::function<void(VoxelOctree*)>& callback) {
+                callback(node);
+                for (auto p : node->subdivisions) {
+                    if (p)
+                        ForEachNode{ p }.forward(callback);
+                }
+            }
+            void backward(std::function<void(VoxelOctree*)>& callback) {
+                for (auto p : node->subdivisions) {
+                    if (p)
+                        ForEachNode{ p }.backward(callback);
+                }
+                callback(node);
+            }
+        };
+
+        void forEach(bool forward, std::function<void(VoxelOctree*)> fn) {
+            if (_root) {
+                if (forward)
+                    ForEachNode{ _root }.forward(fn);
+                else
+                    ForEachNode{ _root }.backward(fn);
+            }
+        }
 
         enum RayHitResultOption {
             AnyHit,
@@ -89,32 +177,17 @@ namespace FV {
 
         struct RayHitResult {
             float t;
-            const VolumeTree* hit;
+            const VoxelOctree* node;
         };
-
-        std::optional<RayHitResult> rayTest(const Vector3& rayOrigin, const Vector3& dir, RayHitResultOption option = CloestHit) const;
-        uint64_t rayTest(const Vector3& rayOrigin, const Vector3& dir, std::function<bool(const RayHitResult&)> filter) const;
-    };
-
-    class FVCORE_API VoxelModel {
-    public:
-        VoxelModel(const AABB& aabb, int depth);
-        ~VoxelModel();
-
-        int enumerateLevel(int depth, std::function<void(const VolumeTree&)>) const;
-
-        const VolumeTree* root() const { return _root; }
-
-        using RayHitResultOption = VolumeTree::RayHitResultOption;
-        using RayHitResult = VolumeTree::RayHitResult;
 
         std::optional<RayHitResult> rayTest(const Vector3& rayOrigin, const Vector3& dir, RayHitResultOption option = RayHitResultOption::CloestHit) const;
         uint64_t rayTest(const Vector3& rayOrigin, const Vector3& dir, std::function<bool(const RayHitResult&)> filter) const;
 
         AABB aabb;
     private:
-        VolumeTree* _root;
+        VoxelOctree* _root;
         uint32_t maxDepth;
-        void deleteNode(VolumeTree*);
+
+        void pruneSolidTree(VoxelOctree*);
     };
 }
