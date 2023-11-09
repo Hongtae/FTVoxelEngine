@@ -118,30 +118,43 @@ namespace FV {
         MaterialProperty()
             : semantic(MaterialSemantic::UserDefined), value(std::monostate{}) {
         }
+           
+        template <typename R, typename T>
+        std::vector<R> map(T&& fn) {
+            return std::visit(
+                [&](auto&& arg) {
+                    using U = std::decay_t<decltype(arg)>;
+                    constexpr bool isVector = requires {
+                        requires requires(typename U::value_type v) {
+                            { fn(v) }->std::convertible_to<R>;
+                        };
+                        requires std::same_as<U, std::vector<typename U::value_type, typename U::allocator_type>>;
+                    };
+                    std::vector<R> output;
+                    if constexpr (isVector) {
+                        output.reserve(arg.size());
+                        for (auto v : arg)
+                            output.push_back(fn(v));
+                    }
+                    return output;
+                }, value);
+        }
 
-        template <typename T, typename U> requires std::convertible_to<U, T>
-        std::vector<T> _mapVector(const std::vector<U>& vector) const {
-            std::vector<T> mapped;
-            mapped.reserve(vector.size());
-            for (auto v : vector) mapped.push_back(static_cast<T>(v));
-            return mapped;
-        }
-        template <typename T> std::vector<T> _mapVector(std::monostate) const {
-            Log::debug(std::format("MaterialProperty:{} has no value!", (int)semantic));
-            return {};
-        }
         template <typename T>
-        std::vector<T> _mapVector(...) const {
-            Log::error(std::format("MaterialProperty:{} unable to cast value type: {}",
-                                   (int)semantic, typeid(T).name()));
-            return {};
-        }
-
-        template <typename T>
-        std::vector<T> map() const {
+        std::vector<T> cast() const {
             return std::visit(
                 [this](auto&& arg) {
-                    return _mapVector<T>(arg); 
+                    using U = std::decay_t<decltype(arg)>;
+                    constexpr bool convertible = requires {
+                        typename U::value_type;
+                        requires std::convertible_to<typename U::value_type, T>;
+                    };
+                    std::vector<T> output;
+                    if constexpr (convertible) {
+                        output.reserve(arg.size());
+                        for (auto v : arg) output.push_back(static_cast<T>(v));
+                    }
+                    return output;
                 }, value);
         }
 
@@ -151,7 +164,7 @@ namespace FV {
                 [this](auto&& arg) {
                     using U = std::decay_t<decltype(arg)>;
                     constexpr bool convertible = requires {
-                        requires std::convertible_to<U::value_type, T>;
+                        requires std::convertible_to<typename U::value_type, T>;
                     };
                     if constexpr (convertible) return true;
                     return false;
@@ -167,29 +180,13 @@ namespace FV {
             return std::visit(
                 [](auto&& arg) -> UnderlyingData {
                     using T = std::decay_t<decltype(arg)>;
-                    if constexpr (std::is_same_v<T, MaterialProperty::Buffer>)
-                        return { arg.data(), sizeof(T::value_type), arg.size() };
-                    else if constexpr (std::is_same_v<T, MaterialProperty::Int8Array>)
-                        return { arg.data(), sizeof(T::value_type), arg.size() };
-                    else if constexpr (std::is_same_v<T, MaterialProperty::UInt8Array>)
-                        return { arg.data(), sizeof(T::value_type), arg.size() };
-                    else if constexpr (std::is_same_v<T, MaterialProperty::Int16Array>)
-                        return { arg.data(), sizeof(T::value_type), arg.size() };
-                    else if constexpr (std::is_same_v<T, MaterialProperty::UInt16Array>)
-                        return { arg.data(), sizeof(T::value_type), arg.size() };
-                    else if constexpr (std::is_same_v<T, MaterialProperty::Int32Array>)
-                        return { arg.data(), sizeof(T::value_type), arg.size() };
-                    else if constexpr (std::is_same_v<T, MaterialProperty::UInt32Array>)
-                        return { arg.data(), sizeof(T::value_type), arg.size() };
-                    else if constexpr (std::is_same_v<T, MaterialProperty::Int64Array>)
-                        return { arg.data(), sizeof(T::value_type), arg.size() };
-                    else if constexpr (std::is_same_v<T, MaterialProperty::UInt64Array>)
-                        return { arg.data(), sizeof(T::value_type), arg.size() };
-                    else if constexpr (std::is_same_v<T, MaterialProperty::HalfArray>)
-                        return { arg.data(), sizeof(T::value_type), arg.size() };
-                    else if constexpr (std::is_same_v<T, MaterialProperty::FloatArray>)
-                        return { arg.data(), sizeof(T::value_type), arg.size() };
-                    else if constexpr (std::is_same_v<T, MaterialProperty::DoubleArray>)
+                    constexpr bool isNumericVector = requires {
+                        arg.data();
+                        arg.size();
+                        typename T::value_type;
+                        requires std::is_integral_v<typename T::value_type> || std::is_floating_point_v<typename T::value_type>;
+                    };
+                    if constexpr (isNumericVector) 
                         return { arg.data(), sizeof(T::value_type), arg.size() };
                     return { nullptr, 0, 0 };
                 }, value);

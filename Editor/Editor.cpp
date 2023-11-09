@@ -208,7 +208,7 @@ public:
                         if (face.material) {
                             if (auto it = face.material->properties.find(MaterialSemantic::BaseColor);
                                 it != face.material->properties.end()) {
-                                auto floats = it->second.map<float>();
+                                auto floats = it->second.cast<float>();
                                 if (floats.size() >= 4) {
                                     baseColor = { floats[0], floats[1], floats[2], floats[3] };
                                 } else if (floats.size() == 3) {
