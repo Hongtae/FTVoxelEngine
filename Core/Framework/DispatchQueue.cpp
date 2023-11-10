@@ -113,7 +113,6 @@ namespace {
     }
 
 	std::thread::id mainThreadID = {};
-	std::function<void()> mainThreadHook = {};
 }
 
 void setDispatchQueueMainThread() {
@@ -183,20 +182,38 @@ void DispatchQueue::await(Task fn) {
 	std::shared_ptr<Command> cmd = std::make_shared<Command>(fn, StatePending);
 	commands.push_back(cmd);
 	auto state = cmd->state;
-	bool workerThread = isWorkerThread(lock);
+
+	DispatchQueue* localQueue = nullptr;
+	if (isWorkerThread(lock))
+		localQueue = this;
+	else {
+		// must be a persistent queue (i.e., main or global)
+		if (auto* q = &main(); this != q && q->isWorkerThread())
+			localQueue = q;
+		else if (auto* q = &global(); this != q && q->isWorkerThread())
+			localQueue = q;
+	}
 	notifyHook(lock, fn);
 	cond.notify_all();
+
     while (state != StateCompleted && state != StateCancelled) {
-		if (workerThread) {
+		if (localQueue == this) {
 			dispatch(lock);
+		} else if (localQueue) {
+			lock.unlock();
+			localQueue->dispatch();
+			if (lock.try_lock() == false) // Our queue is busy. Try next time.
+				continue;
 		} else {
-	        cond.wait(lock);
+		    cond.wait(lock);
 		}
         state = cmd->state;
     }
 }
 
 void DispatchQueue::notifyHook(std::unique_lock<std::mutex>& lock, Task& t) const {
+	FVASSERT_DEBUG(lock.mutex() == &this->mutex);
+
 	std::vector<Hook> hooksCopy = hooks;
 	lock.unlock();
 
@@ -206,10 +223,18 @@ void DispatchQueue::notifyHook(std::unique_lock<std::mutex>& lock, Task& t) cons
 	lock.lock();
 }
 
-bool DispatchQueue::isWorkerThread(std::unique_lock<std::mutex>&) const {
+bool DispatchQueue::isWorkerThread() const {
+	std::unique_lock lock(mutex);
+	return isWorkerThread(lock);
+}
+
+bool DispatchQueue::isWorkerThread(std::unique_lock<std::mutex>& lock) const {
+	FVASSERT_DEBUG(lock.mutex() == &this->mutex);
+
 	auto current = std::this_thread::get_id();
-	if (current == mainThreadID)
-		return true;
+	if (threads.empty()) {
+		return current == mainThreadID;
+	}
 
 	for (auto& t : threads)
 		if (current == t.get_id())
@@ -227,6 +252,7 @@ uint32_t DispatchQueue::dispatch() {
 }
 
 uint32_t DispatchQueue::dispatch(std::unique_lock<std::mutex>& lock) {
+	FVASSERT_DEBUG(lock.mutex() == &this->mutex);
 	while (commands.empty() == false) {
 		std::shared_ptr<Command> cmd = commands.front();
 		commands.erase(commands.begin());

@@ -59,7 +59,8 @@ namespace FV {
         };
         std::vector<Hook> hooks;
         std::vector<std::jthread> threads;
-
+        
+        bool isWorkerThread() const;
         bool isWorkerThread(std::unique_lock<std::mutex>&) const;
         void notifyHook(std::unique_lock<std::mutex>&, Task& t) const;
         uint32_t dispatch(std::unique_lock<std::mutex>&);
