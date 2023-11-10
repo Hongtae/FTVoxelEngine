@@ -145,10 +145,16 @@ DispatchQueue::DispatchQueue(uint32_t q)
 }
 
 DispatchQueue::~DispatchQueue() {
+	std::unique_lock lock(mutex);
 	if (threads.empty() == false) {
 		for (auto& t : threads)
 			t.request_stop();
+		for (auto& cmd : commands)
+			if (cmd->state != StateCompleted)
+				cmd->state = StateCancelled;
 		cond.notify_all();
+		lock.unlock();
+
 		for (auto& t : threads)
 			t.join();
 	}
