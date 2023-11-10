@@ -341,6 +341,9 @@
     <ClInclude Include="Framework\VoxelModel.h">
       <Filter>Framework</Filter>
     </ClInclude>
+    <ClInclude Include="Framework\DispatchQueue.h">
+      <Filter>Framework</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -551,6 +554,9 @@
       <Filter>Framework</Filter>
     </ClCompile>
     <ClCompile Include="Framework\VoxelModel.cpp">
+      <Filter>Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="Framework\DispatchQueue.cpp">
       <Filter>Framework</Filter>
     </ClCompile>
   </ItemGroup>

@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <string>
 #include "../../Unicode.h"
+#include "../../DispatchQueue.h"
 #include "Application.h"
 #include "Window.h"
 #include "Logger.h"
@@ -44,15 +45,25 @@ namespace FV::Win32 {
     int exitCode = 0;
     DWORD mainThreadID = 0;
     std::mutex mainLoopLock;
-    std::mutex mainLoopQueueLock;
-    std::vector<std::function<void()>> mainLoopQueue;
 
     int runApplication(FV::Application* app) {
         std::scoped_lock guard(mainLoopLock);
+
+        void setDispatchQueueMainThread();
+        setDispatchQueueMainThread();
+
         auto logger = std::make_shared<Win32::Logger>();
         logger->bind(false);
 
         mainThreadID = ::GetCurrentThreadId();
+
+        DispatchQueue& mainQueue = DispatchQueue::main();
+        const void* dispatchQueueHook = &runApplication;
+        mainQueue.setHook(
+            dispatchQueueHook, [](auto fn) {
+                PostThreadMessageW(mainThreadID, WM_NULL, 0, 0);
+            });
+
 
         if (::IsDebuggerPresent() == false) {
             if (keyboardHook) {
@@ -102,21 +113,10 @@ namespace FV::Win32 {
                 ::TranslateMessage(&msg);
                 ::DispatchMessageW(&msg);
             }
-            if (terminateRequested == false) {
-                std::unique_lock lock(mainLoopQueueLock);
-                while (terminateRequested == false && mainLoopQueue.empty() == false) {
-                    std::function<void()> fn = mainLoopQueue.front();
-                    mainLoopQueue.erase(mainLoopQueue.begin());
-                    lock.unlock();
-                    fn();
-                    lock.lock();
-                }
-                lock.unlock();
-
-                if (terminateRequested == false) {
-                } else {
-                    PostQuitMessage(0);
-                }
+            while (terminateRequested == false && mainQueue.dispatch() != 0) {
+            }
+            if (terminateRequested) {
+                PostQuitMessage(0);
             }
         }
 
@@ -135,26 +135,18 @@ namespace FV::Win32 {
         keyboardHook = nullptr;
 
         logger->unbind();
+        mainQueue.unsetHook(dispatchQueueHook);
         mainThreadID = 0;
 
         return exitCode;
     }
 
     void terminateApplication(int code) {
-        postOperation([=] {
-            terminateRequested = true;
-            exitCode = code;
-                      });
-    }
-
-    void postOperation(std::function<void()> fn) {
-        std::unique_lock lock(mainLoopQueueLock);
-        mainLoopQueue.push_back(fn);
-        lock.unlock();
-
-        if (mainThreadID) {
-            PostThreadMessageW(mainThreadID, WM_NULL, 0, 0);
-        }
+        DispatchQueue::main().async(
+            [&] {
+                terminateRequested = true;
+                exitCode = code;
+            });
     }
 
     std::vector<std::u8string> commandLineArguments() {
