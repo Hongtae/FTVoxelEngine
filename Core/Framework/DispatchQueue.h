@@ -6,8 +6,23 @@
 #include <condition_variable>
 
 namespace FV {
+    class AsyncTask {
+    public:
+        virtual ~AsyncTask() {}
+
+        enum State {
+            StatePending,
+            StateProcessing,
+            StateCompleted,
+            StateCancelled,
+        };
+        virtual State state() const = 0;
+        virtual bool wait() const = 0;
+    };
+
     class FVCORE_API DispatchQueue {
     public:
+        DispatchQueue(uint32_t);
         ~DispatchQueue();
 
         static DispatchQueue& main();
@@ -16,8 +31,8 @@ namespace FV {
         const uint32_t maxConcurrentQueues;
 
         using Task = std::function<void()>;
-        void async(Task fn);
-        void await(Task fn);
+        std::shared_ptr<AsyncTask> async(Task fn);
+        void await(Task fn) { async(fn)->wait(); }
 
         template <typename R>
         auto await(std::function<R()> fn) -> R {
@@ -31,46 +46,40 @@ namespace FV {
 
         void setHook(const void* key, std::function<void(Task&)>);
         void unsetHook(const void* key);
+
+        class _Dispatcher {
+        public:
+            virtual ~_Dispatcher() {}
+            virtual uint32_t dispatch() = 0;
+            virtual void wait() = 0;
+            virtual void notify() = 0;
+            virtual void cancelAllTasks() = 0;
+            virtual std::shared_ptr<AsyncTask> enqueue(Task& t) = 0;
+        };
+
     private:
-        DispatchQueue(uint32_t);
         struct _DispatchQueueMain {
             enum { _Unused = 1 };
         };
         DispatchQueue(_DispatchQueueMain);
-
-        enum State {
-            StatePending,
-            StateProcessing,
-            StateCompleted,
-            StateCancelled,
-        };
-
-        struct Command {
-            std::function<void()> op;
-            State state;
-        };
-        std::vector<std::shared_ptr<Command>> commands;
-        std::condition_variable cond;
-        mutable std::mutex mutex;
 
         struct Hook {
             const void* key;
             std::function<void(Task&)> notify;
         };
         std::vector<Hook> hooks;
+        void notifyHook(Task& t) const;
+        mutable std::mutex mutex;
+
+        std::shared_ptr<_Dispatcher> dispatcher;
         std::vector<std::jthread> threads;
-        
-        bool isWorkerThread() const;
-        bool isWorkerThread(std::unique_lock<std::mutex>&) const;
-        void notifyHook(std::unique_lock<std::mutex>&, Task& t) const;
-        uint32_t dispatch(std::unique_lock<std::mutex>&);
 
         DispatchQueue(const DispatchQueue&) = delete;
         DispatchQueue& operator = (const DispatchQueue&) = delete;
     };
 
-    inline void async(std::function<void()> fn) {
-        DispatchQueue::global().async(fn);
+    inline auto async(std::function<void()> fn) -> std::shared_ptr<AsyncTask> {
+        return DispatchQueue::global().async(fn);
     }
 
     template <typename T> requires std::invocable<T>
