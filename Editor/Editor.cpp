@@ -19,6 +19,7 @@ std::filesystem::path appResourcesRoot;
 
 class EditorApp : public Application {
 public:
+    std::atomic<bool> isVisible;
     std::shared_ptr<Window> window;
     std::jthread renderThread;
 
@@ -28,7 +29,7 @@ public:
     PixelFormat depthFormat;
 
     MeshRenderer* meshRenderer;
-    VolumeRenderer* volumeRenderer;
+    VolumeRenderer* volumeRenderer; 
     UIRenderer* uiRenderer;
     std::vector<std::shared_ptr<Renderer>> renderers;
 
@@ -62,12 +63,18 @@ public:
                 }
             },
         });
-        window->setContentSize(Size(1024, 768));
-        window->activate();
         window->addEventObserver(this,
                                  [this](const Window::MouseEvent& event) {
                                      this->onMouseEvent(event);
                                  });
+        window->addEventObserver(this,
+                                 [this](const Window::WindowEvent& event) {
+                                     this->onWindowEvent(event);
+                                 });
+
+        window->setContentSize(Size(1024, 768));
+        window->activate();
+        isVisible = true;
 
         auto meshRenderer = std::make_shared<MeshRenderer>();
         auto volumeRenderer = std::make_shared<VolumeRenderer>();
@@ -98,6 +105,21 @@ public:
         window = nullptr;
         renderQueue = nullptr;
         graphicsContext = nullptr;
+    }
+
+    void onWindowEvent(const Window::WindowEvent& event) {
+        switch (event.type) {
+        case Window::WindowEvent::WindowActivated:
+        case Window::WindowEvent::WindowShown:
+            isVisible = true;
+            //Log::info("window is being displayed.");
+            break;
+        case Window::WindowEvent::WindowHidden:
+        case Window::WindowEvent::WindowMinimized:
+            isVisible = false;
+            //Log::info("Window is hidden");
+            break;
+        }
     }
 
     void onMouseEvent(const Window::MouseEvent& event) {
@@ -303,6 +325,46 @@ public:
                 if (ImGui::MenuItem("Paste", "CTRL+V")) {}
                 ImGui::EndMenu();
             }
+            if (ImGui::BeginMenu("Test")) {
+                if (ImGui::BeginMenu("Async Test")) {
+                    auto currentThreadID = []()-> std::string {
+                        std::stringstream ss;
+                        ss << std::this_thread::get_id();
+                        return ss.str();
+                    };
+                    if (ImGui::MenuItem("Async test")) {
+                        Log::debug(std::format("async test - thread:{}", currentThreadID()));
+                        auto t = async(
+                            [&] {
+                                Log::debug(std::format("async - thread:{}", currentThreadID()));
+                            });
+                    }
+                    if (ImGui::MenuItem("Await test")) {
+                        Log::debug(std::format("await test - thread:{}", currentThreadID()));
+                        auto t = await(
+                            [&] {
+                                Log::debug(std::format("await - thread:{}", currentThreadID()));
+                                return 1234;
+                            });
+                        Log::debug(std::format("await result: {}, thread:{}", t, currentThreadID()));
+                    }
+                    if (ImGui::MenuItem("Await await test")) {
+                        Log::debug(std::format("await await test - thread:{}", currentThreadID()));
+                        auto t = await(
+                            [&] {
+                                Log::debug(std::format("await - 1 - thread:{}", currentThreadID()));
+                                return await(
+                                    [&] {
+                                        Log::debug(std::format("await - 2 - thread:{}", currentThreadID()));
+                                        return 1234;
+                                    });
+                            });
+                        Log::debug(std::format("await result: {}, thread:{}", t, currentThreadID()));
+                    }
+                    ImGui::EndMenu();
+                }
+                ImGui::EndMenu();
+            }
             if (delta > 0.0f)
                 ImGui::Text(std::format(" ({:.2f} FPS)", 1.0/delta).c_str());
             ImGui::EndMainMenuBar();
@@ -493,51 +555,58 @@ public:
                 renderer->update(delta);
             }
 
-            auto rp = swapchain->currentRenderPassDescriptor();
+            do {
+                if (this->isVisible.load() == false)
+                    break;
 
-            auto& frontAttachment = rp.colorAttachments.front();
-            frontAttachment.clearColor = Color::nonLinearCyan;
+                auto rp = swapchain->currentRenderPassDescriptor();
 
-            uint32_t width = frontAttachment.renderTarget->width();
-            uint32_t height = frontAttachment.renderTarget->height();
+                auto& frontAttachment = rp.colorAttachments.front();
+                frontAttachment.clearColor = Color::nonLinearCyan;
 
-            if (depthTexture == nullptr ||
-                depthTexture->width() != width ||
-                depthTexture->height() != height) {
-                depthTexture = device->makeTransientRenderTarget(TextureType2D, depthFormat, width, height, 1);
-            }
-            rp.depthStencilAttachment.renderTarget = depthTexture;
-            rp.depthStencilAttachment.loadAction = RenderPassLoadAction::LoadActionClear;
-            rp.depthStencilAttachment.storeAction = RenderPassStoreAction::StoreActionDontCare;
+                uint32_t width = frontAttachment.renderTarget->width();
+                uint32_t height = frontAttachment.renderTarget->height();
 
-            auto buffer = queue->makeCommandBuffer();
-            auto encoder = buffer->makeRenderCommandEncoder(rp);
-            encoder->endEncoding();
-            buffer->commit();
+                if (width > 0 && height > 0) {
 
-            frontAttachment.loadAction = RenderPassAttachmentDescriptor::LoadActionLoad;
+                    if (depthTexture == nullptr ||
+                        depthTexture->width() != width ||
+                        depthTexture->height() != height) {
+                        depthTexture = device->makeTransientRenderTarget(TextureType2D, depthFormat, width, height, 1);
+                    }
+                    rp.depthStencilAttachment.renderTarget = depthTexture;
+                    rp.depthStencilAttachment.loadAction = RenderPassLoadAction::LoadActionClear;
+                    rp.depthStencilAttachment.storeAction = RenderPassStoreAction::StoreActionDontCare;
 
-            auto view = ViewTransform(
-                camera.position, camera.target - camera.position,
-                Vector3(0, 1, 0));
-            auto projection = ProjectionTransform::perspective(
-                camera.fov,
-                float(width) / float(height),
-                camera.nearZ, camera.farZ);
+                    auto buffer = queue->makeCommandBuffer();
+                    auto encoder = buffer->makeRenderCommandEncoder(rp);
+                    encoder->endEncoding();
+                    buffer->commit();
 
-            for (auto& renderer : this->renderers) {
-                renderer->prepareScene(rp, view, projection);
-            }
+                    frontAttachment.loadAction = RenderPassAttachmentDescriptor::LoadActionLoad;
 
-            ImGui::NewFrame();
-            this->uiLoop(delta);
-            ImGui::Render();
+                    auto view = ViewTransform(
+                        camera.position, camera.target - camera.position,
+                        Vector3(0, 1, 0));
+                    auto projection = ProjectionTransform::perspective(
+                        camera.fov,
+                        float(width) / float(height),
+                        camera.nearZ, camera.farZ);
 
-            for (auto& renderer : this->renderers) {
-                renderer->render(rp, Rect(0, 0, width, height));
-            }
+                    for (auto& renderer : this->renderers) {
+                        renderer->prepareScene(rp, view, projection);
+                    }
 
-            swapchain->FV::SwapChain::present();
+                    ImGui::NewFrame();
+                    this->uiLoop(delta);
+                    ImGui::Render();
+
+                    for (auto& renderer : this->renderers) {
+                        renderer->render(rp, Rect(0, 0, width, height));
+                    }
+                }
+                swapchain->FV::SwapChain::present();
+            } while (0);
 
             auto t = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> d = t - timestamp;
