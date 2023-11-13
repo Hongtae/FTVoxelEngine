@@ -89,6 +89,20 @@ namespace FV {
             return n;
         }
 
+        size_t numLeafNodes() const {
+            bool isLeaf = true;
+            size_t n = 0;
+            for (auto p : subdivisions) {
+                if (p) {
+                    isLeaf = false;
+                    n += p->numLeafNodes();
+                }
+            }
+            if (isLeaf)
+                return 1;
+            return n;
+        }
+
         template <typename T> requires std::is_invocable_v<T, const Vector3&, uint32_t, const VoxelOctree&>
         void enumerate(const Vector3& center, uint32_t depth, uint32_t numDepthLevels, T&& fn) const {
             fn(center, depth, *this);
@@ -113,6 +127,8 @@ namespace FV {
             }
         }
 
+        bool mergeSolidBranches();
+
         VolumeArray makeArray(const AABB& aabb, uint32_t maxDepth) const;
     };
 
@@ -121,51 +137,54 @@ namespace FV {
         ~VoxelOctreeBuilder() {}
 
         using VolumeId = uint64_t;
-        virtual bool overlapTest(const AABB&, VolumeId) = 0;
+        virtual bool volumeTest(const AABB&, VolumeId, VolumeId*) = 0;
         virtual Voxel value(const AABB&, VolumeId) = 0;
     };
 
     class FVCORE_API VoxelModel {
     public:
         VoxelModel(const AABB& aabb, int depth);
+        VoxelModel(VoxelOctreeBuilder*, int depth);
         ~VoxelModel();
 
-        void update(uint32_t x, uint32_t y, uint32_t z, std::function<void(VoxelOctree&)>);
-
-        VoxelOctree& emplace(uint32_t x, uint32_t y, uint32_t z, VoxelOctree&& item);
-        const VoxelOctree* lookup(uint32_t x, uint32_t y, uint32_t z) const;
+        void update(uint32_t x, uint32_t y, uint32_t z, const Voxel& value);
+        void erase(uint32_t x, uint32_t y, uint32_t z);
+        std::optional<Voxel> lookup(uint32_t x, uint32_t y, uint32_t z) const;
 
         int enumerateLevel(int depth, std::function<void(const AABB&, const VoxelOctree&)>) const;
 
         const VoxelOctree* root() const { return _root; }
-        size_t resolution() const { return 1ULL << maxDepth; }
+        uint32_t resolution() const { return 1ULL << maxDepth; }
 
         void optimize();
 
         struct ForEachNode {
             VoxelOctree* node;
-            void forward(std::function<void(VoxelOctree*)>& callback) {
+            template <typename T> requires std::invocable<T, VoxelOctree*>
+            void forward(T&& callback) { // invoked top-down
                 callback(node);
                 for (auto p : node->subdivisions) {
                     if (p)
-                        ForEachNode{ p }.forward(callback);
+                        ForEachNode{ p }.forward(std::forward<T>(callback));
                 }
             }
-            void backward(std::function<void(VoxelOctree*)>& callback) {
+            template <typename T> requires std::invocable<T, VoxelOctree*>
+            void backward(T&& callback) { // invoked bottom-up
                 for (auto p : node->subdivisions) {
                     if (p)
-                        ForEachNode{ p }.backward(callback);
+                        ForEachNode{ p }.backward(std::forward<T>(callback));
                 }
                 callback(node);
             }
         };
 
-        void forEach(bool forward, std::function<void(VoxelOctree*)> fn) {
+        template <typename T> requires std::invocable<T, VoxelOctree*>
+        void forEach(bool forward, T&& fn) {
             if (_root) {
                 if (forward)
-                    ForEachNode{ _root }.forward(fn);
+                    ForEachNode{ _root }.forward(std::forward<T>(fn));
                 else
-                    ForEachNode{ _root }.backward(fn);
+                    ForEachNode{ _root }.backward(std::forward<T>(fn));
             }
         }
 
@@ -178,6 +197,8 @@ namespace FV {
         struct RayHitResult {
             float t;
             const VoxelOctree* node;
+            struct { uint32_t x, y, z; } location;
+            uint32_t depth;
         };
 
         std::optional<RayHitResult> rayTest(const Vector3& rayOrigin, const Vector3& dir, RayHitResultOption option = RayHitResultOption::CloestHit) const;
@@ -188,6 +209,6 @@ namespace FV {
         VoxelOctree* _root;
         uint32_t maxDepth;
 
-        void pruneSolidTree(VoxelOctree*);
+        static void deleteNode(VoxelOctree*);
     };
 }

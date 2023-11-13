@@ -363,6 +363,13 @@ public:
                     }
                     ImGui::EndMenu();
                 }
+                if (ImGui::MenuItem("VoxelOctree test")) {
+                    VoxelModel model(AABB(Vector3(0, 0, 0), Vector3(1, 1, 1)), 5);
+                    int res = model.resolution();
+                    model.emplace(12, 1, 27, {});
+                    model.erase(12, 1, 27);
+                    Log::debug("done.");
+                }
                 ImGui::EndMenu();
             }
             if (delta > 0.0f)

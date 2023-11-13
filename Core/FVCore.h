@@ -64,4 +64,5 @@
 #include "Framework/VertexDescriptor.h"
 #include "Framework/ViewProjection.h"
 #include "Framework/VirtualKey.h"
+#include "Framework/VoxelModel.h"
 #include "Framework/Window.h"

@@ -3,6 +3,58 @@
 
 using namespace FV;
 
+bool VoxelOctree::mergeSolidBranches() {
+    int n = 0;
+    uint16_t r = 0;
+    uint16_t g = 0;
+    uint16_t b = 0;
+    uint16_t a = 0;
+    uint16_t metallic = 0;
+    uint16_t roughness = 0;
+
+    for (auto p : this->subdivisions) {
+        if (p) {
+            n++;
+            r += p->value.color.r;
+            g += p->value.color.g;
+            b += p->value.color.b;
+            a += p->value.color.a;
+            metallic += p->value.metallic;
+            roughness += p->value.roughness;
+        }
+    }
+    if (n > 0) {
+        this->value.color.r = r / n;
+        this->value.color.g = g / n;
+        this->value.color.b = b / n;
+        this->value.color.a = a / n;
+        this->value.metallic = metallic / n;
+        this->value.roughness = roughness / n;
+
+        if (n == 8) {
+            bool combinable = true;
+            for (auto p : this->subdivisions) {
+                if (p->isLeafNode() == false ||
+                    p->value != this->value) {
+                    combinable = false;
+                    break;
+                }
+            }
+            if (combinable) {
+                for (int i = 0; i < 8; ++i) {
+                    auto p = this->subdivisions[i];
+                    FVASSERT_DEBUG(p);
+                    FVASSERT_DEBUG(p->isLeafNode());
+                    delete p;
+                    this->subdivisions[i] = nullptr;
+                }
+            }
+        }
+        return true;
+    }
+    return false;
+}
+
 VolumeArray VoxelOctree::makeArray(const AABB& aabb, uint32_t maxDepth) const {
     if (aabb.isNull())
         return {};
@@ -67,94 +119,144 @@ VoxelModel::VoxelModel(const AABB& volume, int depth)
     , maxDepth(std::max(depth, 0)) {
 }
 
+VoxelModel::VoxelModel(VoxelOctreeBuilder* builder, int depth)
+    : _root(nullptr)
+    , maxDepth(std::max(depth, 0)) {
+}
+
 VoxelModel::~VoxelModel() {
-    if (_root) {
-        struct Cleanup {
-            VoxelOctree* node;
-            void operator() () {
-                for (auto p : node->subdivisions) {
-                    if (p)
-                        Cleanup{ p }();
-                }
-                delete node;
-            }
-        };
-        Cleanup{ _root }();
-    }
+    if (_root)
+        deleteNode(_root);
 }
 
-void VoxelModel::update(uint32_t x, uint32_t y, uint32_t z,
-                        std::function<void(VoxelOctree&)> fn) {
+void VoxelModel::update(uint32_t x, uint32_t y, uint32_t z, const Voxel& value) {
     const auto res = resolution();
     if (x >= res || y >= res || z >= res) {
         throw std::out_of_range("Invalid index");
     }
-
     struct Update {
-        size_t dim;
+        uint32_t dim;
         VoxelOctree* node;
-        std::function<void(VoxelOctree*)>& notify;
-        void operator() (uint32_t x, uint32_t y, uint32_t z, std::function<void(VoxelOctree&)>& fn) {
-            FVASSERT_DEBUG(dim > 1);
+        const Voxel& value;
+        bool operator() (uint32_t x, uint32_t y, uint32_t z) {
+            FVASSERT_DEBUG(dim > 0);
 
             auto nx = x / dim;
             auto ny = y / dim;
             auto nz = z / dim;
             uint32_t index = ((nz & 1) << 2) | ((ny & 1) << 1) | (nx & 1);
             auto p = node->subdivisions[index];
+            bool updated = false;
             if (p == nullptr) {
-                p = new VoxelOctree();
+                p = new VoxelOctree(value);
                 node->subdivisions[index] = p;
+                updated = true;
             }
-            if (dim > 2)
-                Update{ dim >> 1, p, notify }(x % dim, y % dim, z % dim, fn);
-            else
-                fn(*p);
-            notify(p);
-        }
-    };
-    if (aabb.isNull() == false) {
-        std::function<void(VoxelOctree*)> notify = [&](auto v) { this->pruneSolidTree(v); };
-        Update{ res >> 1, _root, notify }(x, y, z, fn);
-    }
-}
-
-VoxelOctree& VoxelModel::emplace(uint32_t x, uint32_t y, uint32_t z, VoxelOctree&& item) {
-    const auto res = resolution();
-    if (x >= res || y >= res || z >= res) {
-        throw std::out_of_range("Invalid index");
-    }
-    struct Emplace {
-        size_t dim;
-        VoxelOctree* node;
-        VoxelOctree& item;
-        VoxelOctree& operator() (uint32_t x, uint32_t y, uint32_t z) {
-            FVASSERT_DEBUG(dim > 1);
-
-            auto nx = x / dim;
-            auto ny = y / dim;
-            auto nz = z / dim;
-            uint32_t index = ((nz & 1) << 2) | ((ny & 1) << 1) | (nx & 1);
-            auto p = node->subdivisions[index];
-            if (p == nullptr) {
-                if (dim > 2)
-                    p = new VoxelOctree(item);
-                else
-                    p = new VoxelOctree(static_cast<VoxelOctree&&>(item));
-                node->subdivisions[index] = p;
+            if (dim > 1) {
+                if (Update{ dim >> 1, p, value }(x % dim, y % dim, z % dim)) {
+                    updated = true;
+                }
+            } else {
+                if (p->value != value) {
+                    p->value = value;
+                    updated = true;
+                }
             }
-            if (dim > 2)
-                return Emplace{ dim >> 1, p, item }(x % dim, y % dim, z % dim);
-            return *p;
+            if (updated) {
+                node->mergeSolidBranches();
+            }
+            return updated;
         }
     };
     if (aabb.isNull()) {
         throw std::runtime_error("Invalid object (AABB is null)");
     }
-    return Emplace{ res >> 1, _root, item }(x, y, z);
+    if (_root == nullptr) {
+        _root = new VoxelOctree(value);
+    }
+    if (res > 1) {
+        if (Update{ res >> 1, _root, value }(x, y, z))
+            _root->mergeSolidBranches();
+    } else {
+        FVASSERT_DEBUG(_root->isLeafNode());
+        _root->value = value;
+    }
 }
 
-const VoxelOctree* VoxelModel::lookup(uint32_t x, uint32_t y, uint32_t z) const {
+void VoxelModel::erase(uint32_t x, uint32_t y, uint32_t z) {
+    const auto res = resolution();
+    if (x >= res || y >= res || z >= res) {
+        throw std::out_of_range("Invalid index");
+    }
+    if (_root) {
+        struct EraseNode {
+            uint32_t dim;
+            VoxelOctree* node;
+            bool operator() (uint32_t x, uint32_t y, uint32_t z) {
+                FVASSERT_DEBUG(dim > 0);
+
+                auto nx = x / dim;
+                auto ny = y / dim;
+                auto nz = z / dim;
+                uint32_t index = ((nz & 1) << 2) | ((ny & 1) << 1) | (nx & 1);
+
+                if (dim > 1) {
+                    if (node->isLeafNode()) {
+                        for (int i = 0; i < 8; ++i) {
+                            node->subdivisions[i] = new VoxelOctree({ node->value });
+                        }
+                    }
+                    auto p = node->subdivisions[index];
+                    if (p) {
+                        if (EraseNode{ dim >> 1, p }(x % dim, y % dim, z % dim)) {
+                            if (p->isLeafNode()) {
+                                deleteNode(p);
+                                node->subdivisions[index] = nullptr;
+                            }
+                            node->mergeSolidBranches();
+                            return true;
+                        }
+                    }
+                } else {
+                    auto p = node->subdivisions[index];
+                    if (p) {
+                        FVASSERT_DEBUG(p->isLeafNode());
+                        deleteNode(p);
+                        node->subdivisions[index] = nullptr;
+                        node->mergeSolidBranches();
+                        return true;
+                    } else {
+                        if (node->isLeafNode()) {
+                            for (int i = 0; i < 8; ++i) {
+                                if (i != index)
+                                    node->subdivisions[i] = new VoxelOctree({ node->value });
+                            }
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+                return false;
+            }
+        };
+        if (res > 1) {
+            if (EraseNode{ res >> 1, _root, }(x, y, z)) {
+                if (_root->isLeafNode()) {
+                    deleteNode(_root);
+                    _root = nullptr;
+                } else {
+                    _root->mergeSolidBranches();
+                }
+            }
+        } else {
+            FVASSERT_DEBUG(_root->isLeafNode());
+            deleteNode(_root);
+            _root = nullptr;
+        }
+    }
+}
+
+std::optional<Voxel> VoxelModel::lookup(uint32_t x, uint32_t y, uint32_t z) const {
     const auto res = resolution();
     if (x >= res || y >= res || z >= res) {
         throw std::out_of_range("Invalid index");
@@ -176,50 +278,17 @@ const VoxelOctree* VoxelModel::lookup(uint32_t x, uint32_t y, uint32_t z) const 
         }
     };
     if (aabb.isNull())
-        return nullptr;
-    if (auto p = Lookup{ res >> 1, _root }(x, y, z); p->isLeafNode())
-        return p;
-    return nullptr;
-}
-
-void VoxelModel::pruneSolidTree(VoxelOctree* node) {
-    int n = 0;
-    Vector4 color = { 0, 0, 0, 0 };
-    float metallic = 0.0f;
-    float roughness = 0.0f;
-    for (auto p : node->subdivisions) {
-        if (p) {
-            n++;
-            color += Color(p->value.color).vector4();
-            metallic += float(p->value.metallic) / 65535.0f;
-            roughness += float(p->value.roughness) / 65535.0f;
+        return {};
+    if (_root) {
+        if (res > 1) {
+            if (auto p = Lookup{ res >> 1, _root }(x, y, z); p->isLeafNode())
+                return p->value;
+        } else {
+            FVASSERT_DEBUG(_root->isLeafNode());
+            return _root->value;
         }
     }
-    if (n > 0) {
-        node->value.color = Color(color / float(n)).rgba8();
-        node->value.metallic = static_cast<uint16_t>((metallic / float(n)) * 65535.0f);
-        node->value.roughness = static_cast<uint16_t>((metallic / float(n)) * 65535.0f);
-
-        if (n == 8) {
-            bool combinable = true;
-            for (auto p : node->subdivisions) {
-                if (p->isLeafNode() == false ||
-                    p->value != node->value) {
-                    combinable = false;
-                    break;
-                }
-            }
-            if (combinable) {
-                for (int i = 0; i < 8; ++i) {
-                    auto p = node->subdivisions[i];
-                    FVASSERT_DEBUG(p);
-                    FVASSERT_DEBUG(p->isLeafNode());
-                    delete p;
-                    node->subdivisions[i] = nullptr;
-                }
-            }
-        }
-    }
+    return {};
 }
 
 void VoxelModel::optimize() {
@@ -234,7 +303,7 @@ void VoxelModel::optimize() {
         }
     };
     std::function<void(VoxelOctree*)> fn = [&](VoxelOctree* node) {
-        this->pruneSolidTree(node);
+        node->mergeSolidBranches();
     };
     ForEachNode{ _root }(fn);
 }
@@ -341,6 +410,7 @@ uint64_t VoxelModel::rayTest(const Vector3& rayOrigin, const Vector3& dir,
         const VoxelOctree* node;
         const Vector3 center;
         const uint32_t depth;
+        uint32_t resolution;
         bool& continueRayTest;
         std::function<bool(const RayHitResult&)> callback;
         uint64_t rayTest(const Vector3& start, const Vector3& dir) const {
@@ -370,12 +440,15 @@ uint64_t VoxelModel::rayTest(const Vector3& rayOrigin, const Vector3& dir,
                              center.y + halfExtent * (float(y) - 0.5f),
                              center.z + halfExtent * (float(z) - 0.5f),
                         };
-                        numHits += RayTestNode{ p, pt, depth + 1, continueRayTest, callback }
+                        numHits += RayTestNode{ p, pt, depth + 1, resolution, continueRayTest, callback }
                         .rayTest(start, dir);
                     }
                 }
                 if (leafNode) {
-                    if (callback(RayHitResult{ r, node }) == false) {
+                    uint32_t x = std::floor(center.x * resolution);
+                    uint32_t y = std::floor(center.y * resolution);
+                    uint32_t z = std::floor(center.z * resolution);
+                    if (callback(RayHitResult{ r, node, {x, y, z}, depth }) == false) {
                         continueRayTest = false;
                     }
                     return 1;
@@ -401,6 +474,13 @@ uint64_t VoxelModel::rayTest(const Vector3& rayOrigin, const Vector3& dir,
     }
 
     return RayTestNode{
-        _root, Vector3(0.5f, 0.5f, 0.5f), 0, continueRayTest, callback 
+        _root, Vector3(0.5f, 0.5f, 0.5f), 0, resolution(), continueRayTest, callback 
     }.rayTest(rayStart, rayDir);
+}
+
+void VoxelModel::deleteNode(VoxelOctree* node) {
+    ForEachNode{ node }.backward(
+        [](VoxelOctree* node) {
+            delete node;
+        });
 }
