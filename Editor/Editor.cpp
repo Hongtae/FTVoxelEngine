@@ -338,6 +338,7 @@ public:
                             [&] {
                                 Log::debug(std::format("async - thread:{}", currentThreadID()));
                             });
+                        t->wait();
                     }
                     if (ImGui::MenuItem("Await test")) {
                         Log::debug(std::format("await test - thread:{}", currentThreadID()));
@@ -363,12 +364,120 @@ public:
                     }
                     ImGui::EndMenu();
                 }
-                if (ImGui::MenuItem("VoxelOctree test")) {
-                    VoxelModel model(AABB(Vector3(0, 0, 0), Vector3(1, 1, 1)), 5);
-                    int res = model.resolution();
-                    model.emplace(12, 1, 27, {});
-                    model.erase(12, 1, 27);
-                    Log::debug("done.");
+                if (ImGui::BeginMenu("VoxelOctree Test")) {
+                    if (ImGui::MenuItem("VoxelOctree random update test")) {
+                        VoxelModel model(AABB(Vector3(0, 0, 0), Vector3(1, 1, 1)), 12);
+                        int res = model.resolution();
+
+                        struct Location { uint32_t x, y, z; };
+                        std::vector<Location> locations;
+                        std::random_device r{};
+                        std::default_random_engine random(r());
+                        std::uniform_int_distribution<uint32_t> uniformDist(0, (res - 1));
+
+                        constexpr uint32_t count = 1U << 24;
+                        locations.reserve(count);
+                        for (uint32_t i = 0; i < count; ++i) {
+                            auto x = uniformDist(random);
+                            auto y = uniformDist(random);
+                            auto z = uniformDist(random);
+                            locations.push_back({ x, y, z });
+                        }
+                        const Voxel voxel = {};
+
+                        Log::debug(std::format("{} items generated. (resolution: {})", count, res));
+
+                        auto t1 = std::chrono::high_resolution_clock::now();
+                        for (auto& loc : locations) {
+                            model.update(loc.x, loc.y, loc.z, voxel);
+                        }
+                        auto t2 = std::chrono::high_resolution_clock::now();
+                        std::chrono::duration<double> d = t2 - t1;
+                        Log::debug(std::format("insert {} items, {} elapsed.", count, d.count()));
+
+                        int numLeafNodes = 0;
+                        if (auto root = model.root(); root) {
+                            numLeafNodes = root->numLeafNodes();
+                        }
+                        Log::debug(std::format("Num-LeafNodes: {}", numLeafNodes));
+
+                        // shuffle
+                        std::shuffle(locations.begin(), locations.end(), random);
+
+                        t1 = std::chrono::high_resolution_clock::now();
+                        for (auto& loc : locations) {
+                            model.erase(loc.x, loc.y, loc.z);
+                            if (auto p = model.lookup(loc.x, loc.y, loc.z); p.has_value()) {
+                                Log::debug("error!");
+                                model.lookup(loc.x, loc.y, loc.z);
+                                model.erase(loc.x, loc.y, loc.z);
+                            }
+                        }
+                        t2 = std::chrono::high_resolution_clock::now();
+                        d = t2 - t1;
+                        Log::debug(std::format("erase {} items, {} elapsed.", count, d.count()));
+
+                        numLeafNodes = 0;
+                        if (auto root = model.root(); root) {
+                            numLeafNodes = root->numLeafNodes();
+                        }
+                        Log::debug(std::format("Num-LeafNodes: {}", numLeafNodes));
+                        Log::debug("done.");
+                    }
+                    if (ImGui::MenuItem("VoxelOctree fill test")) {
+                        VoxelModel model(AABB(Vector3(0, 0, 0), Vector3(1, 1, 1)), 8);
+                        int res = model.resolution();
+
+                        struct Location { uint32_t x, y, z; };
+                        std::vector<Location> locations;
+
+                        std::random_device r{};
+                        std::default_random_engine random(r());
+                        std::uniform_int_distribution<uint32_t> uniformDist(0, (res - 1));
+
+                        for (uint32_t x = 0; x < res; ++x) {
+                            for (uint32_t y = 0; y < res; ++y) {
+                                for (uint32_t z = 0; z < res; ++z) {
+                                    locations.push_back({ x, y, z });
+                                }
+                            }
+                        }
+                        std::shuffle(locations.begin(), locations.end(), random);
+                        Log::debug(std::format("{} items generated. (resolution: {})", locations.size(), res));
+                        const Voxel voxel = {};
+
+                        auto t1 = std::chrono::high_resolution_clock::now();
+                        for (auto& loc : locations) {
+                            model.update(loc.x, loc.y, loc.z, voxel);
+                        }
+                        auto t2 = std::chrono::high_resolution_clock::now();
+                        std::chrono::duration<double> d = t2 - t1;
+                        Log::debug(std::format("insert {} items, {} elapsed.", locations.size(), d.count()));
+
+                        int numLeafNodes = 0;
+                        if (auto root = model.root(); root) {
+                            numLeafNodes = root->numLeafNodes();
+                        }
+                        Log::debug(std::format("Num-LeafNodes: {}", numLeafNodes));
+
+                        std::shuffle(locations.begin(), locations.end(), random);
+                        t1 = std::chrono::high_resolution_clock::now();
+                        for (auto& loc : locations) {
+                            model.erase(loc.x, loc.y, loc.z);
+                        }
+                        t2 = std::chrono::high_resolution_clock::now();
+                        d = t2 - t1;
+                        Log::debug(std::format("erase {} items, {} elapsed.", locations.size(), d.count()));
+
+                        numLeafNodes = 0;
+                        if (auto root = model.root(); root) {
+                            numLeafNodes = root->numLeafNodes();
+                        }
+                        Log::debug(std::format("Num-LeafNodes: {}", numLeafNodes));
+
+                        Log::debug("done.");
+                    }
+                    ImGui::EndMenu();
                 }
                 ImGui::EndMenu();
             }
