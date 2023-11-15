@@ -123,8 +123,8 @@ public:
     }
 
     void onMouseEvent(const Window::MouseEvent& event) {
-        if (event.device == Window::MouseEvent::GenericMouse && event.deviceId == 0) {
-            if (event.buttonId == 0) { // left-click
+        if (event.device == Window::MouseEvent::GenericMouse && event.deviceID == 0) {
+            if (event.buttonID == 0) { // left-click
                 switch (event.type) {
                 case Window::MouseEvent::ButtonDown:
                     this->draggingPosition = event.location;
@@ -208,9 +208,9 @@ public:
                                            face.vertex[1].pos,
                                            face.vertex[2].pos);
                         Vector3 hitpoint = p;
-                        if (auto r = plane.rayTest(p, p + plane.normal()) >= 0.0f) {
+                        if (auto r = plane.rayTest(p, plane.normal()) >= 0.0f) {
                             hitpoint = p + plane.normal() * r;
-                        } else if (auto r = plane.rayTest(p, p - plane.normal()) >= 0.0f) {
+                        } else if (auto r = plane.rayTest(p, -plane.normal()) >= 0.0f) {
                             hitpoint = p - plane.normal() * r;
                         }
                         auto uvw = Triangle{
@@ -530,6 +530,40 @@ public:
             if (ImGui::Button("Convert")) {
                 // voxelize..
                 voxelize(depth);
+            }ImGui::SameLine();
+            if (ImGui::Button("Convert-2")) {
+                auto model = meshRenderer->model.get();
+                if (model) {
+                    auto builder = model->voxelBuilder(model->defaultSceneIndex, graphicsContext.get());
+                    if (builder) {
+                        auto start = std::chrono::high_resolution_clock::now();
+                        auto voxelModel = std::make_shared<VoxelModel>(builder.get(), depth);
+                        auto end = std::chrono::high_resolution_clock::now();
+                        auto elapsed = std::chrono::duration<double>(end - start);
+
+                        if (voxelModel) {
+                            uint64_t numNodes = 0;
+                            uint64_t numLeafNodes = 0;
+                            if (auto root = voxelModel->root(); root) {
+                                numNodes = root->numDescendants();
+                                numLeafNodes = root->numLeafNodes();
+                            }
+                            Log::info(std::format(
+                                enUS_UTF8,
+                                "VoxelModel depth:{}, nodes: {:Ld}, leaf-nodes: {:Ld}, elapsed:{}",
+                                voxelModel->depth(), numNodes, numLeafNodes, elapsed.count()));
+                        } else {
+                            Log::info("No output.");
+                        }
+
+                    } else {
+                        Log::error("Invalid model.");
+                        messageBox("Model Error");
+                    }
+                } else {
+                    Log::error("Invalid model");
+                    messageBox("Model is not loaded.");
+                }
             }
             ImGui::EndDisabled();
 

@@ -29,6 +29,8 @@ struct Model {
 
     std::vector<Triangle> triangleList(int scene, GraphicsDeviceContext* graphicsContext) const;
     std::vector<MaterialFace> faceList(int scene, GraphicsDeviceContext* graphicsContext) const;
+
+    std::shared_ptr<VoxelOctreeBuilder> voxelBuilder(int scene, GraphicsDeviceContext* graphicsContext) const;
 };
 
 struct ForEachNode {

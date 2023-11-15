@@ -226,10 +226,12 @@ void loadMaterials(LoaderContext& context) {
             material->attachments.front().blendState = BlendState::opaque;
         }
 
-        if (glTFMaterial.doubleSided)
-            material->cullMode = CullMode::None;
-        else
-            material->cullMode = CullMode::Back;
+        //if (glTFMaterial.doubleSided)
+        //    material->cullMode = CullMode::None;
+        //else
+        //    material->cullMode = CullMode::Back;
+        material->frontFace = Winding::CounterClockwise;
+        material->cullMode = CullMode::None;
 
         material->setProperty(MaterialSemantic::BaseColor,
                               Color(
@@ -1098,4 +1100,181 @@ std::vector<MaterialFace> Model::faceList(int sceneIndex, GraphicsDeviceContext*
         return faces;
     }
     return {};
+}
+
+std::shared_ptr<VoxelOctreeBuilder> Model::voxelBuilder(
+    int sceneIndex, GraphicsDeviceContext* graphicsContext) const {
+    class Builder : public VoxelOctreeBuilder {
+    public:
+        Builder(GraphicsDeviceContext* gc) : graphicsContext(gc) {}
+        AABB aabb() override {
+            return volume;
+        }
+        bool volumeTest(const AABB& aabb, VolumeID vid, VolumeID group) override {
+            auto overlapTest = [&](uint64_t index) {
+                auto& face = faces.at(index);
+                Triangle tri = {
+                face.vertex[0].pos,
+                face.vertex[1].pos,
+                face.vertex[2].pos
+                };
+                return aabb.overlapTest(tri);
+            };
+
+            if (group == nullptr) {
+                std::vector<uint64_t> overlapped;
+                overlapped.reserve(faces.size());
+
+                for (uint64_t index = 0; index < faces.size(); ++index) {
+                    if (overlapTest(index)) {
+                        overlapped.push_back(index);
+                    }
+                }
+                if (overlapped.empty() == false) {
+                    overlappedFaces[vid] = overlapped;
+                    return true;
+                }
+            } else {
+                if (auto it = overlappedFaces.find(group);
+                    it != overlappedFaces.end()) {
+                    std::vector<uint64_t>& group = it->second;
+                    std::vector<uint64_t> overlapped;
+                    overlapped.reserve(group.size());
+
+                    for (auto index : group) {
+                        if (overlapTest(index)) {
+                            overlapped.push_back(index);
+                        }
+                    }
+                    if (overlapped.empty() == false) {
+                        overlappedFaces[vid] = overlapped;
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+        Voxel value(const AABB& aabb, VolumeID vid) override {
+            if (auto it = overlappedFaces.find(vid);
+                it != overlappedFaces.end()) {
+                const auto& overlapped = it->second;
+                if (overlapped.empty() == false) {
+                    Vector4 colors = { 0, 0, 0, 0 };
+                    Vector3 pt = aabb.center();
+
+                    for (auto i : overlapped) {
+                        const auto& face = faces.at(i);
+                        auto& verts = face.vertex;
+
+                        auto plane = Plane(verts[0].pos,
+                                           verts[1].pos,
+                                           verts[2].pos);
+                        Vector3 hitpoint = pt;
+                        Vector3 normal = plane.normal();
+                        if (auto r = plane.rayTest(pt, normal) >= 0.0f) {
+                            hitpoint = pt + normal * r;
+                        } else if (auto r = plane.rayTest(pt, -normal) >= 0.0f) {
+                            hitpoint = pt - normal * r;
+                        }
+
+                        auto uvw = Triangle{
+                            verts[0].pos,
+                            verts[1].pos,
+                            verts[2].pos
+                        }.barycentric(hitpoint);
+
+                        Vector4 vertexColor =
+                            verts[0].color * uvw.x +
+                            verts[1].color * uvw.y +
+                            verts[2].color * uvw.z;
+
+                        Image* textureImage = nullptr;
+                        Vector4 baseColor = { 1, 1, 1, 1 };
+
+
+                        if (face.material) {
+                            if (auto it = face.material->properties.find(MaterialSemantic::BaseColor);
+                                it != face.material->properties.end()) {
+                                auto floats = it->second.cast<float>();
+                                if (floats.size() >= 4) {
+                                    baseColor = { floats[0], floats[1], floats[2], floats[3] };
+                                } else if (floats.size() == 3) {
+                                    baseColor = { floats[0], floats[1], floats[2], 1.0f };
+                                }
+                            }
+                            // find texture
+                            std::shared_ptr<Texture> texture = nullptr;
+                            if (auto iter = face.material->properties.find(MaterialSemantic::BaseColorTexture);
+                                iter != face.material->properties.end()) {
+                                texture = std::visit(
+                                    [&](auto&& args)->std::shared_ptr<Texture> {
+                                        using T = std::decay_t<decltype(args)>;
+                                        if constexpr (std::is_same_v<T, MaterialProperty::TextureArray>) {
+                                            return args.front();
+                                        } else if constexpr (std::is_same_v<T, MaterialProperty::CombinedTextureSamplerArray>) {
+                                            return args.front().texture;
+                                        }
+                                        return nullptr;
+                                    }, iter->second.value);
+                            }
+                            //if (texture == nullptr)
+                            //    texture = face.material->defaultTexture;
+
+                            if (texture) {
+                                std::shared_ptr<Image> image = nullptr;
+                                if (auto iter = cpuAccessibleImages.find(texture.get()); iter != cpuAccessibleImages.end()) {
+                                    image = iter->second;
+                                } else {
+                                    // download image
+                                    auto buffer = graphicsContext->makeCPUAccessible(texture);
+                                    if (buffer) {
+                                        image = Image::fromTextureBuffer(
+                                            buffer,
+                                            texture->width(), texture->height(),
+                                            texture->pixelFormat());
+                                    }
+                                    cpuAccessibleImages[texture.get()] = image;
+                                }
+                                textureImage = image.get();
+                            }
+                        }
+                        if (textureImage) {
+                            Vector2 uv =
+                                face.vertex[0].uv * uvw.x +
+                                face.vertex[1].uv * uvw.y +
+                                face.vertex[2].uv * uvw.z;
+                            auto x = (uv.x - floor(uv.x)) * float(textureImage->width - 1);
+                            auto y = (uv.y - floor(uv.y)) * float(textureImage->height - 1);
+                            auto pixel = textureImage->readPixel(x, y);
+                            Vector4 c = { float(pixel.r), float(pixel.g), float(pixel.b), float(pixel.a) };
+                            colors += c * baseColor;
+                        } else {
+                            colors += vertexColor * baseColor;
+                        }
+                    }
+                    colors = colors / float(overlapped.size());
+                    Voxel voxel = {};
+                    voxel.color = Color(colors).rgba8();
+                    return voxel;
+                }
+            }
+            return {};
+        }
+        AABB volume;
+        std::vector<MaterialFace> faces;
+        std::unordered_map<VolumeID, std::vector<uint64_t>> overlappedFaces;
+    private:
+        GraphicsDeviceContext* graphicsContext;
+        std::unordered_map<Texture*, std::shared_ptr<Image>> cpuAccessibleImages;
+    };
+
+    auto builder = std::make_shared<Builder>(graphicsContext);
+    auto faces = faceList(sceneIndex, graphicsContext);
+    AABB aabb;
+    for (auto& f : faces) {
+        aabb.expand({ f.vertex[0].pos, f.vertex[1].pos, f.vertex[2].pos });
+    }
+    builder->faces = std::move(faces);
+    builder->volume = aabb;
+    return builder;
 }

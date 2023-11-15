@@ -40,8 +40,8 @@ namespace FV {
             Type type;
             std::weak_ptr<Window> window;
             Device device;
-            int deviceId;
-            int buttonId;
+            int deviceID;
+            int buttonID;
             Point location;	///< location in window
             Point delta;
             float pressure;		///< for stylus-pen
@@ -58,7 +58,7 @@ namespace FV {
             };
             Type type;
             std::weak_ptr<Window> window;
-            int deviceId;
+            int deviceID;
             VirtualKey key;
             std::u8string text;
         };

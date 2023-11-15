@@ -70,9 +70,10 @@ namespace FV {
         static constexpr auto maxDepth = 10U; // 2^(10*3)
 
         bool isLeafNode() const {
-            for (auto p : subdivisions)
-                if (p) return false;
-            return true;
+            auto merge = [&]<int... N>(std::integer_sequence<int, N...>) {
+                return (uintptr_t(subdivisions[N]) | ...);
+            };
+            return merge(std::make_integer_sequence<int, 8>{}) == 0;
         }
 
         static constexpr float halfExtent(uint32_t depth) {
@@ -136,9 +137,10 @@ namespace FV {
     public:
         ~VoxelOctreeBuilder() {}
 
-        using VolumeId = uint64_t;
-        virtual bool volumeTest(const AABB&, VolumeId, VolumeId*) = 0;
-        virtual Voxel value(const AABB&, VolumeId) = 0;
+        using VolumeID = const void*;
+        virtual AABB aabb() = 0;
+        virtual bool volumeTest(const AABB&, VolumeID, VolumeID) = 0;
+        virtual Voxel value(const AABB&, VolumeID) = 0;
     };
 
     class FVCORE_API VoxelModel {
@@ -154,7 +156,13 @@ namespace FV {
         int enumerateLevel(int depth, std::function<void(const AABB&, const VoxelOctree&)>) const;
 
         const VoxelOctree* root() const { return _root; }
-        uint32_t resolution() const { return 1ULL << maxDepth; }
+        uint32_t resolution() const { return 1ULL << _maxDepth; }
+
+        void setDepth(uint32_t depth);
+        uint32_t depth() const { return _maxDepth; }
+        void setScale(float scale);
+        float scale() const { return _scale; }
+        AABB aabb() const;
 
         void optimize();
 
@@ -204,10 +212,11 @@ namespace FV {
         std::optional<RayHitResult> rayTest(const Vector3& rayOrigin, const Vector3& dir, RayHitResultOption option = RayHitResultOption::CloestHit) const;
         uint64_t rayTest(const Vector3& rayOrigin, const Vector3& dir, std::function<bool(const RayHitResult&)> filter) const;
 
-        AABB aabb;
     private:
         VoxelOctree* _root;
-        uint32_t maxDepth;
+        Vector3 _center;
+        float _scale;
+        uint32_t _maxDepth;
 
         static void deleteNode(VoxelOctree*);
     };
