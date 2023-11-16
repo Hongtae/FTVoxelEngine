@@ -13,8 +13,8 @@ bool VoxelOctree::mergeSolidBranches() {
     uint16_t g = 0;
     uint16_t b = 0;
     uint16_t a = 0;
-    uint16_t metallic = 0;
-    uint16_t roughness = 0;
+    uint32_t metallic = 0;
+    uint32_t roughness = 0;
 
     for (auto p : this->subdivisions) {
         if (p) {
