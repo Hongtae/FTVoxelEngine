@@ -28,9 +28,8 @@ namespace FV {
             bool isLeaf() const { return flags != 0; }
             AABB aabb() const {
                 constexpr float q = 1.0f / float(std::numeric_limits<uint16_t>::max());
-                float halfExtent = 0.5f;
-                for (int i = 0; i < depth; ++i)
-                    halfExtent = halfExtent * 0.5f;
+                uint32_t exp = (126 - depth) << 23;
+                float halfExtent = std::bit_cast<float>(exp);
                 Vector3 ext = Vector3(halfExtent, halfExtent, halfExtent);
                 Vector3 center = Vector3(float(x), float(y), float(z)) * q;
                 return { center - ext, center + ext };
