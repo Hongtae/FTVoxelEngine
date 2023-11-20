@@ -12,6 +12,7 @@
 #include "UIRenderer.h"
 #include "MeshRenderer.h"
 #include "VolumeRenderer.h"
+#include "VolumeRenderer2.h"
 
 using namespace FV;
 
@@ -29,7 +30,8 @@ public:
     PixelFormat depthFormat;
 
     MeshRenderer* meshRenderer;
-    VolumeRenderer* volumeRenderer; 
+    VolumeRenderer* volumeRenderer;
+    VolumeRenderer2* volumeRenderer2;
     UIRenderer* uiRenderer;
     std::vector<std::shared_ptr<Renderer>> renderers;
 
@@ -78,12 +80,14 @@ public:
 
         auto meshRenderer = std::make_shared<MeshRenderer>();
         auto volumeRenderer = std::make_shared<VolumeRenderer>();
+        auto volumeRenderer2 = std::make_shared<VolumeRenderer2>();
         auto uiRenderer = std::make_shared<UIRenderer>();
         this->renderers = {
-            meshRenderer, volumeRenderer, uiRenderer
+            meshRenderer, volumeRenderer, volumeRenderer2, uiRenderer
         };
         this->meshRenderer = meshRenderer.get();
         this->volumeRenderer = volumeRenderer.get();
+        this->volumeRenderer2 = volumeRenderer2.get();
         this->uiRenderer = uiRenderer.get();
 
         this->uiRenderer->setWindow(window.get());
@@ -100,6 +104,7 @@ public:
         renderers.clear();
         meshRenderer = nullptr;
         volumeRenderer = nullptr;
+        volumeRenderer2 = nullptr;
         uiRenderer = nullptr;
 
         window = nullptr;
@@ -513,11 +518,12 @@ public:
                 v = v.applying(qy);
                 meshRenderer->lightDir = v;
                 volumeRenderer->lightDir = v;
+                volumeRenderer2->lightDir = v;
             }
         }
         ImGui::End();
 
-        if (ImGui::Begin("Voxelize")) {
+        if (ImGui::Begin("Voxelize (AABBTree)")) {
 
             bool voxelizationInProgress = false;
             ImGui::BeginDisabled(voxelizationInProgress);
@@ -531,40 +537,6 @@ public:
                 // voxelize..
                 voxelize(depth);
             }ImGui::SameLine();
-            if (ImGui::Button("Convert-2")) {
-                auto model = meshRenderer->model.get();
-                if (model) {
-                    auto builder = model->voxelBuilder(model->defaultSceneIndex, graphicsContext.get());
-                    if (builder) {
-                        auto start = std::chrono::high_resolution_clock::now();
-                        auto voxelModel = std::make_shared<VoxelModel>(builder.get(), depth);
-                        auto end = std::chrono::high_resolution_clock::now();
-                        auto elapsed = std::chrono::duration<double>(end - start);
-
-                        if (voxelModel) {
-                            uint64_t numNodes = 0;
-                            uint64_t numLeafNodes = 0;
-                            if (auto root = voxelModel->root(); root) {
-                                numNodes = root->numDescendants();
-                                numLeafNodes = root->numLeafNodes();
-                            }
-                            Log::info(std::format(
-                                enUS_UTF8,
-                                "VoxelModel depth:{}, nodes: {:Ld}, leaf-nodes: {:Ld}, elapsed:{}",
-                                voxelModel->depth(), numNodes, numLeafNodes, elapsed.count()));
-                        } else {
-                            Log::info("No output.");
-                        }
-
-                    } else {
-                        Log::error("Invalid model.");
-                        messageBox("Model Error");
-                    }
-                } else {
-                    Log::error("Invalid model");
-                    messageBox("Model is not loaded.");
-                }
-            }
             ImGui::EndDisabled();
 
             ImGui::SameLine();
@@ -635,6 +607,57 @@ public:
         }
         ImGui::End();
 
+        if (ImGui::Begin("Voxelize (Layered)")) {
+
+            static int depth = 5;
+            if (ImGui::SliderInt("Depth Level", &depth, 0, 12, nullptr, ImGuiSliderFlags_None)) {
+                // value changed.
+            }
+
+            if (ImGui::Button("Convert-2")) {
+                auto model = meshRenderer->model.get();
+                if (model) {
+                    auto builder = model->voxelBuilder(model->defaultSceneIndex, graphicsContext.get());
+                    if (builder) {
+                        auto start = std::chrono::high_resolution_clock::now();
+                        auto voxelModel = std::make_shared<VoxelModel>(builder.get(), depth);
+                        auto end = std::chrono::high_resolution_clock::now();
+                        auto elapsed = std::chrono::duration<double>(end - start);
+
+                        if (voxelModel) {
+                            uint64_t numNodes = 0;
+                            uint64_t numLeafNodes = 0;
+                            if (auto root = voxelModel->root(); root) {
+                                numNodes = root->numDescendants();
+                                numLeafNodes = root->numLeafNodes();
+                            }
+                            Log::info(std::format(
+                                enUS_UTF8,
+                                "VoxelModel depth:{}, nodes: {:Ld}, leaf-nodes: {:Ld}, elapsed:{}",
+                                voxelModel->depth(), numNodes, numLeafNodes, elapsed.count()));
+                        } else {
+                            Log::info("No output.");
+                        }
+
+                    } else {
+                        Log::error("Invalid model.");
+                        messageBox("Model Error");
+                    }
+                } else {
+                    Log::error("Invalid model");
+                    messageBox("Model is not loaded.");
+                }
+            }
+            ImGui::SameLine();
+
+            auto texture = volumeRenderer2->renderTarget;
+            ImGui::Text(std::format("Volume Image ({} x {})",
+                                    texture->width(), texture->height()).c_str());
+            ImGui::Image(uiRenderer->textureID(texture.get()), ImVec2(
+                texture->width(), texture->height()));
+        }
+        ImGui::End();
+
         // file dialog 
         if (ImGuiFileDialog::Instance()->Display("FVEditor_Open3DAsset")) {
             // action if OK
@@ -680,6 +703,7 @@ public:
         }
 
         uiRenderer->registerTexture(volumeRenderer->texture);
+        uiRenderer->registerTexture(volumeRenderer2->renderTarget);
 
         auto queue = renderQueue.get();
         auto device = queue->device().get();

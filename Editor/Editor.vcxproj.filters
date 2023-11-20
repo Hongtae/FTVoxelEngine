@@ -99,6 +99,9 @@
     <ClInclude Include="Editor.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="VolumeRenderer2.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Editor.cpp">
@@ -144,6 +147,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="UIRenderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="VolumeRenderer2.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

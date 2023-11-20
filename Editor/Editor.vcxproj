@@ -192,6 +192,7 @@ xcopy /Y /D /R /Q /E "$(ProjectDir)Resources" "$(OutDir)$(ProjectName).Resources
     <ClInclude Include="targetver.h" />
     <ClInclude Include="UIRenderer.h" />
     <ClInclude Include="VolumeRenderer.h" />
+    <ClInclude Include="VolumeRenderer2.h" />
     <ClInclude Include="Voxel.h" />
   </ItemGroup>
   <ItemGroup>
@@ -209,6 +210,7 @@ xcopy /Y /D /R /Q /E "$(ProjectDir)Resources" "$(OutDir)$(ProjectName).Resources
     <ClCompile Include="Model.cpp" />
     <ClCompile Include="UIRenderer.cpp" />
     <ClCompile Include="VolumeRenderer.cpp" />
+    <ClCompile Include="VolumeRenderer2.cpp" />
     <ClCompile Include="Voxel.cpp" />
   </ItemGroup>
   <ItemGroup>
