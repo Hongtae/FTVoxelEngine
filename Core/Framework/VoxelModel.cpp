@@ -1,5 +1,6 @@
 #include "AffineTransform3.h"
 #include "VoxelModel.h"
+#include "DispatchQueue.h"
 
 using namespace FV;
 
@@ -214,6 +215,15 @@ VoxelModel::VoxelModel(VoxelOctreeBuilder* builder, int depth)
                 _scale = 0.0f;
             }
         }
+    }
+}
+
+VoxelModel::VoxelModel(VoxelOctreeBuilder* builder, int depth, DispatchQueue& queue)
+    : _root(nullptr)
+    , _scale(0.0f)
+    , _center(Vector3::zero)
+    , _maxDepth(std::max(depth, 0)) {
+    if (builder) {
     }
 }
 
@@ -447,14 +457,13 @@ void VoxelModel::optimize() {
     ForEachNode{ _root }(fn);
 }
 
-int VoxelModel::enumerateLevel(int depth, std::function<void(const AABB&, const VoxelOctree&)> cb) const {
-    using Callback = std::function<void(const AABB&, const VoxelOctree&)>;
+int VoxelModel::enumerateLevel(int depth, std::function<void(const AABB&, uint32_t, const VoxelOctree&)> cb) const {
+    using Callback = std::function<void(const AABB&, uint32_t, const VoxelOctree&)>;
 
     struct IterateDepth {
         const VoxelOctree& node;
         const Vector3 center;
         uint32_t level;
-        Callback& callback;
         uint32_t operator() (uint32_t depth, Callback& cb) {
             float halfExtent = VoxelOctree::halfExtent(depth);
 
@@ -473,22 +482,31 @@ int VoxelModel::enumerateLevel(int depth, std::function<void(const AABB&, const 
                          center.y + halfExtent * (float(y) - 0.5f),
                          center.z + halfExtent * (float(z) - 0.5f),
                     };
-                    result += IterateDepth{ *p, pt, level + 1, cb }(depth, cb);
+                    result += IterateDepth{ *p, pt, level + 1 }(depth, cb);
                 }
-                return result;
+                if (result > 0)
+                    return result;
             }
             AABB aabb = {
                 center - Vector3(halfExtent, halfExtent, halfExtent),
                 center + Vector3(halfExtent, halfExtent, halfExtent)
             };
-            cb(aabb, node);
+            cb(aabb, level, node);
             return 1;
         }
     };
     if (_root) {
-        auto aabb = AABB();
-        FVASSERT_DEBUG(aabb.isNull() == false);
-        IterateDepth{ *_root, aabb.center(), 0, cb}(std::clamp(depth, 0, 125), cb);
+        auto volume = this->aabb();
+        auto extents = volume.extents();
+        FVASSERT_DEBUG(volume.isNull() == false);
+        Callback transCb = [&](const AABB& aabb, uint32_t depth, const VoxelOctree& octree) {
+            AABB aabb2 = {
+                aabb.min * extents + volume.min,
+                aabb.max * extents + volume.max
+            };
+            cb(aabb2, depth, octree);
+        };
+        return IterateDepth{ *_root, Vector3(0.5f, 0.5f, 0.5f), 0 }(std::clamp(depth, 0, 125), transCb);
     }
     return 0;
 }

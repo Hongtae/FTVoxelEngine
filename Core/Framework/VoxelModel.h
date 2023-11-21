@@ -103,6 +103,16 @@ namespace FV {
             return n;
         }
 
+        uint32_t maxDepthLevels() const {
+            uint32_t level = 0;
+            for (auto p : subdivisions) {
+                if (p) {
+                    level = std::max(level, p->maxDepthLevels() + 1);
+                }
+            }
+            return level;
+        }
+
         template <typename T> requires std::is_invocable_v<T, const Vector3&, uint32_t, const VoxelOctree&>
         void enumerate(const Vector3& center, uint32_t depth, uint32_t numDepthLevels, T&& fn) const {
             fn(center, depth, *this);
@@ -142,17 +152,19 @@ namespace FV {
         virtual Voxel value(const AABB&, VolumeID) = 0;
     };
 
+    class DispatchQueue;
     class FVCORE_API VoxelModel {
     public:
         VoxelModel(const AABB& aabb, int depth);
         VoxelModel(VoxelOctreeBuilder*, int depth);
+        VoxelModel(VoxelOctreeBuilder*, int depth, DispatchQueue&);
         ~VoxelModel();
 
         void update(uint32_t x, uint32_t y, uint32_t z, const Voxel& value);
         void erase(uint32_t x, uint32_t y, uint32_t z);
         std::optional<Voxel> lookup(uint32_t x, uint32_t y, uint32_t z) const;
 
-        int enumerateLevel(int depth, std::function<void(const AABB&, const VoxelOctree&)>) const;
+        int enumerateLevel(int depth, std::function<void(const AABB&, uint32_t, const VoxelOctree&)>) const;
 
         const VoxelOctree* root() const { return _root; }
         uint32_t resolution() const { return 1ULL << _maxDepth; }

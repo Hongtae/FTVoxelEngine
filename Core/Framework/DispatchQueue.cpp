@@ -205,6 +205,58 @@ namespace {
             }
             return st == StateCompleted;
         }
+        static bool waitAny(std::vector<AsyncTaskImpl*> tasks) {
+            if (tasks.empty() == false) {
+                std::unique_lock lock(globalDispatchMutex);
+                do {
+                    for (auto& task : tasks) {
+                        auto st = task->_state;
+                        if (st == AsyncTask::StateCancelled || st == AsyncTask::StateCompleted) {
+                            return st == AsyncTask::StateCompleted;
+                        }
+                    }
+                    if (auto dp = getLocalDispatcher(lock); dp) {
+                        lock.unlock();
+                        dp->dispatch();
+                        lock.lock();
+                    } else {
+                        globalDispatchCond.wait(lock);
+                    }
+                } while (true);
+            }
+            return true;
+        }
+        static bool waitAll(std::vector<AsyncTaskImpl*> tasks) {
+            if (tasks.empty() == false) {
+                std::unique_lock lock(globalDispatchMutex);
+                do {
+                    std::optional<bool> result = {};
+                    for (auto& task : tasks) {
+                        auto st = task->_state;
+                        if (st == AsyncTask::StateCompleted) {
+                            if (result.has_value() == false)
+                                result = true;
+                        } else if (st == AsyncTask::StateCancelled) {
+                            result = false;
+                        } else {
+                            result.reset();
+                            break;
+                        }
+                    }
+                    if (result.has_value())
+                        return result.value();
+
+                    if (auto dp = getLocalDispatcher(lock); dp) {
+                        lock.unlock();
+                        dp->dispatch();
+                        lock.lock();
+                    } else {
+                        globalDispatchCond.wait(lock);
+                    }
+                } while (true);
+            }
+            return true;
+        }
     };
 
     class Dispatcher : public FV::DispatchQueue::_Dispatcher {
@@ -278,6 +330,30 @@ DispatchQueue::DispatchQueue(_DispatchQueueMain)
     : maxConcurrentQueues(1) {
     this->dispatcher = std::make_shared<Dispatcher>();
     mainDispatcher = this->dispatcher;
+}
+
+bool AsyncTask::waitAny(std::vector<std::shared_ptr<AsyncTask>> tasks) {
+    std::vector<AsyncTaskImpl*> tasks2;
+    tasks2.reserve(tasks.size());
+    for (auto& item : tasks) {
+        if (item.get() == nullptr) continue;
+        auto p = std::dynamic_pointer_cast<AsyncTaskImpl>(item).get();
+        if (p == nullptr) { throw std::runtime_error("Type error!"); }
+        tasks2.push_back(p);
+    }
+    return AsyncTaskImpl::waitAny(tasks2);
+}
+
+bool AsyncTask::waitAll(std::vector<std::shared_ptr<AsyncTask>> tasks) {
+    std::vector<AsyncTaskImpl*> tasks2;
+    tasks2.reserve(tasks.size());
+    for (auto& item : tasks) {
+        if (item.get() == nullptr) continue;
+        auto p = std::dynamic_pointer_cast<AsyncTaskImpl>(item).get();
+        if (p == nullptr) { throw std::runtime_error("Type error!"); }
+        tasks2.push_back(p);
+    }
+    return AsyncTaskImpl::waitAll(tasks2);
 }
 
 DispatchQueue::DispatchQueue(uint32_t q)

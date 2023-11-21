@@ -185,5 +185,11 @@
     <None Include="Resources\Shaders\sample_notex.frag">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="Resources\Shaders\voxel_depth_layer.comp">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Resources\Shaders\voxel_depth_clear.comp">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

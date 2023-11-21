@@ -219,10 +219,8 @@ void VolumeRenderer::render(const RenderPassDescriptor&, const Rect& frame) {
             width, height
         };
         pcdata.depth = [&] {
-            auto start4 = Vector4(0, 0, 0, 1).applying(pcdata.inversedMVP);
-            auto end4 = Vector4(0, 0, 1, 1).applying(pcdata.inversedMVP);
-            auto start = Vector3(start4.x, start4.y, start4.z) / start4.w;
-            auto end = Vector3(end4.x, end4.y, end4.z) / end4.w;
+            auto start = Vector3(0, 0, 0).applying(pcdata.inversedMVP, 1.0f);
+            auto end = Vector3(0, 0, 1).applying(pcdata.inversedMVP, 1.0f);
             return (end - start).magnitude();
         }();
 

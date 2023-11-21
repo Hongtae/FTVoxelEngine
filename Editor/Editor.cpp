@@ -635,6 +635,7 @@ public:
                                 enUS_UTF8,
                                 "VoxelModel depth:{}, nodes: {:Ld}, leaf-nodes: {:Ld}, elapsed:{}",
                                 voxelModel->depth(), numNodes, numLeafNodes, elapsed.count()));
+                            volumeRenderer2->setVoxelModel(voxelModel);
                         } else {
                             Log::info("No output.");
                         }

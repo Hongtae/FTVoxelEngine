@@ -18,6 +18,9 @@ namespace FV {
         };
         virtual State state() const = 0;
         virtual bool wait() const = 0;
+
+        static bool waitAny(std::vector<std::shared_ptr<AsyncTask>>);
+        static bool waitAll(std::vector<std::shared_ptr<AsyncTask>>);
     };
 
     class FVCORE_API DispatchQueue {
