@@ -1131,13 +1131,16 @@ std::shared_ptr<VoxelOctreeBuilder> Model::voxelBuilder(
                     }
                 }
                 if (overlapped.empty() == false) {
-                    overlappedFaces[vid] = overlapped;
+                    std::unique_lock lock(mutex);
+                    overlappedFaces.insert_or_assign(vid, std::move(overlapped));
                     return true;
                 }
             } else {
+                std::unique_lock lock(mutex);
                 if (auto it = overlappedFaces.find(group);
                     it != overlappedFaces.end()) {
                     std::vector<uint64_t>& group = it->second;
+                    lock.unlock();
                     std::vector<uint64_t> overlapped;
                     overlapped.reserve(group.size());
 
@@ -1147,7 +1150,8 @@ std::shared_ptr<VoxelOctreeBuilder> Model::voxelBuilder(
                         }
                     }
                     if (overlapped.empty() == false) {
-                        overlappedFaces[vid] = overlapped;
+                        lock.lock();
+                        overlappedFaces.insert_or_assign(vid, std::move(overlapped));
                         return true;
                     }
                 }
@@ -1155,9 +1159,11 @@ std::shared_ptr<VoxelOctreeBuilder> Model::voxelBuilder(
             return false;
         }
         Voxel value(const AABB& aabb, VolumeID vid) override {
+            std::unique_lock lock(mutex);
             if (auto it = overlappedFaces.find(vid);
                 it != overlappedFaces.end()) {
                 const auto& overlapped = it->second;
+                lock.unlock();
                 if (overlapped.empty() == false) {
                     Vector4 colors = { 0, 0, 0, 0 };
                     Vector3 pt = aabb.center();
@@ -1222,6 +1228,7 @@ std::shared_ptr<VoxelOctreeBuilder> Model::voxelBuilder(
 
                             if (texture) {
                                 std::shared_ptr<Image> image = nullptr;
+                                lock.lock();
                                 if (auto iter = cpuAccessibleImages.find(texture.get()); iter != cpuAccessibleImages.end()) {
                                     image = iter->second;
                                 } else {
@@ -1235,6 +1242,7 @@ std::shared_ptr<VoxelOctreeBuilder> Model::voxelBuilder(
                                     }
                                     cpuAccessibleImages[texture.get()] = image;
                                 }
+                                lock.unlock();
                                 textureImage = image.get();
                             }
                         }
@@ -1260,10 +1268,15 @@ std::shared_ptr<VoxelOctreeBuilder> Model::voxelBuilder(
             }
             return {};
         }
+        void clear(VolumeID vid) override {
+            std::unique_lock lock(mutex);
+            overlappedFaces.erase(vid);
+        }
         AABB volume;
         std::vector<MaterialFace> faces;
         std::unordered_map<VolumeID, std::vector<uint64_t>> overlappedFaces;
     private:
+        std::mutex mutex;
         GraphicsDeviceContext* graphicsContext;
         std::unordered_map<Texture*, std::shared_ptr<Image>> cpuAccessibleImages;
     };

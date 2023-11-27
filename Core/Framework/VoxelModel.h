@@ -150,6 +150,7 @@ namespace FV {
         virtual AABB aabb() = 0;
         virtual bool volumeTest(const AABB&, VolumeID, VolumeID) = 0;
         virtual Voxel value(const AABB&, VolumeID) = 0;
+        virtual void clear(VolumeID) = 0;
     };
 
     class DispatchQueue;

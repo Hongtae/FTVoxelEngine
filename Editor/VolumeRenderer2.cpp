@@ -166,6 +166,8 @@ void VolumeRenderer2::setVoxelModel(std::shared_ptr<VoxelModel> model) {
         uint32_t numLayers = 1U << startDepth;
         this->voxelLayers.reserve(numLayers);
 
+        auto device = queue->device().get();
+
         auto numNodes = voxelModel->enumerateLevel(
             startDepth, [&](const AABB& aabb, uint32_t depth, const VoxelOctree& octree) {
                 auto numNodes = octree.numDescendants();
@@ -173,6 +175,44 @@ void VolumeRenderer2::setVoxelModel(std::shared_ptr<VoxelModel> model) {
                 auto maxLevels = octree.maxDepthLevels();
                 Log::debug(std::format("node at depth:{} (max-depth:{}), num-nodes:{}, num-leaf-nodes:{}",
                                        depth, maxLevels, numNodes, numLeafNodes));
+
+                auto volumeData = octree.makeArray(aabb, maxDepthLevel);
+                if (volumeData.data.empty() == false) {
+                    size_t numNodes = volumeData.data.size();
+                    const auto dataLength = sizeof(VolumeArray::Node) * numNodes;
+
+                    VolumeArrayHeader header = {
+                        aabb.min, 0,
+                        aabb.max, 0,
+                    };
+                    size_t bufferLength = sizeof(header) + dataLength;
+                    auto stgBuffer = device->makeBuffer(bufferLength,
+                                                        GPUBuffer::StorageModeShared,
+                                                        CPUCacheModeWriteCombined);
+                    uint8_t* p = (uint8_t*)stgBuffer->contents();
+                    memcpy(p, &header, sizeof(header));
+                    p += sizeof(header);
+                    memcpy(p, volumeData.data.data(), dataLength);
+                    stgBuffer->flush();
+
+                    auto buffer = device->makeBuffer(bufferLength,
+                                                     GPUBuffer::StorageModePrivate,
+                                                     CPUCacheModeDefault);
+                    auto cbuffer = queue->makeCommandBuffer();
+                    auto encoder = cbuffer->makeCopyCommandEncoder();
+                    encoder->copy(stgBuffer, 0, buffer, 0, bufferLength);
+                    encoder->endEncoding();
+                    cbuffer->commit();
+
+                    VoxelLayer layer = {
+                        aabb,
+                        buffer
+                    };
+                    this->voxelLayers.push_back(layer);
+                    Log::debug(std::format("GPUBuffer {} bytes ({} nodes) has been created.",
+                                           bufferLength,
+                                           numNodes));
+                }
             });
         Log::debug(std::format("VoxelModel-Enumerate depth:{}, num-nodes:{}",
                                startDepth, numNodes));
@@ -221,12 +261,12 @@ void VolumeRenderer2::render(const RenderPassDescriptor&, const Rect& frame) {
             struct PushConstantData {
                 Matrix4 inversedM;
                 Matrix4 inversedMVP;
+                Matrix4 mvp;
                 Color ambientColor;
                 Color lightColor;
                 Vector3 lightDir;
                 uint32_t width;
                 uint32_t height;
-                float depth;
             };
 #pragma pack(pop)
 
@@ -234,22 +274,18 @@ void VolumeRenderer2::render(const RenderPassDescriptor&, const Rect& frame) {
             Color ambientColor = { 0.7, 0.7, 0.7, 1 };
 
             auto nodeTM = transform.matrix4();
+            auto mvp = nodeTM
+                .concatenating(view.matrix4())
+                .concatenating(projection.matrix);
             PushConstantData pcdata = {
                 nodeTM.inverted(),
-                nodeTM
-                    .concatenating(view.matrix4())
-                    .concatenating(projection.matrix)
-                    .inverted(),
+                mvp.inverted(),
+                mvp,
                 ambientColor,
                 lightColor,
                 lightDir,
                 width, height
             };
-            pcdata.depth = [&] {
-                auto start = Vector3(0, 0, 0).applying(pcdata.inversedMVP, 1.0f);
-                auto end = Vector3(0, 0, 1).applying(pcdata.inversedMVP, 1.0f);
-                return (end - start).magnitude();
-            }();
 
             auto encoder = cbuffer->makeComputeCommandEncoder();
             encoder->setComputePipelineState(raycastVoxel.pso);

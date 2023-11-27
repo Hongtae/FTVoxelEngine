@@ -102,7 +102,7 @@ VolumeArray VoxelOctree::makeArray(const AABB& aabb, uint32_t maxDepth) const {
                     }
                 }
             }
-            auto advance = (vector.size() - index) + 1;
+            auto advance = (vector.size() - index);
             FVASSERT_DEBUG(advance < std::numeric_limits<decltype(n.advance)>::max());
             n.advance = static_cast<decltype(n.advance)>(advance);
             if (n.advance == 1) { // leaf-node
@@ -148,11 +148,11 @@ VoxelModel::VoxelModel(VoxelOctreeBuilder* builder, int depth)
 
                 struct Subdivide {
                     VoxelOctreeBuilder* builder;
-                    Matrix4 transform; // transform to original volume scale
+                    const Matrix4& transform; // transform to original volume scale
                     Vector3 center; // normalized
                     uint32_t depth;
                     VoxelOctree* node;
-                    void operator() (uint32_t maxDepth) {
+                    void operator() (uint32_t maxDepth) const {
                         if (depth < maxDepth) {
 
                             float halfExtent = VoxelOctree::halfExtent(depth);
@@ -191,6 +191,7 @@ VoxelModel::VoxelModel(VoxelOctreeBuilder* builder, int depth)
                             };
                             node->value = builder->value(aabb.applying(transform), node);
                         }
+                        builder->clear(node);
                     }
                 };
 
@@ -224,6 +225,98 @@ VoxelModel::VoxelModel(VoxelOctreeBuilder* builder, int depth, DispatchQueue& qu
     , _center(Vector3::zero)
     , _maxDepth(std::max(depth, 0)) {
     if (builder) {
+        AABB aabb = builder->aabb();
+        if (aabb.isNull() == false) {
+            auto extents = aabb.extents();
+            _center = aabb.center();
+            _scale = std::max({ extents.x, extents.y, extents.z });
+
+            if (_scale > epsilon) {
+
+                struct SubdivideAsync {
+                    DispatchQueue& queue;
+                    VoxelOctreeBuilder* builder;
+                    const Matrix4& transform; // transform to original volume scale
+                    Vector3 center; // normalized
+                    uint32_t depth;
+                    VoxelOctree* node;
+                    void operator() (uint32_t maxDepth) const {
+                        if (depth < maxDepth) {
+
+                            float halfExtent = VoxelOctree::halfExtent(depth);
+                            Vector3 HalfHalfExt = Vector3(halfExtent, halfExtent, halfExtent) * 0.5f;
+                            std::vector<std::shared_ptr<AsyncTask>> tasks;
+                            tasks.reserve(8);
+                            for (int i = 0; i < 8; ++i) {
+                                const int x = i & 1;
+                                const int y = (i >> 1) & 1;
+                                const int z = (i >> 2) & 1;
+
+                                Vector3 pt = {
+                                     center.x + halfExtent * (float(x) - 0.5f),
+                                     center.y + halfExtent * (float(y) - 0.5f),
+                                     center.z + halfExtent * (float(z) - 0.5f),
+                                };
+                                AABB aabb = { pt - HalfHalfExt, pt + HalfHalfExt };
+                                VoxelOctree* sub = new VoxelOctree();
+                                if (builder->volumeTest(aabb.applying(transform), sub, node)) {
+                                    node->subdivisions[i] = sub;
+
+                                    SubdivideAsync div{
+                                        queue,
+                                        builder, transform,
+                                        pt, depth + 1, sub
+                                    };
+                                    if (depth == 1) {
+                                        auto task = queue.async(
+                                            [div, maxDepth] {
+                                                div(maxDepth);
+                                            });
+                                        tasks.push_back(task);
+                                    } else {
+                                        div(maxDepth);
+                                    }
+                                } else {
+                                    delete sub;
+                                }
+                            }
+                            AsyncTask::waitAll(std::move(tasks));
+                            node->mergeSolidBranches();
+
+                        } else { // leaf-node
+                            float halfExtent = VoxelOctree::halfExtent(depth);
+                            AABB aabb = {
+                                center - Vector3(halfExtent, halfExtent, halfExtent),
+                                center + Vector3(halfExtent, halfExtent, halfExtent)
+                            };
+                            node->value = builder->value(aabb.applying(transform), node);
+                        }
+                        builder->clear(node);
+                    }
+                };
+
+                AABB aabb = {
+                    _center - Vector3(_scale, _scale, _scale) * 0.5f,
+                    _center + Vector3(_scale, _scale, _scale) * 0.5f
+                };
+                auto p = new VoxelOctree();
+                if (builder->volumeTest(aabb, p, nullptr)) {
+                    AffineTransform3 transform = AffineTransform3::identity
+                        .scaled(aabb.extents())
+                        .translated(aabb.min);
+                    SubdivideAsync{
+                        queue,
+                        builder, transform.matrix4(),
+                        Vector3(0.5f, 0.5f, 0.5f), 0, p }(_maxDepth);
+                } else {
+                    deleteNode(p);
+                    p = nullptr;
+                }
+                _root = p;
+            } else {
+                _scale = 0.0f;
+            }
+        }
     }
 }
 
@@ -465,7 +558,7 @@ int VoxelModel::enumerateLevel(int depth, std::function<void(const AABB&, uint32
         const Vector3 center;
         uint32_t level;
         uint32_t operator() (uint32_t depth, Callback& cb) {
-            float halfExtent = VoxelOctree::halfExtent(depth);
+            float halfExtent = VoxelOctree::halfExtent(level);
 
             if (level < depth) {
                 uint32_t result = 0;
@@ -502,7 +595,7 @@ int VoxelModel::enumerateLevel(int depth, std::function<void(const AABB&, uint32
         Callback transCb = [&](const AABB& aabb, uint32_t depth, const VoxelOctree& octree) {
             AABB aabb2 = {
                 aabb.min * extents + volume.min,
-                aabb.max * extents + volume.max
+                aabb.max * extents + volume.min
             };
             cb(aabb2, depth, octree);
         };

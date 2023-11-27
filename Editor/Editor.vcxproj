@@ -122,6 +122,8 @@ xcopy /Y /D /R /Q /E "$(ProjectDir)Resources" "$(OutDir)$(ProjectName).Resources
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <StackReserveSize>0x8000000</StackReserveSize>
+      <StackCommitSize>0x800000</StackCommitSize>
     </Link>
     <PostBuildEvent>
       <Command>echo Copying Resource Files...
@@ -164,6 +166,8 @@ xcopy /Y /D /R /Q /E "$(ProjectDir)Resources" "$(OutDir)$(ProjectName).Resources
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <StackReserveSize>0x8000000</StackReserveSize>
+      <StackCommitSize>0x800000</StackCommitSize>
     </Link>
     <PostBuildEvent>
       <Command>echo Copying Resource Files...
