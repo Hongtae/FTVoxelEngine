@@ -44,5 +44,5 @@ private:
         std::shared_ptr<GPUBuffer> buffer;
     };
     std::vector<VoxelLayer> voxelLayers;
-    const uint32_t maxDepthLevel = 6;
+    const uint32_t maxDepthLevel = 9;
 };

@@ -45,10 +45,6 @@ struct AABB {
 };
 
 struct Ray {
-    vec3 originWorld;
-    vec3 dirWorld;
-    vec3 offsetWorld;
-    vec3 scaleWorld;
     vec3 origin;
     vec3 dir;
 };
@@ -65,12 +61,10 @@ Ray getRay() {
     vec3 end = end4.xyz / end4.w;
 
     vec3 aabbScale = data.aabbMax - data.aabbMin;
-    vec3 startAABB = (start - data.aabbMin) / aabbScale;
-    vec3 endAABB = (end - data.aabbMin) / aabbScale;
+    start = (start - data.aabbMin) / aabbScale;
+    end = (end - data.aabbMin) / aabbScale;
 
-    return Ray(start, normalize(end - start),
-               data.aabbMin, aabbScale,
-               startAABB, normalize(endAABB - startAABB));
+    return Ray(start, normalize(end - start));
 }
 
 float rayTest(const AABB aabb, const Ray ray) {
@@ -154,21 +148,19 @@ void runTest(const Ray ray) {
         const EncodedAABB e = data.volumes[index];
         const AABB aabb = normalizedAABB(e);
         const float t = rayTest(aabb, ray);
-        if (t >= 0.0) {
+        if (t >= 0.0 && t < rayResultNearDepth) {
             if (e.flags != 0) { // leaf-node (has material)
-                if (t < rayResultNearDepth) {
-                    const uint32_t p = e.color;
-                    rayResultNearColor.r = float(p & 0xff) / 255.0;
-                    rayResultNearColor.g = float((p >> 8) & 0xff) / 255.0;
-                    rayResultNearColor.b = float((p >> 16) & 0xff) / 255.0;
-                    rayResultNearColor.a = float((p >> 24) & 0xff) / 255.0;
-                    rayResultNearDepth = t;
+                const uint32_t p = e.color;
+                rayResultNearColor.r = float(p & 0xff) / 255.0;
+                rayResultNearColor.g = float((p >> 8) & 0xff) / 255.0;
+                rayResultNearColor.b = float((p >> 16) & 0xff) / 255.0;
+                rayResultNearColor.a = float((p >> 24) & 0xff) / 255.0;
+                rayResultNearDepth = t;
 
-                    vec3 hitPoint = ray.origin + ray.dir * t;
-                    vec3 center = (aabb.max + aabb.min) * 0.5;
-                    vec3 n = hitPoint - center;
-                    rayResultNormal = normalize(n);
-                }
+                vec3 hitPoint = ray.origin + ray.dir * t;
+                vec3 center = (aabb.max + aabb.min) * 0.5;
+                vec3 n = hitPoint - center;
+                rayResultNormal = normalize(n);
             }
             index += 1;
         } else {
@@ -220,10 +212,6 @@ void main() {
     vec3 aabbDepthClip = ndcToAABB(depth);
     float depth2 = length(aabbDepthClip - ray.origin);
     rayResultNearDepth = depth2;
-
-if (depth != 1.0)
-    debugPrintfEXT("depth: %f, rayResultNearDepth: %f", depth, rayResultNearDepth);
-
     runTest(ray);
     if (rayResultNearDepth < depth2) {
         vec3 normal = boxNormal(rayResultNormal);
@@ -234,11 +222,6 @@ if (depth != 1.0)
         imageStore(outputImage, ivec2(gl_GlobalInvocationID.xy), fragColor);
 
         float depth3 = aabbPtToNDC(ray, rayResultNearDepth);
-/*
-if (depth < 1.0)
-    debugPrintfEXT("depth: %f, depth2: %f, rayResultNearDepth: %f, depth3: %f",
-	    depth, depth2, rayResultNearDepth, depth3);
-*/
         imageStore(depthBuffer, ivec2(gl_GlobalInvocationID.xy), vec4(depth3));
     }
 }
