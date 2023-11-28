@@ -291,7 +291,48 @@ void VolumeRenderer2::render(const RenderPassDescriptor&, const Rect& frame) {
             encoder->setComputePipelineState(raycastVoxel.pso);
             encoder->pushConstant(uint32_t(ShaderStage::Compute), 0, sizeof(pcdata), &pcdata);
 
-            for (auto& layer : voxelLayers) {
+            auto sortLayers = [](const std::vector<VoxelLayer>& layers,
+                                 const Matrix4& mat,
+                                 bool ascending = true) -> std::vector<VoxelLayer> {
+                if (layers.size() > 1) {
+                    struct ZOrderVoxelLayer {
+                        const VoxelLayer* layer;
+                        float z;
+                    };
+                    std::vector<ZOrderVoxelLayer> zlayers;
+                    zlayers.reserve(layers.size());
+                    for (auto& layer : layers) {
+                        auto center = Vector4(layer.aabb.center(), 1.0f);
+                        auto z = Vector4::dot(center, mat.column3());
+                        auto w = Vector4::dot(center, mat.column4());
+                        ZOrderVoxelLayer zl = {
+                            &layer,
+                            z / w
+                        };
+                        zlayers.push_back(zl);
+                    }
+                    if (ascending) {
+                        std::sort(zlayers.begin(), zlayers.end(),
+                                  [](auto& a, auto& b) {
+                                      return a.z < b.z;
+                                  });
+                    } else {
+                        std::sort(zlayers.begin(), zlayers.end(),
+                                  [](auto& a, auto& b) {
+                                      return a.z > b.z;
+                                  });
+                    }
+                    std::vector<VoxelLayer> layersCopy;
+                    layersCopy.reserve(zlayers.size());
+                    for (auto& zlayer : zlayers)
+                        layersCopy.push_back(*zlayer.layer);
+                    return layersCopy;
+                }
+                return layers;
+            };
+
+            std::vector<VoxelLayer> layersCopy = sortLayers(voxelLayers, mvp);
+            for (auto& layer : layersCopy) {
                 raycastVoxel.bindingSet->setBuffer(2, layer.buffer, 0, layer.buffer->length());
                 encoder->setResource(0, raycastVoxel.bindingSet);
                 encoder->dispatch(width / raycastVoxel.threadgroupSize.x,
