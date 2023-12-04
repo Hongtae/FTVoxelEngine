@@ -63,37 +63,37 @@ namespace FV {
 #ifndef FVCORE_NO_UNICODE_FORMATTER
 namespace std {
     template <> struct formatter<char8_t*> : formatter<const char*> {
-        auto format(const char8_t* arg, format_context& ctx) {
+        auto format(const char8_t* arg, format_context& ctx) const {
             return formatter<const char*>::format((const char*)arg, ctx);
         }
     };
 
     template <> struct formatter<u8string> : formatter<char8_t*> {
-        auto format(const std::u8string& arg, format_context& ctx) {
+        auto format(const std::u8string& arg, format_context& ctx) const {
             return formatter<char8_t*>::format(arg.c_str(), ctx);
         }
     };
 
     template <> struct formatter<u16string> : formatter<u8string> {
-        auto format(const std::u16string& arg, format_context& ctx) {
+        auto format(const std::u16string& arg, format_context& ctx) const {
             return formatter<u8string>::format(FV::u8string(arg), ctx);
         }
     };
 
     template <> struct formatter<char16_t*> : formatter<u16string> {
-        auto format(const char16_t* arg, format_context& ctxt) {
+        auto format(const char16_t* arg, format_context& ctxt) const {
             return formatter<u16string>::format(arg, ctxt);
         }
     };
 
     template <> struct formatter<u32string> : formatter<u8string> {
-        auto format(const std::u32string& arg, format_context& ctx) {
+        auto format(const std::u32string& arg, format_context& ctx) const {
             return formatter<u8string>::format(FV::u8string(arg), ctx);
         }
     };
 
     template <> struct formatter<char32_t*> : formatter<u32string> {
-        auto format(const char32_t* arg, format_context& ctxt) {
+        auto format(const char32_t* arg, format_context& ctxt) const {
             return formatter<u32string>::format(arg, ctxt);
         }
     };

@@ -1,4 +1,6 @@
 #include <format>
+#include <mutex>
+#include <condition_variable>
 #include "GraphicsDeviceContext.h"
 #include "Logger.h"
 #include "Application.h"

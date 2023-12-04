@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include <mutex>
 #include "../../CommandQueue.h"
 
 #if FVCORE_ENABLE_VULKAN

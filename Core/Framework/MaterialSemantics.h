@@ -89,7 +89,7 @@ namespace std {
     };
 
     template <> struct formatter<FV::ShaderBindingLocation> : formatter<string> {
-        auto format(const FV::ShaderBindingLocation& arg, format_context& ctx) {
+        auto format(const FV::ShaderBindingLocation& arg, format_context& ctx) const {
             std::string str;
             if (arg.isPushConstant())
                 str = std::format("pushConstant, offset:{}", arg.offset);

@@ -58,7 +58,7 @@ namespace FV {
 
 namespace std {
     template <> struct formatter<FV::Vector2> : formatter<string> {
-        auto format(const FV::Vector2& arg, format_context& ctx) {
+        auto format(const FV::Vector2& arg, format_context& ctx) const {
             auto str = std::format("Vector2({}, {})", arg.x, arg.y);
             return formatter<string>::format(str, ctx);
         }

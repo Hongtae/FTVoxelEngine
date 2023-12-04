@@ -238,7 +238,7 @@ namespace FV::Vulkan {
 
 namespace std {
     template <> struct formatter<VkResult> : formatter<string> {
-        auto format(VkResult arg, format_context& ctx) {
+        auto format(VkResult arg, format_context& ctx) const {
             return formatter<string>::format(
                 FV::Vulkan::getVkResultString(arg), ctx);
         }

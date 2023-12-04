@@ -83,7 +83,7 @@ namespace FV {
 
 namespace std {
     template <> struct formatter<FV::Quaternion> : formatter<string> {
-        auto format(const FV::Quaternion& arg, format_context& ctx) {
+        auto format(const FV::Quaternion& arg, format_context& ctx) const {
             auto str = std::format("Quaternion({}, {}, {}, {})", arg.x, arg.y, arg.z, arg.w);
             return formatter<string>::format(str, ctx);
         }
