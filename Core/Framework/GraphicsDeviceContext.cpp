@@ -5,7 +5,7 @@
 #include "Logger.h"
 #include "Application.h"
 
-#include "Private/Vulkan/Vulkan.h"
+#include "Private/Vulkan/VulkanInstance.h"
 
 using namespace FV;
 
@@ -43,7 +43,7 @@ std::shared_ptr<GraphicsDeviceContext> GraphicsDeviceContext::makeDefault() {
         }
         enableDebugUtils = true;
 #endif
-        if (auto instance = Vulkan::VulkanInstance::makeInstance(
+        if (auto instance = VulkanInstance::makeInstance(
             requiredLayers,
             optionalLayers,
             requiredExtensions,

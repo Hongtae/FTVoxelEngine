@@ -64,7 +64,7 @@ void UIRenderer::setSwapChain(SwapChain* swapchain) {
 }
 
 void UIRenderer::initialize(std::shared_ptr<GraphicsDeviceContext>, std::shared_ptr<SwapChain> swapchain) {
-    this->cqueue = std::dynamic_pointer_cast<FV::Vulkan::CommandQueue>(swapchain->queue());
+    this->cqueue = std::dynamic_pointer_cast<VulkanCommandQueue>(swapchain->queue());
     if (this->cqueue.get() == nullptr)
         throw std::runtime_error("Unable to get vulkan command queue!");
     this->gdevice = this->cqueue->gdevice;
@@ -112,7 +112,7 @@ void UIRenderer::initialize(std::shared_ptr<GraphicsDeviceContext>, std::shared_
     init_info.ImageCount = uint32_t(swapchain->maximumBufferCount());
     init_info.UseDynamicRendering = true;
     init_info.DescriptorPool = this->descriptorPool;
-    init_info.ColorAttachmentFormat = FV::Vulkan::getPixelFormat(swapchain->pixelFormat());
+    init_info.ColorAttachmentFormat = getVkFormat(swapchain->pixelFormat());
 
     ImGui_ImplVulkan_Init(&init_info, nullptr);
 
@@ -222,7 +222,7 @@ void UIRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
         colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
         colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
-        if (auto imageView = dynamic_cast<FV::Vulkan::ImageView*>(rp.colorAttachments.front().renderTarget.get());
+        if (auto imageView = dynamic_cast<VulkanImageView*>(rp.colorAttachments.front().renderTarget.get());
             imageView) {
             colorAttachment.imageView = imageView->imageView;
             colorAttachment.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
@@ -268,11 +268,11 @@ ImTextureID UIRenderer::registerTexture(std::shared_ptr<Texture> texture,
         return t;
 
 #if FVCORE_ENABLE_VULKAN
-    auto sampler2 = std::dynamic_pointer_cast<FV::Vulkan::Sampler>(sampler);
-    auto imageview = std::dynamic_pointer_cast<FV::Vulkan::ImageView>(texture);
+    auto sampler2 = std::dynamic_pointer_cast<VulkanSampler>(sampler);
+    auto imageview = std::dynamic_pointer_cast<VulkanImageView>(texture);
 
     auto cbuffer = cqueue->makeCommandBuffer();
-    auto encoder = std::dynamic_pointer_cast<FV::Vulkan::CopyCommandEncoder>(cbuffer->makeCopyCommandEncoder());
+    auto encoder = std::dynamic_pointer_cast<VulkanCopyCommandEncoder>(cbuffer->makeCopyCommandEncoder());
     encoder->callback(
         [&](auto commandBuffer) {
             imageview->image->setLayout(VK_IMAGE_LAYOUT_GENERAL,

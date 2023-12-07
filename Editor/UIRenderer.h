@@ -5,13 +5,13 @@
 #include <backends/imgui_impl_win32.h>
 #include <backends/imgui_impl_vulkan.h>
 #define FVCORE_ENABLE_VULKAN 1
-#include <Framework/Private/Vulkan/GraphicsDevice.h>
-#include <Framework/Private/Vulkan/CommandQueue.h>
-#include <Framework/Private/Vulkan/SwapChain.h>
-#include <Framework/Private/Vulkan/RenderCommandEncoder.h>
-#include <Framework/Private/Vulkan/CopyCommandEncoder.h>
-#include <Framework/Private/Vulkan/ImageView.h>
-#include <Framework/Private/Vulkan/Sampler.h>
+#include <Framework/Private/Vulkan/VulkanGraphicsDevice.h>
+#include <Framework/Private/Vulkan/VulkanCommandQueue.h>
+#include <Framework/Private/Vulkan/VulkanSwapChain.h>
+#include <Framework/Private/Vulkan/VulkanRenderCommandEncoder.h>
+#include <Framework/Private/Vulkan/VulkanCopyCommandEncoder.h>
+#include <Framework/Private/Vulkan/VulkanImageView.h>
+#include <Framework/Private/Vulkan/VulkanSampler.h>
 #endif
 
 class UIRenderer : public Renderer {
@@ -41,8 +41,8 @@ private:
     VkCommandPool commandPool;
     VkDescriptorPool descriptorPool;
 
-    std::shared_ptr<FV::Vulkan::CommandQueue> cqueue;
-    std::shared_ptr<FV::Vulkan::GraphicsDevice> gdevice;
+    std::shared_ptr<VulkanCommandQueue> cqueue;
+    std::shared_ptr<VulkanGraphicsDevice> gdevice;
 #endif
 
     struct UITexture {
