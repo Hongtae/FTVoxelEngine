@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include <optional>
 #include "../../PixelFormat.h"
 #include "../../GPUBuffer.h"
 
@@ -11,7 +12,7 @@ namespace FV {
     class VulkanGraphicsDevice;
     class VulkanBuffer : public std::enable_shared_from_this<VulkanBuffer> {
     public:
-        VulkanBuffer(std::shared_ptr<VulkanDeviceMemory>, VkBuffer, const VkBufferCreateInfo&);
+        VulkanBuffer(std::shared_ptr<VulkanGraphicsDevice>, const VulkanMemoryBlock&, VkBuffer, const VkBufferCreateInfo&);
         VulkanBuffer(std::shared_ptr<VulkanGraphicsDevice>, VkBuffer, VkDeviceSize);
         ~VulkanBuffer();
 
@@ -26,8 +27,8 @@ namespace FV {
         VkSharingMode       sharingMode;
         VkDeviceSize        size;
 
-        std::shared_ptr<VulkanDeviceMemory> deviceMemory;
         std::shared_ptr<VulkanGraphicsDevice> gdevice;
+        std::optional<VulkanMemoryBlock> memory;
     };
 }
 #endif //#if FVCORE_ENABLE_VULKAN

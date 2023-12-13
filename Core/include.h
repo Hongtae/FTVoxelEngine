@@ -126,6 +126,7 @@
 #include <type_traits>
 #include <algorithm>
 #include <optional>
+#include <variant>
 #include <functional>
 #include <numeric>
 #include <limits>

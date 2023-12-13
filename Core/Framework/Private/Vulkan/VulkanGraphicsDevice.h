@@ -14,6 +14,7 @@
 #include "VulkanDescriptorPoolChain.h"
 #include "VulkanDescriptorPool.h"
 #include "VulkanDescriptorSet.h"
+#include "VulkanDeviceMemory.h"
 
 namespace FV {
     class VulkanInstance;
@@ -59,8 +60,6 @@ namespace FV {
         VkDevice device;
 
         std::vector<VulkanQueueFamily*> queueFamilies;
-        std::vector<VkMemoryType> deviceMemoryTypes;
-        std::vector<VkMemoryHeap> deviceMemoryHeaps;
 
         // device properties
         VkPhysicalDeviceProperties properties() { return physicalDevice.properties; }
@@ -72,6 +71,10 @@ namespace FV {
         VulkanDeviceExtensions extensionProc; // device procedure
 
     private:
+        std::vector<VkMemoryType> deviceMemoryTypes;
+        std::vector<VkMemoryHeap> deviceMemoryHeaps;
+        std::vector<VulkanMemoryPool*> memoryPools;
+
         VkPipelineLayout makePipelineLayout(std::initializer_list<std::shared_ptr<ShaderFunction>>, VkShaderStageFlags) const;
         VkPipelineLayout makePipelineLayout(std::initializer_list<std::shared_ptr<ShaderFunction>>, std::vector<VkDescriptorSetLayout>&, VkShaderStageFlags) const;
 
@@ -86,7 +89,6 @@ namespace FV {
                 if ((typeBits & (1U << i)) && (deviceMemoryTypes.at(i).propertyFlags & properties) == properties)
                     return i;
             }
-            FVASSERT_DEBUG(0);
             return uint32_t(-1);
         };
 

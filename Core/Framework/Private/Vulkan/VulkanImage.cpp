@@ -5,10 +5,10 @@
 #if FVCORE_ENABLE_VULKAN
 using namespace FV;
 
-VulkanImage::VulkanImage(std::shared_ptr<VulkanDeviceMemory> m, VkImage i, const VkImageCreateInfo& ci)
-    : image(i)
-    , deviceMemory(m)
-    , gdevice(m->gdevice)
+VulkanImage::VulkanImage(std::shared_ptr<VulkanGraphicsDevice> dev, const VulkanMemoryBlock& mem, VkImage img, const VkImageCreateInfo& ci)
+    : image(img)
+    , memory(mem)
+    , gdevice(dev)
     , imageType(VK_IMAGE_TYPE_1D)
     , format(VK_FORMAT_UNDEFINED)
     , extent({ 0,0,0 })
@@ -32,7 +32,7 @@ VulkanImage::VulkanImage(std::shared_ptr<VulkanDeviceMemory> m, VkImage i, const
         layoutInfo.layout == VK_IMAGE_LAYOUT_PREINITIALIZED)
         layoutInfo.stageMaskEnd = VK_PIPELINE_STAGE_2_HOST_BIT;
 
-    FVASSERT_DEBUG(deviceMemory);
+    FVASSERT_DEBUG(memory.has_value());
     FVASSERT_DEBUG(extent.width > 0);
     FVASSERT_DEBUG(extent.height > 0);
     FVASSERT_DEBUG(extent.depth > 0);
@@ -44,7 +44,7 @@ VulkanImage::VulkanImage(std::shared_ptr<VulkanDeviceMemory> m, VkImage i, const
 VulkanImage::VulkanImage(std::shared_ptr<VulkanGraphicsDevice> dev, VkImage img)
     : image(img)
     , gdevice(dev)
-    , deviceMemory(nullptr)
+    , memory{}
     , imageType(VK_IMAGE_TYPE_1D)
     , format(VK_FORMAT_UNDEFINED)
     , extent({ 0,0,0 })
@@ -62,7 +62,8 @@ VulkanImage::~VulkanImage() {
     if (image) {
         vkDestroyImage(gdevice->device, image, gdevice->allocationCallbacks());
     }
-    deviceMemory = nullptr;
+    if (memory.has_value())
+        memory.value().chunk->pool->dealloc(memory.value());
 }
 
 VkImageLayout VulkanImage::setLayout(VkImageLayout layout,

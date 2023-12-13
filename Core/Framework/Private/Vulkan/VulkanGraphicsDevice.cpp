@@ -140,6 +140,15 @@ VulkanGraphicsDevice::VulkanGraphicsDevice(std::shared_ptr<VulkanInstance> ins,
     for (uint32_t i = 0; i < physicalDevice.memory.memoryHeapCount; ++i) {
         this->deviceMemoryHeaps.at(i) = physicalDevice.memory.memoryHeaps[i];
     }
+    
+    memoryPools.resize(physicalDevice.memory.memoryTypeCount, nullptr);
+    for (uint32_t i = 0; i < physicalDevice.memory.memoryTypeCount; ++i) {
+        auto memoryType = physicalDevice.memory.memoryTypes[i];
+        auto memoryHeap = physicalDevice.memory.memoryHeaps[memoryType.heapIndex];
+        memoryPools.at(i) = new VulkanMemoryPool(this, i,
+                                                 memoryType.propertyFlags,
+                                                 memoryHeap);
+    }
 
     this->queueFamilies.clear();
     this->queueFamilies.reserve(queueCreateInfos.size());
@@ -215,6 +224,11 @@ VulkanGraphicsDevice::~VulkanGraphicsDevice() {
         this->pipelineCache = VK_NULL_HANDLE;
     }
 
+    // destroy memory pools
+    for (VulkanMemoryPool* pool : memoryPools) {
+        delete pool;
+    }
+    
     vkDestroyDevice(device, allocationCallbacks());
     device = VK_NULL_HANDLE;
 }
@@ -445,15 +459,15 @@ std::shared_ptr<GPUBuffer> VulkanGraphicsDevice::makeBuffer(size_t length, GPUBu
     if (length == 0) return nullptr;
 
     VkBuffer buffer = VK_NULL_HANDLE;
-    VkDeviceMemory memory = VK_NULL_HANDLE;
+    std::optional<VulkanMemoryBlock> memory = {};
 
     _ScopeExit defer = {
         [&] {
             if (buffer != VK_NULL_HANDLE)
                 vkDestroyBuffer(device, buffer, allocationCallbacks());
-            if (memory != VK_NULL_HANDLE)
-                vkFreeMemory(device, memory, allocationCallbacks());
-            }
+            if (memory.has_value())
+                memory.value().chunk->pool->dealloc(memory.value());
+        }
     };
 
     VkBufferCreateInfo bufferCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
@@ -491,60 +505,43 @@ std::shared_ptr<GPUBuffer> VulkanGraphicsDevice::makeBuffer(size_t length, GPUBu
     vkGetBufferMemoryRequirements2(device, &memoryRequirementsInfo, &memoryRequirements);
 
     auto& memReqs = memoryRequirements.memoryRequirements;
-    VkMemoryAllocateInfo memAllocInfo = {
-        VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO
-    };
-    memAllocInfo.allocationSize = memReqs.size;
+    FVASSERT_DEBUG(memReqs.size >= bufferCreateInfo.size);
     auto memoryTypeIndex = indexOfMemoryType(memReqs.memoryTypeBits, memProperties);
     if (memoryTypeIndex == uint32_t(-1)) {
         FVERROR_ABORT("GraphicsDevice error: Unknown memory type!");
     }
-    memAllocInfo.memoryTypeIndex = memoryTypeIndex;
-    FVASSERT_DEBUG(memAllocInfo.allocationSize >= bufferCreateInfo.size);
-
     if (dedicatedRequirements.prefersDedicatedAllocation) {
-        // bind resource to a dedicated allocation.
-        VkMemoryDedicatedAllocateInfo memoryDedicatedAllocateInfo = {
-            VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO
-        };
-        memoryDedicatedAllocateInfo.buffer = buffer;
-        memAllocInfo.pNext = &memoryDedicatedAllocateInfo;
-
-        err = vkAllocateMemory(device, &memAllocInfo, allocationCallbacks(), &memory);
+        memory = memoryPools.at(memoryTypeIndex)->allocDedicated(memReqs.size, VK_NULL_HANDLE, buffer);
     } else {
-        err = vkAllocateMemory(device, &memAllocInfo, allocationCallbacks(), &memory);
+        memory = memoryPools.at(memoryTypeIndex)->alloc(memReqs.size);
     }
-
-    if (err != VK_SUCCESS) {
-        Log::error(std::format("vkAllocateMemory failed: {}", err));
+    if (memory.has_value() == false) {
+        Log::error("Memory allocation failed.");
         return nullptr;
     }
-    err = vkBindBufferMemory(device, buffer, memory, 0);
+
+    auto& mem = memory.value();
+    err = vkBindBufferMemory(device, buffer, mem.chunk->memory, mem.offset);
     if (err != VK_SUCCESS) {
         Log::error(std::format("vkBindBufferMemory failed: {}", err));
         return nullptr;
     }
-
-    VkMemoryType memoryType = this->deviceMemoryTypes[memAllocInfo.memoryTypeIndex];
-    auto deviceMemory = std::make_shared<VulkanDeviceMemory>(shared_from_this(), memory, memoryType, memAllocInfo.allocationSize);
-    memory = nullptr;
-
-    auto bufferObject = std::make_shared<VulkanBuffer>(deviceMemory, buffer, bufferCreateInfo);
+    auto bufferObject = std::make_shared<VulkanBuffer>(shared_from_this(), mem, buffer, bufferCreateInfo);
     buffer = nullptr;
-
+    memory.reset();
     return std::make_shared<VulkanBufferView>(bufferObject);
 }
 
 std::shared_ptr<Texture> VulkanGraphicsDevice::makeTexture(const TextureDescriptor& desc) {
     VkImage image = VK_NULL_HANDLE;
-    VkDeviceMemory memory = VK_NULL_HANDLE;
+    std::optional<VulkanMemoryBlock> memory = {};
 
     _ScopeExit defer = {
-    [&] {
-        if (image != VK_NULL_HANDLE)
-            vkDestroyImage(device, image, allocationCallbacks());
-        if (memory != VK_NULL_HANDLE)
-            vkFreeMemory(device, memory, allocationCallbacks());
+        [&] {
+            if (image != VK_NULL_HANDLE)
+                vkDestroyImage(device, image, allocationCallbacks());
+            if (memory.has_value())
+                memory.value().chunk->pool->dealloc(memory.value());
         }
     };
 
@@ -637,46 +634,31 @@ std::shared_ptr<Texture> VulkanGraphicsDevice::makeTexture(const TextureDescript
     vkGetImageMemoryRequirements2(device, &memoryRequirementsInfo, &memoryRequirements);
 
     auto& memReqs = memoryRequirements.memoryRequirements;
-    VkMemoryAllocateInfo memAllocInfo = {
-        VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO
-    };
     VkMemoryPropertyFlags memProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    memAllocInfo.allocationSize = memReqs.size;
-
     auto memoryTypeIndex = indexOfMemoryType(memReqs.memoryTypeBits, memProperties);
     if (memoryTypeIndex == uint32_t(-1)) {
         FVERROR_ABORT("GraphicsDevice error: Unknown memory type!");
     }
-    memAllocInfo.memoryTypeIndex = memoryTypeIndex;
-
     if (dedicatedRequirements.prefersDedicatedAllocation) {
-        // bind resource to a dedicated allocation.
-        VkMemoryDedicatedAllocateInfo memoryDedicatedAllocateInfo = {
-            VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO
-        };
-        memoryDedicatedAllocateInfo.image = image;
-        memAllocInfo.pNext = &memoryDedicatedAllocateInfo;
-
-        err = vkAllocateMemory(device, &memAllocInfo, allocationCallbacks(), &memory);
+        memory = memoryPools.at(memoryTypeIndex)->allocDedicated(memReqs.size, image, VK_NULL_HANDLE);
     } else {
-        err = vkAllocateMemory(device, &memAllocInfo, allocationCallbacks(), &memory);
+        memory = memoryPools.at(memoryTypeIndex)->alloc(memReqs.size);
     }
-    if (err != VK_SUCCESS) {
-        Log::error(std::format("vkAllocateMemory failed: {}", err));
+    if (memory.has_value() == false) {
+        Log::error("Memory allocation failed.");
         return nullptr;
     }
-    err = vkBindImageMemory(device, image, memory, 0);
+
+    auto& mem = memory.value();
+    err = vkBindImageMemory(device, image, mem.chunk->memory, mem.offset);
     if (err != VK_SUCCESS) {
         Log::error(std::format("vkBindImageMemory failed: {}", err));
         return nullptr;
     }
 
-    VkMemoryType memoryType = this->deviceMemoryTypes[memAllocInfo.memoryTypeIndex];
-    auto deviceMemory = std::make_shared<VulkanDeviceMemory>(shared_from_this(), memory, memoryType, memAllocInfo.allocationSize);
-    memory = nullptr;
-
-    auto imageObject = std::make_shared<VulkanImage>(deviceMemory, image, imageCreateInfo);
-    image = nullptr;
+    auto imageObject = std::make_shared<VulkanImage>(shared_from_this(), mem, image, imageCreateInfo);
+    image = VK_NULL_HANDLE;
+    memory.reset();
 
     if (imageCreateInfo.usage & (VK_IMAGE_USAGE_SAMPLED_BIT |
                                  VK_IMAGE_USAGE_STORAGE_BIT |
@@ -747,14 +729,14 @@ std::shared_ptr<Texture> VulkanGraphicsDevice::makeTexture(const TextureDescript
 
 std::shared_ptr<Texture> VulkanGraphicsDevice::makeTransientRenderTarget(TextureType textureType, PixelFormat pixelFormat, uint32_t width, uint32_t height, uint32_t depth) {
     VkImage image = VK_NULL_HANDLE;
-    VkDeviceMemory memory = VK_NULL_HANDLE;
+    std::optional<VulkanMemoryBlock> memory = {};
 
     _ScopeExit defer = {
-    [&] {
-        if (image != VK_NULL_HANDLE)
-            vkDestroyImage(device, image, allocationCallbacks());
-        if (memory != VK_NULL_HANDLE)
-            vkFreeMemory(device, memory, allocationCallbacks());
+        [&] {
+            if (image != VK_NULL_HANDLE)
+                vkDestroyImage(device, image, allocationCallbacks());
+            if (memory.has_value())
+                memory.value().chunk->pool->dealloc(memory.value());
         }
     };
 
@@ -798,7 +780,6 @@ std::shared_ptr<Texture> VulkanGraphicsDevice::makeTransientRenderTarget(Texture
         imageCreateInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     }
 
-
     imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     // Set initial layout of the image to undefined
     imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -825,46 +806,37 @@ std::shared_ptr<Texture> VulkanGraphicsDevice::makeTransientRenderTarget(Texture
     vkGetImageMemoryRequirements2(device, &memoryRequirementsInfo, &memoryRequirements);
 
     auto& memReqs = memoryRequirements.memoryRequirements;
-    VkMemoryAllocateInfo memAllocInfo = {
-        VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO
-    };
-    VkMemoryPropertyFlags memProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    memAllocInfo.allocationSize = memReqs.size;
-
-    auto memoryTypeIndex = indexOfMemoryType(memReqs.memoryTypeBits, memProperties);
+    // try lazily allocated memory type
+    uint32_t memoryTypeIndex = indexOfMemoryType(memReqs.memoryTypeBits,
+                                                 VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT);
+    if (memoryTypeIndex == uint32_t(-1)) { // not supported.
+        memoryTypeIndex = indexOfMemoryType(memReqs.memoryTypeBits,
+                                            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    }
     if (memoryTypeIndex == uint32_t(-1)) {
         FVERROR_ABORT("GraphicsDevice error: Unknown memory type!");
     }
-    memAllocInfo.memoryTypeIndex = memoryTypeIndex;
 
     if (dedicatedRequirements.prefersDedicatedAllocation) {
-        // bind resource to a dedicated allocation.
-        VkMemoryDedicatedAllocateInfo memoryDedicatedAllocateInfo = {
-            VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO
-        };
-        memoryDedicatedAllocateInfo.image = image;
-        memAllocInfo.pNext = &memoryDedicatedAllocateInfo;
-
-        err = vkAllocateMemory(device, &memAllocInfo, allocationCallbacks(), &memory);
+        memory = memoryPools.at(memoryTypeIndex)->allocDedicated(memReqs.size, image, VK_NULL_HANDLE);
     } else {
-        err = vkAllocateMemory(device, &memAllocInfo, allocationCallbacks(), &memory);
+        memory = memoryPools.at(memoryTypeIndex)->alloc(memReqs.size);
     }
-    if (err != VK_SUCCESS) {
-        Log::error(std::format("vkAllocateMemory failed: {}", err));
+    if (memory.has_value() == false) {
+        Log::error("Memory allocation failed.");
         return nullptr;
     }
-    err = vkBindImageMemory(device, image, memory, 0);
+
+    auto& mem = memory.value();
+    err = vkBindImageMemory(device, image, mem.chunk->memory, mem.offset);
     if (err != VK_SUCCESS) {
         Log::error(std::format("vkBindImageMemory failed: {}", err));
         return nullptr;
     }
 
-    VkMemoryType memoryType = this->deviceMemoryTypes[memAllocInfo.memoryTypeIndex];
-    auto deviceMemory = std::make_shared<VulkanDeviceMemory>(shared_from_this(), memory, memoryType, memAllocInfo.allocationSize);
-    memory = nullptr;
-
-    auto imageObject = std::make_shared<VulkanImage>(deviceMemory, image, imageCreateInfo);
-    image = nullptr;
+    auto imageObject = std::make_shared<VulkanImage>(shared_from_this(), mem, image, imageCreateInfo);
+    image = VK_NULL_HANDLE;
+    memory.reset();
 
     // create imageView
     VkImageViewCreateInfo imageViewCreateInfo = {

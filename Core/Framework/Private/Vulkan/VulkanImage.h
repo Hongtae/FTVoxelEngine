@@ -12,7 +12,7 @@ namespace FV {
     class VulkanGraphicsDevice;
     class VulkanImage {
     public:
-        VulkanImage(std::shared_ptr<VulkanDeviceMemory>, VkImage, const VkImageCreateInfo&);
+        VulkanImage(std::shared_ptr<VulkanGraphicsDevice>, const VulkanMemoryBlock&, VkImage, const VkImageCreateInfo&);
         VulkanImage(std::shared_ptr<VulkanGraphicsDevice>, VkImage);
         ~VulkanImage();
 
@@ -65,7 +65,7 @@ namespace FV {
         uint32_t				arrayLayers;
         VkImageUsageFlags		usage;
 
-        std::shared_ptr<VulkanDeviceMemory>  deviceMemory;
+        std::optional<VulkanMemoryBlock> memory;
         std::shared_ptr<VulkanGraphicsDevice> gdevice;
 
     private:
@@ -77,7 +77,7 @@ namespace FV {
             uint32_t queueFamilyIndex;
         };
         mutable std::mutex layoutLock;
-        mutable LayoutAccessInfo    layoutInfo;
+        mutable LayoutAccessInfo layoutInfo;
     };
 }
 
