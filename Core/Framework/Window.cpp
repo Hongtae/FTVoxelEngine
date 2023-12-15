@@ -1,6 +1,6 @@
 #include "Window.h"
 #include "Logger.h"
-#include "Private/Win32/Window.h"
+#include "Private/Win32/Win32Window.h"
 
 using namespace FV;
 
@@ -58,7 +58,7 @@ void Window::postWindowEvent(const WindowEvent& event) {
 std::shared_ptr<Window> Window::makeWindow(const std::u8string& name, Style style, const WindowCallback& cb) {
     try {
 #ifdef _WIN32
-        return std::make_shared<Win32::Window>(name, style, cb);
+        return std::make_shared<Win32Window>(name, style, cb);
 #endif
     } catch (const std::exception& err) {
         Log::error(std::format("Window creation failed: {}",

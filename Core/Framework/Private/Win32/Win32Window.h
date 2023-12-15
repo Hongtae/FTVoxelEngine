@@ -7,11 +7,11 @@
 #ifdef _WIN32
 #include <Windows.h>
 
-namespace FV::Win32 {
-    class Window : public FV::Window, public std::enable_shared_from_this<Window> {
+namespace FV {
+    class Win32Window : public Window, public std::enable_shared_from_this<Win32Window> {
     public:
-        Window(const std::u8string& name, Style style, const WindowCallback& callback);
-        ~Window();
+		Win32Window(const std::u8string& name, Style style, const WindowCallback& callback);
+        ~Win32Window();
 
 		bool isActivated() const override { return activated; }
 		bool isVisible() const override { return visible; }
@@ -59,7 +59,7 @@ namespace FV::Win32 {
 
 		static LRESULT windowProc(HWND, UINT, WPARAM, LPARAM);
 
-		class DropTarget* dropTarget;
+		class Win32DropTarget* dropTarget;
 		HWND hWnd;
 		Style style;
 		Rect bounds;

@@ -1,16 +1,16 @@
 #pragma once
 #include <vector>
 #include <string>
-#include "Window.h"
+#include "Win32Window.h"
 
 #ifdef _WIN32
 #include <Windows.h>
 
-namespace FV::Win32 {
-    class DropTarget : public IDropTarget {
+namespace FV {
+    class Win32DropTarget : public IDropTarget {
     public:
-        DropTarget(Window* target);
-        ~DropTarget();
+        Win32DropTarget(Win32Window* target);
+        ~Win32DropTarget();
 
         // *** IUnknown ***
         STDMETHODIMP QueryInterface(REFIID riid, void** ppv);
@@ -33,7 +33,7 @@ namespace FV::Win32 {
         BOOL periodicUpdate;
         LONG refCount;
         std::vector<std::u8string> source;
-        Window* target;
+        Win32Window* target;
     };
 }
 #endif //#ifdef _WIN32

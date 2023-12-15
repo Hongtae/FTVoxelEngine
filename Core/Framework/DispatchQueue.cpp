@@ -259,7 +259,7 @@ namespace {
         }
     };
 
-    class Dispatcher : public FV::DispatchQueue::_Dispatcher {
+    class Dispatcher : public DispatchQueue::_Dispatcher {
     public:
         std::vector<std::shared_ptr<AsyncTaskImpl>> tasks;
         // cond, mutex for enqueued tasks

@@ -2,15 +2,15 @@
 #include <algorithm>
 #include "../../Logger.h"
 #include "../../Unicode.h"
-#include "Window.h"
-#include "VirtualKey.h"
-#include "DropTarget.h"
-#include "Application.h"
+#include "Win32Window.h"
+#include "Win32VirtualKey.h"
+#include "Win32DropTarget.h"
+#include "Win32Application.h"
 
 #ifdef _WIN32
 #include <Windows.h>
 
-namespace FV::Win32 {
+namespace {
     constexpr wchar_t FV_WindowClass[] = L"FVWindowClass";
     // timer id, interval
     constexpr UINT_PTR TimerID_UpdateKeyboardMouse = 10;
@@ -18,11 +18,13 @@ namespace FV::Win32 {
     // window messages
     constexpr UINT FV_WM_SHOWCURSOR = (WM_USER + 0x1100);
     constexpr UINT FV_WM_UPDATEMOUSECAPTURE = (WM_USER + 0x1110);
+}
 
+namespace FV {
     extern uint64_t numActiveWindows;
 }
 
-using namespace FV::Win32;
+using namespace FV;
 
 namespace {
     float dpiScaleForWindow(HWND hWnd) {
@@ -39,12 +41,12 @@ namespace {
 
         std::wstring ret = (const wchar_t*)lpMsgBuf;
         ::LocalFree(lpMsgBuf);
-        return FV::u8string(ret);
+        return u8string(ret);
     }
 }
 
-Window::Window(const std::u8string& title, Style s, const WindowCallback& cb)
-    : FV::Window(cb)
+Win32Window::Win32Window(const std::u8string& title, Style s, const WindowCallback& cb)
+    : Window(cb)
     , hWnd(nullptr)
     , dropTarget(nullptr)
     , name(title)
@@ -126,7 +128,7 @@ Window::Window(const std::u8string& title, Style s, const WindowCallback& cb)
     }
 
     if (style & Window::StyleAcceptFileDrop) {
-        DropTarget* dropTarget = new DropTarget(this);
+        Win32DropTarget* dropTarget = new Win32DropTarget(this);
         HRESULT err = RegisterDragDrop(hWnd, dropTarget);
         if (err == S_OK) {
             this->dropTarget = dropTarget;
@@ -164,7 +166,7 @@ Window::Window(const std::u8string& title, Style s, const WindowCallback& cb)
     ::SetTimer(hWnd, TimerID_UpdateKeyboardMouse, UpdateKeyboardMouseInterval, nullptr);
 }
 
-Window::~Window() {
+Win32Window::~Win32Window() {
     if (hWnd) {
         ::KillTimer(hWnd, TimerID_UpdateKeyboardMouse);
         ::SetWindowLongPtrW(hWnd, GWLP_USERDATA, 0);
@@ -173,7 +175,7 @@ Window::~Window() {
     ::OleUninitialize();
 }
 
-void Window::destroy() {
+void Win32Window::destroy() {
     activated = false;
     if (hWnd) {
         if (this->dropTarget) {
@@ -208,11 +210,11 @@ void Window::destroy() {
     }
 }
 
-FV::Size Window::resolution() const {
+Size Win32Window::resolution() const {
     return bounds.size * scaleFactor;
 }
 
-void Window::setResolution(Size size) {
+void Win32Window::setResolution(Size size) {
     if (hWnd) {
         LONG w = std::max(std::lround(size.width), 1L);
         LONG h = std::max(std::lround(size.height), 1L);
@@ -234,7 +236,7 @@ void Window::setResolution(Size size) {
     }
 }
 
-void Window::setOrigin(Point origin) {
+void Win32Window::setOrigin(Point origin) {
     if (hWnd) {
         auto x = std::lround(origin.x);
         auto y = std::lround(origin.y);
@@ -243,11 +245,11 @@ void Window::setOrigin(Point origin) {
     }
 }
 
-void Window::setContentSize(Size s) {
+void Win32Window::setContentSize(Size s) {
     setResolution(s * scaleFactor);
 }
 
-void Window::show() {
+void Win32Window::show() {
     if (hWnd) {
         if (::IsIconic(hWnd))
             ::ShowWindow(hWnd, SW_RESTORE);
@@ -256,12 +258,12 @@ void Window::show() {
     }
 }
 
-void Window::hide() {
+void Win32Window::hide() {
     if (hWnd)
         ::ShowWindow(hWnd, SW_HIDE);
 }
 
-void Window::activate() {
+void Win32Window::activate() {
     if (hWnd) {
         if (::IsIconic(hWnd))
             ::ShowWindow(hWnd, SW_RESTORE);
@@ -273,12 +275,12 @@ void Window::activate() {
     }
 }
 
-void Window::minimize() {
+void Win32Window::minimize() {
     if (hWnd)
         ::ShowWindow(hWnd, SW_MINIMIZE);
 }
 
-std::u8string Window::title() const {
+std::u8string Win32Window::title() const {
     if (hWnd) {
         int len = GetWindowTextLengthW(hWnd);
         if (len > 0) {
@@ -292,21 +294,21 @@ std::u8string Window::title() const {
     return name;
 }
 
-void Window::setTitle(const std::u8string& title) {
+void Win32Window::setTitle(const std::u8string& title) {
     if (hWnd) {
         ::SetWindowTextW(hWnd, (const wchar_t*)toUTF16(title).c_str());
     }
     name = title;
 }
 
-void Window::showMouse(int deviceID, bool show) {
+void Win32Window::showMouse(int deviceID, bool show) {
     if (hWnd && deviceID == mouseID) {
         WPARAM wParam = show ? WPARAM(1) : WPARAM(0);
         ::PostMessageW(hWnd, FV_WM_SHOWCURSOR, wParam, 0);
     }
 }
 
-bool Window::isMouseVisible(int deviceID) const {
+bool Win32Window::isMouseVisible(int deviceID) const {
     if (deviceID == mouseID) {
         CURSORINFO info = {};
         if (::GetCursorInfo(&info))
@@ -315,7 +317,7 @@ bool Window::isMouseVisible(int deviceID) const {
     return false;
 }
 
-void Window::lockMouse(int deviceID, bool lock) {
+void Win32Window::lockMouse(int deviceID, bool lock) {
     if (deviceID == mouseID && hWnd) {
         this->mouseLocked = lock;
         this->mousePos = this->mousePosition(deviceID);
@@ -325,13 +327,13 @@ void Window::lockMouse(int deviceID, bool lock) {
     }
 }
 
-bool Window::isMouseLocked(int deviceID) const {
+bool Win32Window::isMouseLocked(int deviceID) const {
     if (deviceID == mouseID)
         return mouseLocked;
     return false;
 }
 
-void Window::setMousePosition(int deviceID, Point pos) {
+void Win32Window::setMousePosition(int deviceID, Point pos) {
     if (hWnd && deviceID == mouseID) {
         POINT pt = {
             std::lround(pos.x),
@@ -345,7 +347,7 @@ void Window::setMousePosition(int deviceID, Point pos) {
     }
 }
 
-FV::Point Window::mousePosition(int deviceID) const {
+Point Win32Window::mousePosition(int deviceID) const {
     if (hWnd && deviceID == mouseID) {
         POINT pt;
         ::GetCursorPos(&pt);
@@ -355,12 +357,12 @@ FV::Point Window::mousePosition(int deviceID) const {
     return Point(-1, -1);
 }
 
-void Window::resetKeyStates() {
+void Win32Window::resetKeyStates() {
     for (int i = 0; i < 256; ++i) {
         if (i == VK_CAPITAL)
             continue;
 
-        VirtualKey key = getVirtualKey(i);
+        VirtualKey key = virtualKeyFromWin32VK(i);
         if (key == VirtualKey::None)
             continue;
 
@@ -385,7 +387,7 @@ void Window::resetKeyStates() {
     keyboardStates.reset();
 }
 
-void Window::resetMouse() {
+void Win32Window::resetMouse() {
     if (hWnd) {
         POINT ptMouse;
         ::GetCursorPos(&ptMouse);
@@ -394,38 +396,38 @@ void Window::resetMouse() {
     }
 }
 
-bool Window::isTextInputEnabled(int deviceID) const {
+bool Win32Window::isTextInputEnabled(int deviceID) const {
     if (deviceID == keyboardID)
         return textCompositionMode;
     return false;
 }
 
-void Window::enableTextInput(int deviceID, bool enable) {
+void Win32Window::enableTextInput(int deviceID, bool enable) {
     if (deviceID == keyboardID) {
         textCompositionMode = enable;
     }
 }
 
-bool Window::keyState(int deviceID, VirtualKey k) {
+bool Win32Window::keyState(int deviceID, VirtualKey k) {
     if (deviceID == keyboardID && k > VirtualKey::None && k < VirtualKey::MaxValue) {
         return keyboardStates[std::size_t(k)];
     }
     return false;
 }
 
-void Window::setKeyState(int deviceID, VirtualKey k, bool down) {
+void Win32Window::setKeyState(int deviceID, VirtualKey k, bool down) {
     if (deviceID == keyboardID && k > VirtualKey::None && k < VirtualKey::MaxValue) {
         keyboardStates.set(std::size_t(k), down);
     }
 }
 
-void Window::resetKeyStates(int deviceID) {
+void Win32Window::resetKeyStates(int deviceID) {
     if (deviceID == keyboardID) {
         resetKeyStates();
     }
 }
 
-void Window::synchronizeKeyStates() {
+void Win32Window::synchronizeKeyStates() {
     if (activated == false) return;
 
     BYTE keyStateCurrent[256] = { 0 };	// key-state buffer
@@ -435,7 +437,7 @@ void Window::synchronizeKeyStates() {
         if (i == VK_CAPITAL)
             continue;
 
-        VirtualKey key = getVirtualKey(i);
+        VirtualKey key = virtualKeyFromWin32VK(i);
         if (key == VirtualKey::None)
             continue;
 
@@ -479,7 +481,7 @@ void Window::synchronizeKeyStates() {
     }
 }
 
-void Window::synchronizeMouse() {
+void Win32Window::synchronizeMouse() {
     if (this->activated == false) return;
 
     // check mouse has gone out of window region.
@@ -497,9 +499,9 @@ void Window::synchronizeMouse() {
     }
 }
 
-LRESULT Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+LRESULT Win32Window::windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     if (hWnd) {
-        Window* window = (Window*)::GetWindowLongPtrW(hWnd, GWLP_USERDATA);
+        auto window = (Win32Window*)::GetWindowLongPtrW(hWnd, GWLP_USERDATA);
         if (window && window->hWnd == hWnd) {
             auto postWindowEvent = [&](WindowEvent::Type type) {
                 window->postWindowEvent({

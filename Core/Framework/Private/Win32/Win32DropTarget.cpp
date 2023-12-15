@@ -1,24 +1,24 @@
 #include <string>
 #include "../../Unicode.h"
-#include "DropTarget.h"
+#include "Win32DropTarget.h"
 
 #ifdef _WIN32
 #include <Windows.h>
 
-using namespace FV::Win32;
+using namespace FV;
 
-DropTarget::DropTarget(Window* win)
+Win32DropTarget::Win32DropTarget(Win32Window* win)
     : refCount(1)
     , target(win)
     , periodicUpdate(FALSE)
     , lastEffectMask(DROPEFFECT_NONE) {
 }
 
-DropTarget::~DropTarget() {
+Win32DropTarget::~Win32DropTarget() {
 }
 
 // *** IUnknown ***
-HRESULT DropTarget::QueryInterface(REFIID riid, void** ppv) {
+HRESULT Win32DropTarget::QueryInterface(REFIID riid, void** ppv) {
     if (riid == IID_IUnknown || riid == IID_IDropTarget) {
         *ppv = static_cast<IUnknown*>(this);
         AddRef();
@@ -28,11 +28,11 @@ HRESULT DropTarget::QueryInterface(REFIID riid, void** ppv) {
     return E_NOINTERFACE;
 }
 
-ULONG DropTarget::AddRef() {
+ULONG Win32DropTarget::AddRef() {
     return InterlockedIncrement(&refCount);
 }
 
-ULONG DropTarget::Release() {
+ULONG Win32DropTarget::Release() {
     LONG cRef = InterlockedDecrement(&refCount);
     if (cRef == 0) {
         delete this;
@@ -40,7 +40,7 @@ ULONG DropTarget::Release() {
     return cRef;
 }
 
-HRESULT DropTarget::DragEnter(IDataObject* pDataObject, DWORD grfKeyState, POINTL pt, DWORD* pdwEffect) {
+HRESULT Win32DropTarget::DragEnter(IDataObject* pDataObject, DWORD grfKeyState, POINTL pt, DWORD* pdwEffect) {
     source.clear();
     dropAllowed = FALSE;
     lastEffectMask = DROPEFFECT_NONE;
@@ -89,7 +89,7 @@ HRESULT DropTarget::DragEnter(IDataObject* pDataObject, DWORD grfKeyState, POINT
     return S_OK;
 }
 
-HRESULT DropTarget::DragOver(DWORD grfKeyState, POINTL pt, DWORD* pdwEffect) {
+HRESULT Win32DropTarget::DragOver(DWORD grfKeyState, POINTL pt, DWORD* pdwEffect) {
     if (dropAllowed) {
         POINT pt2 = { pt.x,  pt.y };
         ScreenToClient((HWND)target->platformHandle(), &pt2);
@@ -134,7 +134,7 @@ HRESULT DropTarget::DragOver(DWORD grfKeyState, POINTL pt, DWORD* pdwEffect) {
     return S_OK;
 }
 
-HRESULT DropTarget::DragLeave() {
+HRESULT Win32DropTarget::DragLeave() {
     if (dropAllowed) {
         Window::DraggingState state = Window::DraggingExited;
         Window::DragOperation op = target->callback().draggingFeedback(
@@ -149,7 +149,7 @@ HRESULT DropTarget::DragLeave() {
     return S_OK;
 }
 
-HRESULT DropTarget::Drop(IDataObject* pDataObject, DWORD grfKeyState, POINTL pt, DWORD* pdwEffect) {
+HRESULT Win32DropTarget::Drop(IDataObject* pDataObject, DWORD grfKeyState, POINTL pt, DWORD* pdwEffect) {
     if (dropAllowed) {
         POINT pt2 = { pt.x, pt.y };
         ScreenToClient((HWND)target->platformHandle(), &pt2);
@@ -185,7 +185,7 @@ HRESULT DropTarget::Drop(IDataObject* pDataObject, DWORD grfKeyState, POINTL pt,
     return S_OK;
 }
 
-std::vector<std::u8string> DropTarget::filesFromDataObject(IDataObject* pDataObject) {
+std::vector<std::u8string> Win32DropTarget::filesFromDataObject(IDataObject* pDataObject) {
     std::vector<std::u8string> filenames;
 
     FORMATETC fmte = { CF_HDROP, NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };

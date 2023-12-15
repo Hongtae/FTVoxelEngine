@@ -1,4 +1,4 @@
-#include "Logger.h"
+#include "Win32Logger.h"
 #include "../../Unicode.h"
 
 #ifdef _WIN32
@@ -9,13 +9,13 @@
 #include <io.h>
 #include <iostream>
 
-using namespace FV::Win32;
+using namespace FV;
 
-Logger::Logger()
+Win32Logger::Win32Logger()
     : console(nullptr)
     , allocatedConsole(false)
     , initTextAttrs(FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED)
-    , FV::Logger("Win32") {
+    , Logger("Win32") {
     allocatedConsole = ::AllocConsole();
 
     if (allocatedConsole) {
@@ -46,7 +46,7 @@ Logger::Logger()
     }
 }
 
-Logger::~Logger() {
+Win32Logger::~Win32Logger() {
     if (console) {
         ::SetConsoleTextAttribute(console, initTextAttrs);
 
@@ -58,7 +58,7 @@ Logger::~Logger() {
     }
 }
 
-void Logger::log(Level level, const std::string& mesg) const {
+void Win32Logger::log(Level level, const std::string& mesg) const {
     WORD attr;
     const char* header = "";
     switch (level) {
@@ -101,7 +101,7 @@ void Logger::log(Level level, const std::string& mesg) const {
     writeLog(attr, (const wchar_t*)ws.c_str());
 }
 
-void Logger::writeLog(WORD attr, const wchar_t* str) const {
+void Win32Logger::writeLog(WORD attr, const wchar_t* str) const {
     if (console) {
         SetConsoleTextAttribute(console, attr);
         DWORD dwWritten = 0;

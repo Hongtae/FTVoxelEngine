@@ -4,11 +4,11 @@
 #ifdef _WIN32
 #include <Windows.h>
 
-namespace FV::Win32 {
-    class Logger : public FV::Logger {
+namespace FV {
+    class Win32Logger : public Logger {
     public:
-        Logger();
-        ~Logger();
+        Win32Logger();
+        ~Win32Logger();
 
         void log(Level level, const std::string& mesg) const override;
 

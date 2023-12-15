@@ -278,19 +278,19 @@
     <ClInclude Include="Framework\Hash.h">
       <Filter>Framework</Filter>
     </ClInclude>
-    <ClInclude Include="Framework\Private\Win32\DropTarget.h">
+    <ClInclude Include="Framework\Private\Win32\Win32DropTarget.h">
       <Filter>Private\Win32</Filter>
     </ClInclude>
-    <ClInclude Include="Framework\Private\Win32\VirtualKey.h">
+    <ClInclude Include="Framework\Private\Win32\Win32VirtualKey.h">
       <Filter>Private\Win32</Filter>
     </ClInclude>
-    <ClInclude Include="Framework\Private\Win32\Window.h">
+    <ClInclude Include="Framework\Private\Win32\Win32Window.h">
       <Filter>Private\Win32</Filter>
     </ClInclude>
-    <ClInclude Include="Framework\Private\Win32\Application.h">
+    <ClInclude Include="Framework\Private\Win32\Win32Application.h">
       <Filter>Private\Win32</Filter>
     </ClInclude>
-    <ClInclude Include="Framework\Private\Win32\Logger.h">
+    <ClInclude Include="Framework\Private\Win32\Win32Logger.h">
       <Filter>Private\Win32</Filter>
     </ClInclude>
     <ClInclude Include="Framework\GraphicsDeviceContext.h">
@@ -496,19 +496,19 @@
     <ClCompile Include="Framework\Hash.cpp">
       <Filter>Framework</Filter>
     </ClCompile>
-    <ClCompile Include="Framework\Private\Win32\DropTarget.cpp">
+    <ClCompile Include="Framework\Private\Win32\Win32DropTarget.cpp">
       <Filter>Private\Win32</Filter>
     </ClCompile>
-    <ClCompile Include="Framework\Private\Win32\Window.cpp">
+    <ClCompile Include="Framework\Private\Win32\Win32Window.cpp">
       <Filter>Private\Win32</Filter>
     </ClCompile>
-    <ClCompile Include="Framework\Private\Win32\Application.cpp">
+    <ClCompile Include="Framework\Private\Win32\Win32Application.cpp">
       <Filter>Private\Win32</Filter>
     </ClCompile>
     <ClCompile Include="Framework\Window.cpp">
       <Filter>Framework</Filter>
     </ClCompile>
-    <ClCompile Include="Framework\Private\Win32\Logger.cpp">
+    <ClCompile Include="Framework\Private\Win32\Win32Logger.cpp">
       <Filter>Private\Win32</Filter>
     </ClCompile>
     <ClCompile Include="Framework\GraphicsDeviceContext.cpp">

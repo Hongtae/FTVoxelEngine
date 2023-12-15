@@ -2,26 +2,26 @@
 #include "Unicode.h"
 
 #ifdef _WIN32
-#include "Private/Win32/Application.h"
+#include "Private/Win32/Win32Application.h"
 #endif
-
-namespace {
-    FV::Application* shared;
-    std::vector<std::u8string> commandLineArgs;
-}
 
 using namespace FV;
 
+namespace {
+    Application* shared;
+    std::vector<std::u8string> commandLineArgs;
+}
+
 void Application::terminate(int exitCode) {
 #ifdef _WIN32
-    Win32::terminateApplication(exitCode);
+    Win32App::terminateApplication(exitCode);
 #endif
 }
 
 int Application::run() {
     std::vector<std::u8string> args;
 #ifdef _WIN32
-    args = Win32::commandLineArguments();
+    args = Win32App::commandLineArguments();
 #endif
     return run(args);
 }
@@ -48,7 +48,7 @@ int Application::run(std::vector<std::u8string> args) {
 
     int result;
 #ifdef _WIN32
-    result = Win32::runApplication(this);
+    result = Win32App::runApplication(this);
 #endif
     shared = nullptr;
     return result;
@@ -64,7 +64,7 @@ Application* Application::sharedInstance() {
 
 std::filesystem::path Application::environmentPath(EnvironmentPath path) {
 #ifdef _WIN32
-    return Win32::environmentPath(path);
+    return Win32App::environmentPath(path);
 #endif
     return {};
 }
