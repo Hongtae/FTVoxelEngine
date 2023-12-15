@@ -219,11 +219,7 @@ void loadMaterials(LoaderContext& context) {
         } else {
             material->attachments.front().blendState = BlendState::opaque;
         }
-
-        if (glTFMaterial.doubleSided)
-            material->cullMode = CullMode::None;
-        else
-            material->cullMode = CullMode::Back;
+        material->cullMode = CullMode::None;
 
         material->setProperty(MaterialSemantic::BaseColor,
                               Color(
