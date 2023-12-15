@@ -21,7 +21,8 @@ public:
 
     std::shared_ptr<CommandQueue> queue;
 
-    void setVoxelModel(std::shared_ptr<VoxelModel> model);
+    void setModel(std::shared_ptr<VoxelModel> model);
+    std::shared_ptr<VoxelModel> model() const { return voxelModel; }
 
 private:
     struct PipelineState {

@@ -1,6 +1,7 @@
 #include "AffineTransform3.h"
 #include "VoxelModel.h"
 #include "DispatchQueue.h"
+#include "Logger.h"
 
 using namespace FV;
 
@@ -730,4 +731,96 @@ void VoxelModel::deleteNode(VoxelOctree* node) {
         [](VoxelOctree* node) {
             delete node;
         });
+}
+
+constexpr char fileTag[] = "FV.VoxelModel";
+
+bool VoxelModel::deserialize(std::istream& stream) {
+    struct {
+        char tag[20] = {};
+        uint64_t totalNodes = 0;
+    } header;
+
+    auto pos = stream.tellg();
+    stream.read((char*)&header, sizeof(header));
+    if (strcmp(header.tag, fileTag) == 0) {
+
+        struct Deserializer {
+            VoxelOctree* node;
+            void operator() (std::istream& stream) {
+                stream.read((char*) & (node->value), sizeof(node->value));
+                uint8_t subdiv = 0;
+                stream.read((char*)&subdiv, sizeof(subdiv));
+                for (int i = 0; i < 8; ++i) {
+                    if ((subdiv >> i) & 1) {
+                        auto p = new VoxelOctree{};
+                        node->subdivisions[i] = p;
+                        Deserializer{ p }(stream);
+                    }
+                }
+            }
+        };
+
+        VoxelOctree* node = nullptr;
+
+        if (header.totalNodes) {
+            node = new VoxelOctree{};
+            try {
+                Deserializer{ node }(stream);
+            } catch (const std::ios::failure& fail) {
+                Log::error(std::format("IO ERROR! deserialization failed: {}",
+                                       fail.what()));
+                deleteNode(node);
+                node = nullptr;
+#if FVCORE_DEBUG_ENABLED
+                throw;
+#endif
+                return false;
+            }
+        }
+
+        if (_root)
+            deleteNode(_root);
+        _root = node;
+
+        return true;
+    }
+    return false;
+}
+
+uint64_t VoxelModel::serialize(std::ostream& stream) const {
+    struct Serializer {
+        VoxelOctree* node;
+        void operator() (std::ostream& stream) const {
+            auto subdivMasks = [this]<int... N>(std::integer_sequence<int, N...>) -> uint8_t {
+                return ((node->subdivisions[N] ? (1U << N) : 0U) | ...);
+            };
+            uint8_t subdiv = subdivMasks(std::make_integer_sequence<int, 8>{});
+
+            stream.write((const char*)&node->value, sizeof(node->value));
+            stream.write((const char*)&subdiv, sizeof(subdiv));
+            for (auto sub : node->subdivisions) {
+                if (sub)
+                    Serializer{ sub }(stream);
+            }
+        }
+    };
+
+    struct {
+        char tag[20] = {};
+        uint64_t totalNodes = 0;
+    } header;
+    strcpy_s(header.tag, std::size(header.tag), fileTag);
+
+    if (_root) {
+        header.totalNodes = _root->numDescendants();
+    }
+
+    auto pos = stream.tellp();
+    stream.write((const char*)& header, sizeof(header));
+
+    if (_root)
+        Serializer{ _root }(stream);
+
+    return stream.tellp() - pos;
 }

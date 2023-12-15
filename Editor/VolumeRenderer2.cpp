@@ -139,7 +139,7 @@ std::optional<VolumeRenderer2::PipelineState> VolumeRenderer2::loadPipeline(
     return pipeline;
 }
 
-void VolumeRenderer2::setVoxelModel(std::shared_ptr<VoxelModel> model) {
+void VolumeRenderer2::setModel(std::shared_ptr<VoxelModel> model) {
     voxelModel = model;
     voxelLayers.clear();
 

@@ -482,6 +482,51 @@ public:
 
                         Log::debug("done.");
                     }
+                    ImGui::Separator();
+                    if (ImGui::MenuItem("Serialize Voxel Model")) {
+                        auto model = volumeRenderer2->model();
+                        if (model) {
+                            std::filesystem::path path = "D:\\Work\\test.vxm";
+                            auto ofile = std::ofstream(
+                                path,
+                                std::ios::binary /*|| std::ios::out || std::ios::trunc */);
+                            if (ofile) {
+                                auto bytes = model->serialize(ofile);
+                                ofile.close();
+                                auto nodes1 = model->numNodes();
+                                auto leaf1 = model->numLeafNodes();
+                                Log::debug(std::format(
+                                    enUS_UTF8,
+                                    "Serialized {:Ld} bytes, {:Ld} nodes, {:Ld} leaf-nodes",
+                                    bytes, nodes1, leaf1));
+
+                                auto ifile = std::ifstream(path,
+                                                           std::ios::binary);
+                                if (ifile) {
+                                    auto model2 = std::make_shared<VoxelModel>(nullptr, 0);
+                                    auto r = model2->deserialize(ifile);
+                                    ifile.close();
+
+                                    auto nodes2 = model2->numNodes();
+                                    auto leaf2 = model2->numLeafNodes();
+
+                                    if (r)
+                                        Log::debug(std::format(
+                                            enUS_UTF8,
+                                            "deserialized result: {}, {:Ld} nodes, {:Ld} leaf-nodes",
+                                            r, nodes2, leaf2));
+                                    else
+                                        Log::debug("Deserialization failed.");
+                                } else {
+                                    Log::debug("Failed to open file");
+                                }
+                            } else {
+                                Log::debug("failed to open file.");
+                            }
+                        } else {
+                            Log::debug("No model loaded.");
+                        }
+                    }
                     ImGui::EndMenu();
                 }
                 ImGui::EndMenu();
@@ -635,7 +680,7 @@ public:
                                 enUS_UTF8,
                                 "VoxelModel depth:{}, nodes: {:Ld}, leaf-nodes: {:Ld}, elapsed:{}",
                                 voxelModel->depth(), numNodes, numLeafNodes, elapsed.count()));
-                            volumeRenderer2->setVoxelModel(voxelModel);
+                            volumeRenderer2->setModel(voxelModel);
                         } else {
                             Log::info("No output.");
                         }

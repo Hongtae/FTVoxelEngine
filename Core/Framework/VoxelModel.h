@@ -170,6 +170,15 @@ namespace FV {
         const VoxelOctree* root() const { return _root; }
         uint32_t resolution() const { return 1ULL << _maxDepth; }
 
+        size_t numNodes() const {
+            if (_root) return _root->numDescendants();
+            return 0U;
+        }
+        size_t numLeafNodes() const {
+            if (_root) return _root->numLeafNodes();
+            return 0U;
+        }
+
         void setDepth(uint32_t depth);
         uint32_t depth() const { return _maxDepth; }
         void setScale(float scale);
@@ -223,6 +232,9 @@ namespace FV {
 
         std::optional<RayHitResult> rayTest(const Vector3& rayOrigin, const Vector3& dir, RayHitResultOption option = RayHitResultOption::CloestHit) const;
         uint64_t rayTest(const Vector3& rayOrigin, const Vector3& dir, std::function<bool(const RayHitResult&)> filter) const;
+
+        bool deserialize(std::istream&);
+        uint64_t serialize(std::ostream&) const;
 
     private:
         VoxelOctree* _root;
