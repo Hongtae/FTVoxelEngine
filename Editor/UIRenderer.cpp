@@ -11,14 +11,26 @@ LRESULT forwardImGuiWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
         return true;
 
+    mouseLocked = false;
     if (ImGui::GetCurrentContext()) {
         ImGuiIO& io = ImGui::GetIO();
         if (io.WantCaptureMouse) {
             mouseLocked = true;
-            return ::DefWindowProcW(hWnd, msg, wParam, lParam);
+            switch (msg) {
+            case WM_MOUSEMOVE:
+            case WM_LBUTTONDOWN:
+            case WM_LBUTTONUP:
+            case WM_RBUTTONDOWN:
+            case WM_RBUTTONUP:
+            case WM_MBUTTONDOWN:
+            case WM_MBUTTONUP:
+            case WM_XBUTTONDOWN:
+            case WM_XBUTTONUP:
+            case WM_MOUSEWHEEL:
+                return ::DefWindowProcW(hWnd, msg, wParam, lParam);
+            }
         }
     }
-    mouseLocked = false;
 
     if (defaultWndProc)
         return (*defaultWndProc)(hWnd, msg, wParam, lParam);
