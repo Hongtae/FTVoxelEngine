@@ -483,10 +483,10 @@ public:
                         Log::debug("done.");
                     }
                     ImGui::Separator();
+                    std::filesystem::path path = "D:\\Work\\test.vxm";
                     if (ImGui::MenuItem("Serialize Voxel Model")) {
                         auto model = volumeRenderer2->model();
                         if (model) {
-                            std::filesystem::path path = "D:\\Work\\test.vxm";
                             auto ofile = std::ofstream(
                                 path,
                                 std::ios::binary /*|| std::ios::out || std::ios::trunc */);
@@ -499,32 +499,33 @@ public:
                                     enUS_UTF8,
                                     "Serialized {:Ld} bytes, {:Ld} nodes, {:Ld} leaf-nodes",
                                     bytes, nodes1, leaf1));
-
-                                auto ifile = std::ifstream(path,
-                                                           std::ios::binary);
-                                if (ifile) {
-                                    auto model2 = std::make_shared<VoxelModel>(nullptr, 0);
-                                    auto r = model2->deserialize(ifile);
-                                    ifile.close();
-
-                                    auto nodes2 = model2->numNodes();
-                                    auto leaf2 = model2->numLeafNodes();
-
-                                    if (r)
-                                        Log::debug(std::format(
-                                            enUS_UTF8,
-                                            "deserialized result: {}, {:Ld} nodes, {:Ld} leaf-nodes",
-                                            r, nodes2, leaf2));
-                                    else
-                                        Log::debug("Deserialization failed.");
-                                } else {
-                                    Log::debug("Failed to open file");
-                                }
                             } else {
                                 Log::debug("failed to open file.");
                             }
                         } else {
                             Log::debug("No model loaded.");
+                        }
+                    }
+                    if (ImGui::MenuItem("Deserialize Voxel Model")) {
+                        auto ifile = std::ifstream(path,
+                                                   std::ios::binary);
+                        if (ifile) {
+                            auto model2 = std::make_shared<VoxelModel>(nullptr, 0);
+                            auto r = model2->deserialize(ifile);
+                            ifile.close();
+
+                            auto nodes2 = model2->numNodes();
+                            auto leaf2 = model2->numLeafNodes();
+
+                            if (r)
+                                Log::debug(std::format(
+                                    enUS_UTF8,
+                                    "Deserialized result: {}, {:Ld} nodes, {:Ld} leaf-nodes",
+                                    r, nodes2, leaf2));
+                            else
+                                Log::debug("Deserialization failed.");
+                        } else {
+                            Log::debug("Failed to open file");
                         }
                     }
                     ImGui::EndMenu();
@@ -655,7 +656,7 @@ public:
         if (ImGui::Begin("Voxelize (Layered)")) {
 
             static int depth = 5;
-            if (ImGui::SliderInt("Depth Level", &depth, 0, 12, nullptr, ImGuiSliderFlags_None)) {
+            if (ImGui::SliderInt("Depth Level", &depth, 0, 13, nullptr, ImGuiSliderFlags_None)) {
                 // value changed.
             }
 
