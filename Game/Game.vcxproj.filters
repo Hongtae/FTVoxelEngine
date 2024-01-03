@@ -13,6 +13,21 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{59a3d91b-bf1d-4ae0-877e-08572a2dd495}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="imgui">
+      <UniqueIdentifier>{74a3f9fe-3344-4a69-960f-4a0ab379f48a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="imgui\backends">
+      <UniqueIdentifier>{417f7a5f-2f0d-4d96-88c1-530e2d6b0510}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="imgui\file dialog">
+      <UniqueIdentifier>{438a5a8f-d206-4d2a-a92f-db7677026edd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="imgui\imgui">
+      <UniqueIdentifier>{04d4406b-36ee-4de5-971c-e5f3a72d1871}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -27,10 +42,64 @@
     <ClInclude Include="Game.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Renderer.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="UIRenderer.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utils\imgui\backends\imgui_impl_win32.h">
+      <Filter>imgui\backends</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utils\imgui\backends\imgui_impl_vulkan.h">
+      <Filter>imgui\backends</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utils\ImGuiFileDialog\ImGuiFileDialogConfig.h">
+      <Filter>imgui\file dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utils\ImGuiFileDialog\ImGuiFileDialog.h">
+      <Filter>imgui\file dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utils\imgui\imconfig.h">
+      <Filter>imgui\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utils\imgui\imgui.h">
+      <Filter>imgui\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utils\imgui\imgui_internal.h">
+      <Filter>imgui\imgui</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Game.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="UIRenderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utils\imgui\backends\imgui_impl_vulkan.cpp">
+      <Filter>imgui\backends</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utils\imgui\backends\imgui_impl_win32.cpp">
+      <Filter>imgui\backends</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utils\ImGuiFileDialog\ImGuiFileDialog.cpp">
+      <Filter>imgui\file dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utils\imgui\imgui_widgets.cpp">
+      <Filter>imgui\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utils\imgui\imgui.cpp">
+      <Filter>imgui\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utils\imgui\imgui_demo.cpp">
+      <Filter>imgui\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utils\imgui\imgui_draw.cpp">
+      <Filter>imgui\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utils\imgui\imgui_tables.cpp">
+      <Filter>imgui\imgui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -45,5 +114,31 @@
     <Image Include="Game.ico">
       <Filter>Resource Files</Filter>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Shaders\voxel_depth_layer.comp">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Resources\Shaders\bvh_aabb_raycast.comp">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Resources\Shaders\compileshaders.py">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Resources\Shaders\sample.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Resources\Shaders\sample.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Resources\Shaders\sample_notex.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Resources\Shaders\sample_notex.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Resources\Shaders\voxel_depth_clear.comp">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

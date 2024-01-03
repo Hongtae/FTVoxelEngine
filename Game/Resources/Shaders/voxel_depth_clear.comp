@@ -1,0 +1,18 @@
+#version 450
+#extension GL_EXT_shader_explicit_arithmetic_types         : enable
+#extension GL_EXT_shader_explicit_arithmetic_types_int8    : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int16   : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int32   : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int64   : require
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+#extension GL_EXT_shader_explicit_arithmetic_types_float32 : require
+#extension GL_EXT_shader_explicit_arithmetic_types_float64 : require
+#extension GL_EXT_debug_printf : enable
+
+layout (binding=0, rgba8) uniform image2D outputImage;
+layout (binding=1, r32f) uniform image2D depthBuffer;
+
+void main() {
+    imageStore(outputImage, ivec2(gl_GlobalInvocationID.xy), vec4(0.0));
+    imageStore(depthBuffer, ivec2(gl_GlobalInvocationID.xy), vec4(1.0));
+}

@@ -93,13 +93,17 @@
       <PreprocessorDefinitions>FVCORE_STATIC;NOMINMAX;WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Core;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Core;$(SolutionDir)Utils\imgui;$(VULKAN_SDK)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Command>echo Copying Resource Files...
+xcopy /Y /D /R /Q /E "$(ProjectDir)Resources" "$(OutDir)$(ProjectName).Resources\"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -110,7 +114,7 @@
       <PreprocessorDefinitions>FVCORE_STATIC;NOMINMAX;WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Core;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Core;$(SolutionDir)Utils\imgui;$(VULKAN_SDK)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
@@ -119,6 +123,10 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Command>echo Copying Resource Files...
+xcopy /Y /D /R /Q /E "$(ProjectDir)Resources" "$(OutDir)$(ProjectName).Resources\"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -127,13 +135,17 @@
       <PreprocessorDefinitions>FVCORE_STATIC;NOMINMAX;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Core;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Core;$(SolutionDir)Utils\imgui;$(VULKAN_SDK)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Command>echo Copying Resource Files...
+xcopy /Y /D /R /Q /E "$(ProjectDir)Resources" "$(OutDir)$(ProjectName).Resources\"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -144,7 +156,7 @@
       <PreprocessorDefinitions>FVCORE_STATIC;NOMINMAX;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Core;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Core;$(SolutionDir)Utils\imgui;$(VULKAN_SDK)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
@@ -153,15 +165,37 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Command>echo Copying Resource Files...
+xcopy /Y /D /R /Q /E "$(ProjectDir)Resources" "$(OutDir)$(ProjectName).Resources\"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\Utils\ImGuiFileDialog\ImGuiFileDialog.h" />
+    <ClInclude Include="..\Utils\ImGuiFileDialog\ImGuiFileDialogConfig.h" />
+    <ClInclude Include="..\Utils\imgui\backends\imgui_impl_vulkan.h" />
+    <ClInclude Include="..\Utils\imgui\backends\imgui_impl_win32.h" />
+    <ClInclude Include="..\Utils\imgui\imconfig.h" />
+    <ClInclude Include="..\Utils\imgui\imgui.h" />
+    <ClInclude Include="..\Utils\imgui\imgui_internal.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="Game.h" />
+    <ClInclude Include="Renderer.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="UIRenderer.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\Utils\ImGuiFileDialog\ImGuiFileDialog.cpp" />
+    <ClCompile Include="..\Utils\imgui\backends\imgui_impl_vulkan.cpp" />
+    <ClCompile Include="..\Utils\imgui\backends\imgui_impl_win32.cpp" />
+    <ClCompile Include="..\Utils\imgui\imgui.cpp" />
+    <ClCompile Include="..\Utils\imgui\imgui_demo.cpp" />
+    <ClCompile Include="..\Utils\imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\Utils\imgui\imgui_tables.cpp" />
+    <ClCompile Include="..\Utils\imgui\imgui_widgets.cpp" />
     <ClCompile Include="Game.cpp" />
+    <ClCompile Include="UIRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Game.rc" />
@@ -174,6 +208,16 @@
     <ProjectReference Include="..\Core\Core.vcxproj">
       <Project>{3adf360f-dd2e-40e9-8901-989c7bf852af}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Shaders\bvh_aabb_raycast.comp" />
+    <None Include="Resources\Shaders\compileshaders.py" />
+    <None Include="Resources\Shaders\sample.frag" />
+    <None Include="Resources\Shaders\sample.vert" />
+    <None Include="Resources\Shaders\sample_notex.frag" />
+    <None Include="Resources\Shaders\sample_notex.vert" />
+    <None Include="Resources\Shaders\voxel_depth_clear.comp" />
+    <None Include="Resources\Shaders\voxel_depth_layer.comp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
