@@ -120,6 +120,9 @@
 #endif
 
 #ifdef __cplusplus
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
 #include <memory>
 #include <utility>
 #include <stdexcept>
@@ -132,8 +135,6 @@
 #include <limits>
 #include <concepts>
 #include <compare>
-#include <cstdint>
-#include <cstdlib>
 #include <iostream>
 #include <format>
 #include <string>

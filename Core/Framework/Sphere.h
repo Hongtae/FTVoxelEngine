@@ -2,6 +2,7 @@
 #include "../include.h"
 #include "Vector3.h"
 
+#pragma pack(push, 4)
 namespace FV {
     struct Sphere {
         Vector3 center;
@@ -24,6 +25,16 @@ namespace FV {
 
         bool isPointInside(const Vector3& pt) const {
             return (pt - center).magnitudeSquared() <= (radius * radius);
+        }
+    };
+}
+#pragma pack(pop)
+
+namespace std {
+    template <> struct formatter<FV::Sphere> : formatter<string> {
+        auto format(const FV::Sphere& arg, format_context& ctx) const {
+            auto str = std::format("Sphere(center: ({}, {}, {}), radius:{})", arg.center.x, arg.center.y, arg.center.z, arg.radius);
+            return formatter<string>::format(str, ctx);
         }
     };
 }

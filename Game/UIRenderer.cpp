@@ -7,27 +7,31 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 LRESULT(*defaultWndProc)(HWND, UINT, WPARAM, LPARAM) = nullptr;
 bool mouseLocked = false;
 
-LRESULT forwardImGuiWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
-        return true;
+extern bool hideUI;
 
-    mouseLocked = false;
-    if (ImGui::GetCurrentContext()) {
-        ImGuiIO& io = ImGui::GetIO();
-        if (io.WantCaptureMouse) {
-            mouseLocked = true;
-            switch (msg) {
-            case WM_MOUSEMOVE:
-            case WM_LBUTTONDOWN:
-            case WM_LBUTTONUP:
-            case WM_RBUTTONDOWN:
-            case WM_RBUTTONUP:
-            case WM_MBUTTONDOWN:
-            case WM_MBUTTONUP:
-            case WM_XBUTTONDOWN:
-            case WM_XBUTTONUP:
-            case WM_MOUSEWHEEL:
-                return ::DefWindowProcW(hWnd, msg, wParam, lParam);
+LRESULT forwardImGuiWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    if (hideUI == false) {
+        if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
+            return true;
+
+        mouseLocked = false;
+        if (ImGui::GetCurrentContext()) {
+            ImGuiIO& io = ImGui::GetIO();
+            if (io.WantCaptureMouse) {
+                mouseLocked = true;
+                switch (msg) {
+                case WM_MOUSEMOVE:
+                case WM_LBUTTONDOWN:
+                case WM_LBUTTONUP:
+                case WM_RBUTTONDOWN:
+                case WM_RBUTTONUP:
+                case WM_MBUTTONDOWN:
+                case WM_MBUTTONUP:
+                case WM_XBUTTONDOWN:
+                case WM_XBUTTONUP:
+                case WM_MOUSEWHEEL:
+                    return ::DefWindowProcW(hWnd, msg, wParam, lParam);
+                }
             }
         }
     }
@@ -210,6 +214,9 @@ void UIRenderer::prepareScene(const RenderPassDescriptor&, const ViewTransform&,
 }
 
 void UIRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
+    if (hideUI)
+        return;
+
     ImDrawData* draw_data = ImGui::GetDrawData();
     const bool is_minimized = (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f);
     if (!is_minimized) {

@@ -316,9 +316,30 @@ public:
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("File")) {
                 if (ImGui::MenuItem("Open", "Ctrl+O")) {
-                    ImGuiFileDialog::Instance()->OpenDialog("FVEditor_Open3DAsset", "Choose File", ".glb,.gltf", ".");
+                    ImGuiFileDialog::Instance()->OpenDialog("FVEditor_Open3DAsset", "Choose File", ".glb,.gltf", ".",
+                                                            1, nullptr,
+                                                            ImGuiFileDialogFlags_Modal |
+                                                            ImGuiFileDialogFlags_ReadOnlyFileNameField |
+                                                            ImGuiFileDialogFlags_DisableCreateDirectoryButton);
                 }
-                
+                ImGui::Separator();
+                if (ImGui::MenuItem("Import VXM")) {
+                    ImGuiFileDialog::Instance()->OpenDialog("ImportVXM", "Choose File", ".vxm", ".",
+                                                            1, nullptr,
+                                                            ImGuiFileDialogFlags_Modal |
+                                                            ImGuiFileDialogFlags_ReadOnlyFileNameField |
+                                                            ImGuiFileDialogFlags_DisableCreateDirectoryButton);
+                }
+                bool enableExport = volumeRenderer2->model().get() != nullptr;
+                ImGui::BeginDisabled(!enableExport);
+                if (ImGui::MenuItem("Export VXM")) {
+                    ImGuiFileDialog::Instance()->OpenDialog("ExportVXM", "Choose File", ".vxm", ".",
+                                                            1, nullptr,
+                                                            ImGuiFileDialogFlags_ConfirmOverwrite |
+                                                            ImGuiFileDialogFlags_Modal);
+                }
+                ImGui::EndDisabled();
+
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Edit")) {
@@ -656,8 +677,12 @@ public:
         if (ImGui::Begin("Voxelize (Layered)")) {
 
             static int depth = 5;
-            if (ImGui::SliderInt("Depth Level", &depth, 0, 13, nullptr, ImGuiSliderFlags_None)) {
+            if (ImGui::SliderInt("Depth Level", &depth, 0, 15, nullptr, ImGuiSliderFlags_None)) {
                 // value changed.
+            }
+            if (depth > 12) {
+                ImGui::SameLine();
+                ImGui::Text("(UNSAFE)");
             }
 
             if (ImGui::Button("Convert-2")) {
@@ -700,6 +725,10 @@ public:
             auto texture = volumeRenderer2->renderTarget;
             ImGui::Text(std::format("Volume Image ({} x {})",
                                     texture->width(), texture->height()).c_str());
+            ImGui::SameLine();
+            if (ImGui::Button("Delete")) {
+                volumeRenderer2->setModel(nullptr);
+            }
             ImGui::Image(uiRenderer->textureID(texture.get()), ImVec2(
                 texture->width(), texture->height()));
         }
@@ -716,6 +745,68 @@ public:
                 loadModel(filePathName);
             }
             // close
+            ImGuiFileDialog::Instance()->Close();
+        }
+        if (ImGuiFileDialog::Instance()->Display("ImportVXM")) {
+            if (ImGuiFileDialog::Instance()->IsOk()) {
+                std::string path = ImGuiFileDialog::Instance()->GetFilePathName();
+
+                auto ifile = std::ifstream(path, std::ios::binary);
+                if (ifile) {
+                    auto model = std::make_shared<VoxelModel>(nullptr, 0);
+                    auto r = model->deserialize(ifile);
+                    ifile.close();
+
+                    if (r) {
+                        auto nodes = model->numNodes();
+                        auto leaf = model->numLeafNodes();
+
+                        Log::debug(std::format(
+                            enUS_UTF8,
+                            "Deserialized result: {}, {:Ld} nodes, {:Ld} leaf-nodes",
+                            r, nodes, leaf));
+
+                        volumeRenderer2->setModel(model);
+                    } else {
+                        Log::debug("Deserialization failed.");
+                        messageBox("Deserialization failed.");
+                    }
+                } else {
+                    Log::debug("Failed to open file");
+                    messageBox("Failed to open file");
+                }
+            }
+            ImGuiFileDialog::Instance()->Close();
+        }
+        if (ImGuiFileDialog::Instance()->Display("ExportVXM")) {
+            if (ImGuiFileDialog::Instance()->IsOk()) {
+                std::string path = ImGuiFileDialog::Instance()->GetFilePathName();
+
+                Log::debug(std::format("Export vxm to {}", path));
+
+                auto model = volumeRenderer2->model();
+                if (model) {
+                    auto ofile = std::ofstream(
+                        path,
+                        std::ios::binary /*|| std::ios::out || std::ios::trunc */);
+                    if (ofile) {
+                        auto bytes = model->serialize(ofile);
+                        ofile.close();
+                        auto nodes1 = model->numNodes();
+                        auto leaf1 = model->numLeafNodes();
+                        Log::debug(std::format(
+                            enUS_UTF8,
+                            "Serialized {:Ld} bytes, {:Ld} nodes, {:Ld} leaf-nodes",
+                            bytes, nodes1, leaf1));
+                    } else {
+                        Log::debug("failed to open file.");
+                        messageBox("failed to open file.");
+                    }
+                } else {
+                    Log::debug("No model loaded.");
+                    messageBox("No model loaded.");
+                }
+            }
             ImGuiFileDialog::Instance()->Close();
         }
 
@@ -783,7 +874,7 @@ public:
                 auto rp = swapchain->currentRenderPassDescriptor();
 
                 auto& frontAttachment = rp.colorAttachments.front();
-                frontAttachment.clearColor = Color::nonLinearCyan;
+                frontAttachment.clearColor = Color::nonLinearBlue;
 
                 uint32_t width = frontAttachment.renderTarget->width();
                 uint32_t height = frontAttachment.renderTarget->height();

@@ -1,4 +1,3 @@
-#include "Model.h"
 #include "ShaderReflection.h"
 #include "VolumeRenderer2.h"
 
@@ -161,7 +160,7 @@ void VolumeRenderer2::setModel(std::shared_ptr<VoxelModel> model) {
         uint32_t startDepth = 0;
         if (depth > maxDepthLevel) {
             startDepth = depth - maxDepthLevel;
-            startDepth = std::min(2U, startDepth);
+            startDepth = std::min(maxStartLevel, startDepth);
         }
         uint32_t numLayers = 1U << startDepth;
         this->voxelLayers.reserve(numLayers);
@@ -173,8 +172,10 @@ void VolumeRenderer2::setModel(std::shared_ptr<VoxelModel> model) {
                 auto numNodes = octree.numDescendants();
                 auto numLeafNodes = octree.numLeafNodes();
                 auto maxLevels = octree.maxDepthLevels();
-                Log::debug(std::format("node at depth:{} (max-depth:{}), num-nodes:{}, num-leaf-nodes:{}",
-                                       depth, maxLevels, numNodes, numLeafNodes));
+                Log::debug(std::format(
+                    enUS_UTF8,
+                    "node at depth:{} (max-depth:{}/{}), num-nodes:{:Ld}, num-leaf-nodes:{:Ld}",
+                    depth, maxDepthLevel, maxLevels, numNodes, numLeafNodes));
 
                 auto volumeData = octree.makeArray(aabb, maxDepthLevel);
                 if (volumeData.data.empty() == false) {
@@ -209,9 +210,11 @@ void VolumeRenderer2::setModel(std::shared_ptr<VoxelModel> model) {
                         buffer
                     };
                     this->voxelLayers.push_back(layer);
-                    Log::debug(std::format("GPUBuffer {} bytes ({} nodes) has been created.",
-                                           bufferLength,
-                                           numNodes));
+                    Log::debug(std::format(
+                        enUS_UTF8,
+                        "GPUBuffer {:Ld} bytes ({:Ld} nodes) has been created.",
+                        bufferLength,
+                        numNodes));
                 }
             });
         Log::debug(std::format("VoxelModel-Enumerate depth:{}, num-nodes:{}",
@@ -330,9 +333,13 @@ void VolumeRenderer2::render(const RenderPassDescriptor&, const Rect& frame) {
                 }
                 return layers;
             };
+            auto viewFrustum = ViewFrustum(view, projection);
 
             std::vector<VoxelLayer> layersCopy = sortLayers(voxelLayers, mvp);
             for (auto& layer : layersCopy) {
+                if (viewFrustum.isAABBInside(layer.aabb) == false)
+                    continue;
+
                 raycastVoxel.bindingSet->setBuffer(2, layer.buffer, 0, layer.buffer->length());
                 encoder->setResource(0, raycastVoxel.bindingSet);
                 encoder->dispatch(width / raycastVoxel.threadgroupSize.x,
@@ -344,4 +351,3 @@ void VolumeRenderer2::render(const RenderPassDescriptor&, const Rect& frame) {
         cbuffer->commit();
     }
 }
-

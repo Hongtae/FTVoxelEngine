@@ -15,3 +15,28 @@ public:
     virtual void render(const RenderPassDescriptor&, const Rect&) = 0;
     virtual void prepareScene(const RenderPassDescriptor&, const ViewTransform&, const ProjectionTransform&) {}
 };
+
+struct RenderPipeline {
+    std::shared_ptr<RenderPipelineState> state;
+    std::shared_ptr<ShaderBindingSet> bindingSet;
+};
+
+struct ComputePipeline {
+    std::shared_ptr<ComputePipelineState> state;
+    std::shared_ptr<ShaderBindingSet> bindingSet;
+    struct { uint32_t x, y, z; } threadgroupSize;
+};
+
+std::optional<RenderPipeline> makeRenderPipeline(
+    GraphicsDevice* device,
+    std::filesystem::path vsPath,
+    std::filesystem::path fsPath,
+    const VertexDescriptor& vertexDescriptor,
+    std::vector<RenderPipelineColorAttachmentDescriptor> colorAttachments,
+    PixelFormat depthStencilAttachmentPixelFormat,
+    std::vector<ShaderBinding> bindings);
+
+std::optional<ComputePipeline> makeComputePipeline(
+    GraphicsDevice* device,
+    std::filesystem::path path,
+    std::vector<ShaderBinding> bindings);

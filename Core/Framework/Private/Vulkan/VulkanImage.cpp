@@ -67,11 +67,11 @@ VulkanImage::~VulkanImage() {
 }
 
 VkImageLayout VulkanImage::setLayout(VkImageLayout layout,
-                               VkAccessFlags2 accessMask,
-                               VkPipelineStageFlags2 stageBegin,
-                               VkPipelineStageFlags2 stageEnd,
-                               uint32_t queueFamilyIndex,
-                               VkCommandBuffer commandBuffer) const {
+                                     VkAccessFlags2 accessMask,
+                                     VkPipelineStageFlags2 stageBegin,
+                                     VkPipelineStageFlags2 stageEnd,
+                                     uint32_t queueFamilyIndex,
+                                     VkCommandBuffer commandBuffer) const {
     FVASSERT_DEBUG(layout != VK_IMAGE_LAYOUT_UNDEFINED);
     FVASSERT_DEBUG(layout != VK_IMAGE_LAYOUT_PREINITIALIZED);
 
@@ -114,7 +114,13 @@ VkImageLayout VulkanImage::setLayout(VkImageLayout layout,
             barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
         }
         barrier.dstStageMask = stageBegin;
-
+#if 0
+        // full pipeline barrier for debugging
+        barrier.srcAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+        barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+        barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+#endif
         VkDependencyInfo dependencyInfo = { VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
         dependencyInfo.imageMemoryBarrierCount = 1;
         dependencyInfo.pImageMemoryBarriers = &barrier;

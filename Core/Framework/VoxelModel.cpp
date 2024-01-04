@@ -738,12 +738,17 @@ constexpr char fileTag[] = "FV.VoxelModel";
 bool VoxelModel::deserialize(std::istream& stream) {
     struct {
         char tag[20] = {};
+        float bounds[4] = {};
         uint64_t totalNodes = 0;
     } header;
 
     auto pos = stream.tellg();
     stream.read((char*)&header, sizeof(header));
     if (strcmp(header.tag, fileTag) == 0) {
+
+        _center = Vector3(header.bounds[0], header.bounds[1], header.bounds[2]);
+        _scale = header.bounds[3];
+        _maxDepth = 0;
 
         struct Deserializer {
             VoxelOctree* node;
@@ -782,6 +787,8 @@ bool VoxelModel::deserialize(std::istream& stream) {
         if (_root)
             deleteNode(_root);
         _root = node;
+        if (_root)
+            _maxDepth = _root->maxDepthLevels();
 
         return true;
     }
@@ -808,9 +815,14 @@ uint64_t VoxelModel::serialize(std::ostream& stream) const {
 
     struct {
         char tag[20] = {};
+        float bounds[4] = {};
         uint64_t totalNodes = 0;
     } header;
     strcpy_s(header.tag, std::size(header.tag), fileTag);
+    header.bounds[0] = _center.x;
+    header.bounds[1] = _center.y;
+    header.bounds[2] = _center.z;
+    header.bounds[3] = _scale;
 
     if (_root) {
         header.totalNodes = _root->numDescendants();

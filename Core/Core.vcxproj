@@ -97,9 +97,9 @@
       <PreprocessorDefinitions>FVCORE_STATIC;FVCORE_EXPORTS;FVCORE_ENABLE_VULKAN;VK_USE_PLATFORM_WIN32_KHR;NOMINMAX;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
-      <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>Libs/Vulkan/include</AdditionalIncludeDirectories>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -120,9 +120,9 @@
       <PreprocessorDefinitions>FVCORE_STATIC;FVCORE_EXPORTS;FVCORE_ENABLE_VULKAN;VK_USE_PLATFORM_WIN32_KHR;NOMINMAX;WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
-      <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>Libs/Vulkan/include</AdditionalIncludeDirectories>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -143,9 +143,9 @@
       <PreprocessorDefinitions>FVCORE_STATIC;FVCORE_EXPORTS;FVCORE_ENABLE_VULKAN;VK_USE_PLATFORM_WIN32_KHR;NOMINMAX;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
-      <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>Libs/Vulkan/include</AdditionalIncludeDirectories>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -166,9 +166,9 @@
       <PreprocessorDefinitions>FVCORE_STATIC;FVCORE_EXPORTS;FVCORE_ENABLE_VULKAN;VK_USE_PLATFORM_WIN32_KHR;NOMINMAX;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
-      <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>Libs/Vulkan/include</AdditionalIncludeDirectories>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

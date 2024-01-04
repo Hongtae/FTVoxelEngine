@@ -28,6 +28,9 @@
     <Filter Include="imgui\imgui">
       <UniqueIdentifier>{04d4406b-36ee-4de5-971c-e5f3a72d1871}</UniqueIdentifier>
     </Filter>
+    <Filter Include="tinygltf">
+      <UniqueIdentifier>{6a666de4-b763-4979-8178-235724b72cbf}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -69,6 +72,30 @@
     <ClInclude Include="..\Utils\imgui\imgui_internal.h">
       <Filter>imgui\imgui</Filter>
     </ClInclude>
+    <ClInclude Include="VolumeRenderer.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ShaderReflection.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Model.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshRenderer.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utils\tinygltf\stb_image_write.h">
+      <Filter>tinygltf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utils\tinygltf\tiny_gltf.h">
+      <Filter>tinygltf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utils\tinygltf\json.hpp">
+      <Filter>tinygltf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utils\tinygltf\stb_image.h">
+      <Filter>tinygltf</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Game.cpp">
@@ -100,6 +127,21 @@
     </ClCompile>
     <ClCompile Include="..\Utils\imgui\imgui_tables.cpp">
       <Filter>imgui\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="VolumeRenderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshRenderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Model.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utils\tinygltf\tiny_gltf.cc">
+      <Filter>tinygltf</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -138,6 +180,12 @@
       <Filter>Shaders</Filter>
     </None>
     <None Include="Resources\Shaders\voxel_depth_clear.comp">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Resources\Shaders\blit.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Resources\Shaders\blit.frag">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>

@@ -3,6 +3,10 @@
 #include "Matrix3.h"
 #include "Matrix4.h"
 #include "Vector3.h"
+#include "Vector4.h"
+#include "Plane.h"
+#include "Sphere.h"
+#include "AABB.h"
 
 namespace FV {
     struct ViewTransform {
@@ -137,12 +141,12 @@ namespace FV {
 
         Matrix4 matrix() const { return view.matrix4().concatenating(projection.matrix); }
 
-        Vector4 nearPlane;
-        Vector4 farPlane;
-        Vector4 leftPlane;
-        Vector4 rightPlane;
-        Vector4 topPlane;
-        Vector4 bottomPlane;
+        Plane nearPlane;
+        Plane farPlane;
+        Plane leftPlane;
+        Plane rightPlane;
+        Plane topPlane;
+        Plane bottomPlane;
 
         ViewFrustum(const ViewTransform& v, const ProjectionTransform& p)
             : view(v), projection(p) {
@@ -165,37 +169,73 @@ namespace FV {
             };
 
             if constexpr (ProjectionTransform::leftHanded) {
-                this->farPlane = makePlane(vec[5], vec[7], vec[4]);
-                this->nearPlane = makePlane(vec[2], vec[0], vec[3]);
-                this->topPlane = makePlane(vec[0], vec[7], vec[3]);
-                this->bottomPlane = makePlane(vec[2], vec[5], vec[1]);
-                this->leftPlane = makePlane(vec[3], vec[6], vec[2]);
-                this->rightPlane = makePlane(vec[1], vec[4], vec[0]);
+                this->farPlane = Plane(vec[5], vec[7], vec[4]);
+                this->nearPlane = Plane(vec[2], vec[0], vec[3]);
+                this->topPlane = Plane(vec[0], vec[7], vec[3]);
+                this->bottomPlane = Plane(vec[2], vec[5], vec[1]);
+                this->leftPlane = Plane(vec[3], vec[6], vec[2]);
+                this->rightPlane = Plane(vec[1], vec[4], vec[0]);
             } else {
-                this->farPlane = makePlane(vec[4], vec[7], vec[5]);
-                this->nearPlane = makePlane(vec[3], vec[0], vec[2]);
-                this->topPlane = makePlane(vec[3], vec[7], vec[0]);
-                this->bottomPlane = makePlane(vec[1], vec[5], vec[2]);
-                this->leftPlane = makePlane(vec[2], vec[6], vec[3]);
-                this->rightPlane = makePlane(vec[0], vec[4], vec[1]);
+                this->farPlane = Plane(vec[4], vec[7], vec[5]);
+                this->nearPlane = Plane(vec[3], vec[0], vec[2]);
+                this->topPlane = Plane(vec[3], vec[7], vec[0]);
+                this->bottomPlane = Plane(vec[1], vec[5], vec[2]);
+                this->leftPlane = Plane(vec[2], vec[6], vec[3]);
+                this->rightPlane = Plane(vec[0], vec[4], vec[1]);
             }
         }
 
-        bool isSphereInside(const Vector3& center, float radius) const {
-            if (radius < 0.0f) return false;
+        bool isSphereInside(const Sphere& sp) const {
+            if (sp.radius < 0.0f) return false;
 
-            Vector4 pt = Vector4(center.x, center.y, center.z, 1.0f);
-            if (Vector4::dot(this->nearPlane, pt) < -radius)   return false;
-            if (Vector4::dot(this->farPlane, pt) < -radius)    return false;
-            if (Vector4::dot(this->leftPlane, pt) < -radius)   return false;
-            if (Vector4::dot(this->rightPlane, pt) < -radius)  return false;
-            if (Vector4::dot(this->topPlane, pt) < -radius)    return false;
-            if (Vector4::dot(this->bottomPlane, pt) < -radius) return false;
+            Vector4 pt = Vector4(sp.center.x, sp.center.y, sp.center.z, 1.0f);
+            if (this->nearPlane.dot(pt) < -sp.radius)   return false;
+            if (this->farPlane.dot(pt) < -sp.radius)    return false;
+            if (this->leftPlane.dot(pt) < -sp.radius)   return false;
+            if (this->rightPlane.dot(pt) < -sp.radius)  return false;
+            if (this->topPlane.dot(pt) < -sp.radius)    return false;
+            if (this->bottomPlane.dot(pt) < -sp.radius) return false;
             return true;
         }
 
         bool isPointInside(const Vector3& point) const {
-            return isSphereInside(point, 0.0f);
+            return isSphereInside({ point, 0.0f });
+        }
+
+        bool isAABBInside(const AABB& aabb) const {
+            if (aabb.isNull())
+                return false;
+
+            const Plane* planes[6] = {
+                &nearPlane,
+                &farPlane,
+                &leftPlane,
+                &rightPlane,
+                &topPlane,
+                &bottomPlane,
+            };
+
+            const Vector3* minMax[2] = { &aabb.min, &aabb.max };
+
+            for (int i = 0; i < 6; ++i) {
+                auto plane = planes[i];
+                int bx = (plane->a > 0.0f) ? 1 : 0;
+                int by = (plane->b > 0.0f) ? 1 : 0;
+                int bz = (plane->c > 0.0f) ? 1 : 0;
+
+                auto d = plane->dot(Vector3(minMax[bx]->x, minMax[by]->y, minMax[bz]->z));
+                if (d < 0.0f)
+                    return false;
+
+                bx = 1 - bx;
+                by = 1 - by;
+                bz = 1 - bz;
+                d = plane->dot(Vector3(minMax[bx]->x, minMax[by]->z, minMax[bz]->z));
+                if (d <= 0.0f)
+                    return true; // intersects
+            }
+            // inside
+            return true;
         }
     };
 }

@@ -7,10 +7,12 @@
 #include <imgui.h>
 #include "../Utils/ImGuiFileDialog/ImGuiFileDialog.h"
 #include "UIRenderer.h"
+#include "VolumeRenderer.h"
 
 using namespace FV;
 
 std::filesystem::path appResourcesRoot;
+bool hideUI = false;
 
 struct App : public Application {
     std::shared_ptr<Window> window;
@@ -18,12 +20,13 @@ struct App : public Application {
     std::atomic<bool> isVisible;
 
     std::shared_ptr<GraphicsDeviceContext> graphicsContext;
-    std::shared_ptr<CommandQueue> renderQueue;
+    std::shared_ptr<CommandQueue> commandQueue;
     PixelFormat colorFormat;
     PixelFormat depthFormat;
 
-    std::shared_ptr<UIRenderer> uiRenderer;
-    std::string popupMessage;
+    UIRenderer* uiRenderer;
+    VolumeRenderer* volumeRenderer;
+    std::vector<std::shared_ptr<Renderer>> renderers;
 
     void initialize() override {
         appResourcesRoot = environmentPath(EnvironmentPath::AppRoot) / "Game.Resources";
@@ -50,6 +53,10 @@ struct App : public Application {
                                      this->onMouseEvent(event);
                                  });
         window->addEventObserver(this,
+                                 [this](const Window::KeyboardEvent& event) {
+                                     this->onKeyboardEvent(event);
+                                 });
+        window->addEventObserver(this,
                                  [this](const Window::WindowEvent& event) {
                                      this->onWindowEvent(event);
                                  });
@@ -58,11 +65,18 @@ struct App : public Application {
         window->activate();
 
         isVisible = true;
-        uiRenderer = std::make_shared<UIRenderer>();
+        auto uiRenderer = std::make_shared<UIRenderer>();
+        auto volumeRenderer = std::make_shared<VolumeRenderer>();
+        this->renderers = {
+            volumeRenderer,
+            uiRenderer,
+        };
+        this->volumeRenderer = volumeRenderer.get();
+        this->uiRenderer = uiRenderer.get();
         uiRenderer->setWindow(window.get());
 
         graphicsContext = GraphicsDeviceContext::makeDefault();
-        renderQueue = graphicsContext->renderQueue();
+        commandQueue = graphicsContext->commandQueue(CommandQueue::Render | CommandQueue::Compute);
 
         renderThread = std::jthread([this](auto stop) { renderLoop(stop); });
     }
@@ -70,17 +84,25 @@ struct App : public Application {
     void finalize() override {
         renderThread.join();
 
+        renderers.clear();
         uiRenderer = nullptr;
         window = nullptr;
-        renderQueue = nullptr;
+        commandQueue = nullptr;
         graphicsContext = nullptr;
+    }
+
+    bool openPopupModal = false;
+    std::string popupMessage;
+    void messageBox(const std::string& mesg) {
+        popupMessage = mesg;
+        openPopupModal = true;
     }
 
     void uiLoop(float delta) {
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("File")) {
                 if (ImGui::MenuItem("New", "Ctrl+N")) {
-
+                    volumeRenderer->setModel(nullptr);
                 }
                 if (ImGui::MenuItem("Open...", "Ctrl+O")) {
                     ImGuiFileDialog::Instance()->OpenDialog("OpenVoxelModel", "Choose File", ".vxm", ".");
@@ -98,15 +120,95 @@ struct App : public Application {
             ImGui::EndMainMenuBar();
         }
 
+        if (ImGui::Begin("Configuration")) {
+            if (ImGui::CollapsingHeader("Camera")) {
+                auto pos = camera.position;
+                auto dir = camera.dir;
+                ImGui::Text(std::format("Position ({:.1f}, {:.1f}, {:.1f})",
+                                        pos.x, pos.y, pos.z).c_str());
+                ImGui::Text(std::format("Direction ({:.3f}, {:.3f}, {:.3f})",
+                                        dir.x, dir.y, dir.z).c_str());
+                static auto fov = radianToDegree(camera.fov);
+                if (ImGui::SliderFloat("FOV", &fov, 30.0, 160.0, "%.1f")) {
+                    camera.fov = degreeToRadian(fov);
+                }
+                static auto nz = camera.nearZ;
+                if (ImGui::SliderFloat("Near", &nz, 0.001f, 1000.0f, "%.3f",
+                                       ImGuiSliderFlags_Logarithmic)) {
+                    camera.nearZ = nz;
+
+                }
+                static auto fz = camera.farZ;
+                if (ImGui::SliderFloat("Far", &fz, 1000.0f, 100000.0f, "%.3f",
+                                       ImGuiSliderFlags_None)) {
+                    camera.farZ = fz;
+                }
+                static auto mspeed = camera.movementSpeed;
+                if (ImGui::SliderFloat("Movement speed", &mspeed,
+                                       0.001f, 1000.0, "%.3f",
+                                       ImGuiSliderFlags_Logarithmic)) {
+                    camera.movementSpeed = mspeed;
+                }
+                static auto rspeed = camera.rotationSpeed;
+                if (ImGui::SliderFloat("Rotation speed", &rspeed,
+                                       0.001f, 1.0f, "%.3f",
+                                       ImGuiSliderFlags_Logarithmic)) {
+                    camera.rotationSpeed = rspeed;
+                }
+            }
+            if (ImGui::CollapsingHeader("Lighting")) {
+                static int rotate[2] = {};
+                if (ImGui::SliderInt2("Rotate-Roll/Yaw", rotate, 0, 359, nullptr, ImGuiSliderFlags_AlwaysClamp)) {
+                    auto qz = Quaternion(Vector3(0, 0, 1), degreeToRadian((float)rotate[0]));
+                    auto qy = Quaternion(Vector3(0, 1, 0), degreeToRadian((float)rotate[1]));
+                    Vector3 v = { 0, 1, 0 };
+                    v = v.applying(qz);
+                    v = v.applying(qy);
+                    volumeRenderer->lightDir = v;
+                }
+            }
+        }
+        ImGui::End();
+
         // file dialog 
         if (ImGuiFileDialog::Instance()->Display("OpenVoxelModel")) {
             // action if OK
             if (ImGuiFileDialog::Instance()->IsOk()) {
-                std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
-                std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
-                std::string fileName = ImGuiFileDialog::Instance()->GetCurrentFileName();
+                std::string path = ImGuiFileDialog::Instance()->GetFilePathName();
+                Log::debug(std::format("Load model: {}", path));
 
-                Log::debug(std::format("Load model: {}", filePath));
+                auto ifile = std::ifstream(path, std::ios::binary);
+                if (ifile) {
+                    auto model = std::make_shared<VoxelModel>(nullptr, 0);
+                    auto r = model->deserialize(ifile);
+                    ifile.close();
+
+                    if (r) {
+                        auto nodes = model->numNodes();
+                        auto leaf = model->numLeafNodes();
+
+                        Log::debug(std::format(
+                            enUS_UTF8,
+                            "Deserialized result: {}, {:Ld} nodes, {:Ld} leaf-nodes",
+                            r, nodes, leaf));
+
+                        volumeRenderer->setModel(model);
+
+                        AABB aabb = model->aabb();
+                        auto camPosition = Vector3(aabb.max);
+                        auto camTarget = Vector3(aabb.min);
+
+                        this->camera.position = camPosition;
+                        this->camera.dir = (camTarget - camPosition).normalized();
+
+                    } else {
+                        Log::debug("Deserialization failed.");
+                        messageBox("Deserialization failed.");
+                    }
+                } else {
+                    Log::debug("Failed to open file");
+                    messageBox("Failed to open file");
+                }
             }
             // close
             ImGuiFileDialog::Instance()->Close();
@@ -114,6 +216,11 @@ struct App : public Application {
         // etc..
         static bool show_demo_window = true;
         ImGui::ShowDemoWindow(&show_demo_window);
+
+        if (openPopupModal) {
+            ImGui::OpenPopup("Error");
+            openPopupModal = false;
+        }
 
         if (ImGui::BeginPopupModal("Error", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
             ImGui::Text(popupMessage.c_str());
@@ -125,15 +232,32 @@ struct App : public Application {
         }
     }
 
+    struct {
+        Vector3 position = { 0, 0, 100 };
+        Vector3 dir = { 0, 0, -1 };
+        Vector3 up = { 0, 1, 0 };
+        float fov = degreeToRadian(80.f);
+        float nearZ = 0.01f;
+        float farZ = 10000.0f;
+        float movementSpeed = 1.0f;
+        float rotationSpeed = 0.01f;
+    } camera;
+
+    std::mutex mutex;
+    std::unordered_set<VirtualKey> pressingKeys;
+
     void renderLoop(std::stop_token stop) {
-        auto swapchain = renderQueue->makeSwapChain(window);
+        auto swapchain = commandQueue->makeSwapChain(window);
         if (swapchain == nullptr)
             throw std::runtime_error("swapchain creation failed");
 
         uiRenderer->setSwapChain(swapchain.get());
-        uiRenderer->initialize(graphicsContext, swapchain);
+
+        for (auto& renderer : this->renderers) {
+            renderer->initialize(graphicsContext, swapchain);
+        }
         
-        auto queue = renderQueue.get();
+        auto queue = commandQueue.get();
         auto device = queue->device().get();
 
         this->colorFormat = swapchain->pixelFormat();
@@ -153,61 +277,117 @@ struct App : public Application {
         double delta = 0.0;
 
         while (stop.stop_requested() == false) {
-            auto rp = swapchain->currentRenderPassDescriptor();
+            {
+                auto t = std::chrono::high_resolution_clock::now();
+                std::chrono::duration<double> d = t - timestamp;
+                timestamp = t;
+                delta = d.count();
+            }
 
-            auto& frontAttachment = rp.colorAttachments.front();
-            frontAttachment.clearColor = Color::nonLinearBlue;
+            for (auto& renderer : this->renderers) {
+                renderer->update(delta);
+            }
 
-            uint32_t width = frontAttachment.renderTarget->width();
-            uint32_t height = frontAttachment.renderTarget->height();
+            std::unique_lock lock(mutex);
+            auto movementSpeed = camera.movementSpeed * delta;
+            auto dir = camera.dir;
+            auto pos = camera.position;
+            auto up = camera.up;
+            auto left = Vector3::cross(up, dir);
 
-            if (width > 0 && height > 0) {
-                if (depthTexture == nullptr ||
-                    depthTexture->width() != width ||
-                    depthTexture->height() != height) {
-                    depthTexture = device->makeTransientRenderTarget(
-                        TextureType2D,
-                        depthFormat,
-                        width,
-                        height,
-                        1);
+            if (pressingKeys.contains(VirtualKey::W))
+                pos += dir * movementSpeed;
+            if (pressingKeys.contains(VirtualKey::A))
+                pos += left * movementSpeed;
+            if (pressingKeys.contains(VirtualKey::D))
+                pos -= left * movementSpeed;
+            if (pressingKeys.contains(VirtualKey::S))
+                pos -= dir * movementSpeed;
+            if (pressingKeys.contains(VirtualKey::Q))
+                pos += up * movementSpeed;
+            if (pressingKeys.contains(VirtualKey::E))
+                pos -= up * movementSpeed;
+
+            camera.position = pos;
+            auto fov = camera.fov;
+            auto nearZ = camera.nearZ;
+            auto farZ = camera.farZ;
+            lock.unlock();
+
+
+            do {
+                if (this->isVisible.load() == false)
+                    break;
+
+                auto rp = swapchain->currentRenderPassDescriptor();
+
+                auto& frontAttachment = rp.colorAttachments.front();
+                frontAttachment.clearColor = Color::nonLinearCyan;
+
+                uint32_t width = frontAttachment.renderTarget->width();
+                uint32_t height = frontAttachment.renderTarget->height();
+
+                if (width > 0 && height > 0) {
+                    if (depthTexture == nullptr ||
+                        depthTexture->width() != width ||
+                        depthTexture->height() != height) {
+                        depthTexture = device->makeTransientRenderTarget(
+                            TextureType2D,
+                            depthFormat,
+                            width,
+                            height,
+                            1);
+                    }
+                    rp.depthStencilAttachment.renderTarget = depthTexture;
+                    rp.depthStencilAttachment.loadAction = RenderPassLoadAction::LoadActionClear;
+                    rp.depthStencilAttachment.storeAction = RenderPassStoreAction::StoreActionDontCare;
+
+                    if (1) {
+                        auto buffer = queue->makeCommandBuffer();
+                        auto encoder = buffer->makeRenderCommandEncoder(rp);
+                        encoder->setDepthStencilState(depthStencilState);
+
+                        encoder->endEncoding();
+                        buffer->commit();
+                    }
+
+                    frontAttachment.loadAction = RenderPassAttachmentDescriptor::LoadActionLoad;
+
+                    auto aspectRatio = float(width) / float(height);
+                    auto view = ViewTransform(pos, dir, up);
+                    auto projection = ProjectionTransform::perspective(fov, aspectRatio, nearZ, farZ);
+
+                    for (auto& renderer : this->renderers) {
+                        renderer->prepareScene(rp, view, projection);
+                    }
+
+                    if (!hideUI) {
+                        ImGui::NewFrame();
+                        uiLoop(delta);
+                        ImGui::Render();
+                    }
+
+                    for (auto& renderer : this->renderers) {
+                        renderer->render(rp, Rect(0, 0, width, height));
+                    }
                 }
-                rp.depthStencilAttachment.renderTarget = depthTexture;
-                rp.depthStencilAttachment.loadAction = RenderPassLoadAction::LoadActionClear;
-                rp.depthStencilAttachment.storeAction = RenderPassStoreAction::StoreActionDontCare;
 
-                auto buffer = queue->makeCommandBuffer();
-                auto encoder = buffer->makeRenderCommandEncoder(rp);
-                encoder->setDepthStencilState(depthStencilState);
+                swapchain->present();
+            } while (0);
 
-                encoder->endEncoding();
-                buffer->commit();
+            //auto t = std::chrono::high_resolution_clock::now();
+            //std::chrono::duration<double> d = t - timestamp;
 
-                frontAttachment.loadAction = RenderPassAttachmentDescriptor::LoadActionLoad;
-
-                uiRenderer->prepareScene(rp, {}, {});
-                ImGui::NewFrame();
-                uiLoop(delta);
-                ImGui::Render();
-                uiRenderer->render(rp, Rect(0, 0, width, height));
-
-            }
-
-            swapchain->present();
-
-            auto t = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double> d = t - timestamp;
-            timestamp = t;
-            delta = d.count();
-
-            auto interval = std::max(frameInterval - delta, 0.0);
-            if (interval > 0.0) {
-                std::this_thread::sleep_for(std::chrono::duration<double>(interval));
-            } else {
+            //auto interval = std::max(frameInterval - d.count(), 0.0);
+            //if (interval > 0.0) {
+            //    std::this_thread::sleep_for(std::chrono::duration<double>(interval));
+            //} else {
                 std::this_thread::yield();
-            }
+            //}
         }
-        uiRenderer->finalize();
+        for (auto& renderer : this->renderers) {
+            renderer->finalize();
+        }
     }
 
     void onWindowEvent(const Window::WindowEvent& event) {
@@ -225,17 +405,64 @@ struct App : public Application {
         }
     }
 
+    bool mouseHidden = false;
     void onMouseEvent(const Window::MouseEvent& event) {
         if (event.device == Window::MouseEvent::GenericMouse && event.deviceID == 0) {
             if (event.buttonID == 0) { // left-click
                 switch (event.type) {
                 case Window::MouseEvent::ButtonDown:
+                    window->showMouse(event.deviceID, false);
+                    window->lockMouse(event.deviceID, true);
+                    mouseHidden = true;
                     break;
                 case Window::MouseEvent::ButtonUp:
+                    window->showMouse(event.deviceID, true);
+                    window->lockMouse(event.deviceID, false);
+                    mouseHidden = false;
                     break;
                 case Window::MouseEvent::Move:
+                    if (mouseHidden) {
+                        auto delta = event.delta;
+                        //Log::debug(std::format("Mouse move: {:.1f}, {:.1f}", delta.x, delta.y));
+
+                        auto up = camera.up;
+                        auto dir = camera.dir;
+                        auto left = Vector3::cross(dir, up);
+
+                        auto speed = camera.rotationSpeed;
+                        auto delta2 = delta * speed;
+                        auto dx = Quaternion(up, delta2.x);
+                        auto dy = Quaternion(left, delta2.y);
+                        auto rot = dx.concatenating(dy).conjugated();
+
+                        auto t = dir.applying(rot);
+                        camera.dir = t.normalized();
+                    }
                     break;
                 }
+            }
+        }
+    }
+
+    void onKeyboardEvent(const Window::KeyboardEvent& event) {
+        if (event.deviceID == 0) {
+            std::unique_lock lock(mutex, std::defer_lock_t{});
+            switch (event.type) {
+            case Window::KeyboardEvent::KeyDown:
+                lock.lock();
+                pressingKeys.insert(event.key);
+                break;
+            case Window::KeyboardEvent::KeyUp:
+                lock.lock();
+                if (pressingKeys.contains(VirtualKey::LeftControl) || pressingKeys.contains(VirtualKey::RightControl)) {
+                    if (event.key == VirtualKey::U) {
+                        hideUI = !hideUI;
+                        Log::info(std::format("HideUI: {}", hideUI));
+                        return;
+                    }
+                }
+                pressingKeys.erase(event.key);
+                break;
             }
         }
     }
