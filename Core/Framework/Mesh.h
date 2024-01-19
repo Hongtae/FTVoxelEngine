@@ -97,8 +97,5 @@ namespace FV {
         uint32_t bindShaderUniformTextures(ShaderUniformSemantic semantic, const std::string& name, const SceneState& sceneState, ShaderBindingSet* bindingSet) const;
         uint32_t bindShaderUniformSamplers(ShaderUniformSemantic semantic, const std::string& name, const SceneState& sceneState, ShaderBindingSet* bindingSet) const;
         uint32_t bindShaderUniformBuffer(ShaderUniformSemantic semantic, ShaderDataType type, const std::string& name, const SceneState&, uint8_t* buffer, size_t length) const;
-
-        std::shared_ptr<GPUBuffer> mappableBuffer(CommandQueue*, std::shared_ptr<GPUBuffer> buffer) const {
-        }
     };
 }
