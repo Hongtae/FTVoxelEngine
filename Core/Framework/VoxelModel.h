@@ -113,27 +113,26 @@ namespace FV {
             return level;
         }
 
-        template <typename T> requires std::is_invocable_v<T, const Vector3&, uint32_t, const VoxelOctree&>
-        void enumerate(const Vector3& center, uint32_t depth, uint32_t numDepthLevels, T&& fn) const {
-            fn(center, depth, *this);
-            if (numDepthLevels > 0) {
-                float halfExtent = halfExtent(depth);
-                auto pivot = center - Vector3(halfExtent, halfExtent, halfExtent) * 0.5f;
+        template <typename T> requires std::is_invocable_v<T, const AABB&, const VoxelOctree&>
+        void enumerateSubtree(const AABB& aabb, T&& fn) const {
+            const auto pivot = aabb.min;
+            const auto halfExtents = aabb.extents() * 0.5f;
 
-                for (int i = 0; i < 8; ++i) {
-                    auto node = subdivisions[i];
-                    if (node == nullptr) continue;
+            for (int i = 0; i < 8; ++i) {
+                auto node = subdivisions[i];
+                if (node == nullptr) continue;
 
-                    const int x = i & 1;
-                    const int y = (i >> 1) & 1;
-                    const int z = (i >> 2) & 1;
+                const int x = i & 1;
+                const int y = (i >> 1) & 1;
+                const int z = (i >> 2) & 1;
 
-                    Vector3 pt = pivot;
-                    pt.x += halfExtent * x;
-                    pt.y += halfExtent * y;
-                    pt.z += halfExtent * z;
-                    node->enumerate(pt, depth+1, numDepthLevels-1, std::forward<T>(fn));
-                }
+                Vector3 pt = {
+                    pivot.x + halfExtents.x * x,
+                    pivot.y + halfExtents.y * y,
+                    pivot.z + halfExtents.z * z
+                };
+                AABB aabb2 = { pt, pt + halfExtents };
+                fn(aabb2, *node);
             }
         }
 

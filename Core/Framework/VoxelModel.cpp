@@ -556,51 +556,29 @@ int VoxelModel::enumerateLevel(int depth, std::function<void(const AABB&, uint32
 
     struct IterateDepth {
         const VoxelOctree& node;
-        const Vector3 center;
+        const AABB aabb;
         uint32_t level;
         uint32_t operator() (uint32_t depth, Callback& cb) {
-            float halfExtent = VoxelOctree::halfExtent(level);
-
             if (level < depth) {
-                uint32_t result = 0;
-                for (int i = 0; i < 8; ++i) {
-                    auto p = node.subdivisions[i];
-                    if (p == nullptr) continue;
-
-                    const int x = i & 1;
-                    const int y = (i >> 1) & 1;
-                    const int z = (i >> 2) & 1;
-
-                    Vector3 pt = {
-                         center.x + halfExtent * (float(x) - 0.5f),
-                         center.y + halfExtent * (float(y) - 0.5f),
-                         center.z + halfExtent * (float(z) - 0.5f),
-                    };
-                    result += IterateDepth{ *p, pt, level + 1 }(depth, cb);
-                }
-                if (result > 0)
-                    return result;
+                int result = 0;
+                node.enumerateSubtree(
+                    aabb, [&](const AABB& aabb2, const VoxelOctree& tree) {
+                        result += IterateDepth{ tree, aabb2, level + 1 }(depth, cb);
+                    });
+                return result;
             }
-            AABB aabb = {
-                center - Vector3(halfExtent, halfExtent, halfExtent),
-                center + Vector3(halfExtent, halfExtent, halfExtent)
-            };
+            FVASSERT_DEBUG(level == depth);
             cb(aabb, level, node);
             return 1;
         }
     };
     if (_root) {
         auto volume = this->aabb();
-        auto extents = volume.extents();
         FVASSERT_DEBUG(volume.isNull() == false);
-        Callback transCb = [&](const AABB& aabb, uint32_t depth, const VoxelOctree& octree) {
-            AABB aabb2 = {
-                aabb.min * extents + volume.min,
-                aabb.max * extents + volume.min
-            };
-            cb(aabb2, depth, octree);
-        };
-        return IterateDepth{ *_root, Vector3(0.5f, 0.5f, 0.5f), 0 }(std::clamp(depth, 0, 125), transCb);
+
+        if (volume.isNull() == false) {
+            return IterateDepth{ *_root, volume, 0 }(depth, cb);
+        }
     }
     return 0;
 }
