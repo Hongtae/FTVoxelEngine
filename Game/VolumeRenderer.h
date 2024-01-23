@@ -12,8 +12,7 @@ public:
     void prepareScene(const RenderPassDescriptor&, const ViewTransform& v, const ProjectionTransform& p) override;
     void render(const RenderPassDescriptor&, const Rect&) override;
 
-    ViewTransform view;
-    ProjectionTransform projection;
+    ViewFrustum viewFrustum;
     Transform transform;
     Vector3 lightDir;
 
@@ -22,6 +21,7 @@ public:
     void setModel(std::shared_ptr<VoxelModel> model);
     std::shared_ptr<VoxelModel> model() const { return voxelModel; }
 
+    float renderScale = 0.25f;
 private:
     ComputePipeline raycastVoxel;
     ComputePipeline clearBuffers;
@@ -37,6 +37,4 @@ private:
         std::shared_ptr<GPUBuffer> buffer;
     };
     std::vector<VoxelLayer> voxelLayers;
-    const uint32_t maxDepthLevel = 9U;
-    const uint32_t maxStartLevel = 2U;
 };

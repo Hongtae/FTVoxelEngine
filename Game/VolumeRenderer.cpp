@@ -4,8 +4,7 @@
 extern std::filesystem::path appResourcesRoot;
 
 VolumeRenderer::VolumeRenderer()
-    : view{}
-    , projection{}
+    : viewFrustum{ {}, {} }
     , transform{}
     , lightDir{ 0, 1, 0 } {
 }
@@ -62,97 +61,19 @@ void VolumeRenderer::finalize() {
 void VolumeRenderer::setModel(std::shared_ptr<VoxelModel> model) {
     voxelModel = model;
     voxelLayers.clear();
-
-    if (voxelModel) {
-        AABB aabb = voxelModel->aabb();
-        FVASSERT_DEBUG(aabb.isNull() == false);
-
-#pragma pack(push, 1)
-        struct VolumeArrayHeader {
-            Vector3 aabbMin;
-            uint32_t _padding_offset12;
-            Vector3 aabbMax;
-            uint32_t _padding_offset28;
-        };
-#pragma pack(pop)
-
-        voxelLayers.clear();
-        auto depth = voxelModel->depth();
-        uint32_t startDepth = 0;
-        if (depth > maxDepthLevel) {
-            startDepth = depth - maxDepthLevel;
-            startDepth = std::min(maxStartLevel, startDepth);
-        }
-        uint32_t numLayers = 1U << startDepth;
-        this->voxelLayers.reserve(numLayers);
-
-        auto device = queue->device().get();
-        int index = 0;
-        auto numNodes = voxelModel->enumerateLevel(
-            startDepth, [&](const AABB& aabb, uint32_t depth, const VoxelOctree& octree) {
-                auto numNodes = octree.numDescendants();
-                auto numLeafNodes = octree.numLeafNodes();
-                auto maxLevels = octree.maxDepthLevels();
-                Log::debug(std::format(
-                    enUS_UTF8,
-                    "node at depth:{} (max-depth:{}/{}), num-nodes:{:Ld}, num-leaf-nodes:{:Ld}",
-                    depth, maxDepthLevel, maxLevels, numNodes, numLeafNodes));
-
-                auto volumeData = octree.makeArray(aabb, maxDepthLevel);
-                if (volumeData.data.empty() == false) {
-                    size_t numNodes = volumeData.data.size();
-                    const auto dataLength = sizeof(VolumeArray::Node) * numNodes;
-
-                    VolumeArrayHeader header = {
-                        aabb.min, 0,
-                        aabb.max, 0,
-                    };
-                    size_t bufferLength = sizeof(header) + dataLength;
-                    auto stgBuffer = device->makeBuffer(bufferLength,
-                                                        GPUBuffer::StorageModeShared,
-                                                        CPUCacheModeWriteCombined);
-                    uint8_t* p = (uint8_t*)stgBuffer->contents();
-                    memcpy(p, &header, sizeof(header));
-                    p += sizeof(header);
-                    memcpy(p, volumeData.data.data(), dataLength);
-                    stgBuffer->flush();
-
-                    auto buffer = device->makeBuffer(bufferLength,
-                                                     GPUBuffer::StorageModePrivate,
-                                                     CPUCacheModeDefault);
-                    auto cbuffer = queue->makeCommandBuffer();
-                    auto encoder = cbuffer->makeCopyCommandEncoder();
-                    encoder->copy(stgBuffer, 0, buffer, 0, bufferLength);
-                    encoder->endEncoding();
-                    cbuffer->commit();
-
-                    VoxelLayer layer = {
-                        aabb,
-                        buffer
-                    };
-                    this->voxelLayers.push_back(layer);
-                    Log::debug(std::format(
-                        enUS_UTF8,
-                        "[{}] GPUBuffer {:Ld} bytes ({:Ld} nodes) has been created.",
-                        index,
-                        bufferLength,
-                        numNodes));
-                    index++;
-                }
-            });
-        Log::debug(std::format("VoxelModel-Enumerate depth:{}, num-nodes:{}",
-                               startDepth, numNodes));
-    }
 }
 
 void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTransform& v, const ProjectionTransform& p) {
-    this->view = v;
-    this->projection = p;
+    ViewTransform view = v;
+    ProjectionTransform projection = p;
 
     auto renderTarget = rp.colorAttachments.front().renderTarget;
 
     uint32_t width = renderTarget->width();
     uint32_t height = renderTarget->height();
+
+    width = width * renderScale;
+    height = height * renderScale;
 
     bool resetImages = true;
     if (outputImage) {
@@ -199,6 +120,7 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
 
         raycastVoxel.bindingSet->setTexture(0, outputImage);
         raycastVoxel.bindingSet->setTexture(1, depthImage);
+        Log::debug("VolumeRenderer: resetImages");
     }
 
     if (outputImage) {
@@ -211,7 +133,7 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
             auto aspect = float(width) / float(height);
             proj.matrix._11 = f / aspect;
         }
-        this->projection = proj;
+        projection = proj;
     }
 
 #pragma pack(push, 4)
@@ -296,11 +218,147 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
 
     if (resetImages)
         imageBlit.value().bindingSet->setTexture(0, outputImage);
+
+    this->viewFrustum = { view, projection };
+    // calculate volume depth
+    voxelLayers.clear();
+    if (voxelModel) {
+
+        auto nodeTM = transform.matrix4();
+        auto mvp = nodeTM.concatenating(view.matrix4()).concatenating(projection.matrix);
+
+        auto calculateDepthLevel = [&](const AABB& aabb, uint32_t width, uint32_t height) {
+            Vector3 aabbCornerVertices[8] = {
+                {aabb.min.x, aabb.min.y, aabb.min.z},
+                {aabb.max.x, aabb.min.y, aabb.min.z},
+                {aabb.min.x, aabb.max.y, aabb.min.z},
+                {aabb.max.x, aabb.max.y, aabb.min.z},
+                {aabb.min.x, aabb.min.y, aabb.max.z},
+                {aabb.max.x, aabb.min.y, aabb.max.z},
+                {aabb.min.x, aabb.max.y, aabb.max.z},
+                {aabb.max.x, aabb.max.y, aabb.max.z},
+            };
+
+            for (auto& v : aabbCornerVertices) { v.apply(mvp, 1.0); }
+
+            struct { float minX, maxX, minY, maxY; } ndcMinMaxPoint = {
+                aabbCornerVertices[0].x,
+                aabbCornerVertices[0].x,
+                aabbCornerVertices[0].y,
+                aabbCornerVertices[0].y,
+            };
+            for (int i = 1; i < 8; ++i) {
+                const auto& v = aabbCornerVertices[i];
+                ndcMinMaxPoint.minX = std::min(ndcMinMaxPoint.minX, v.x);
+                ndcMinMaxPoint.maxX = std::max(ndcMinMaxPoint.maxX, v.x);
+                ndcMinMaxPoint.minY = std::min(ndcMinMaxPoint.minY, v.y);
+                ndcMinMaxPoint.maxY = std::max(ndcMinMaxPoint.maxY, v.y);
+            }
+            auto pixelsX = (ndcMinMaxPoint.maxX - ndcMinMaxPoint.minX) * float(width - 1) * 0.5f;
+            auto pixelsY = (ndcMinMaxPoint.maxY - ndcMinMaxPoint.minY) * float(height - 1) * 0.5f;
+            auto effectivePixels = std::max(pixelsX, pixelsY);
+            if (effectivePixels > 1.0) {
+                return std::min(std::log2(effectivePixels), 125.0f);
+            }
+            return 0.0f;
+        };
+
+        bool printDebugInfo = false;
+        auto timestamp = std::chrono::high_resolution_clock::now();
+        if (!printDebugInfo) {
+            static std::chrono::time_point<std::chrono::high_resolution_clock> _timestamp = {};
+            std::chrono::duration<double> d = timestamp - _timestamp;
+            if (d.count() > 2.0) {
+                _timestamp = timestamp;
+                printDebugInfo = true;
+            }
+        }
+
+        constexpr uint32_t bestDisplayLevel = 6U;
+        constexpr uint32_t maxStartLevel = 4U;
+
+        AABB aabb = voxelModel->aabb();
+        
+        if (viewFrustum.isAABBInside(aabb)) {
+            const VoxelOctree* root = voxelModel->root();
+
+            uint32_t depthLevel = voxelModel->depth();
+
+            uint32_t bestFitDepth = (uint32_t)calculateDepthLevel(aabb, width, height);
+            uint32_t startLevel = 0;
+            if (depthLevel > bestDisplayLevel)
+                startLevel = 4;
+
+            uint32_t _debug_numIterations = 0;
+            uint32_t _debug_numCulling = 0;
+
+            VolumeArray volumeData = {};
+            if (startLevel > 0) {
+                volumeData = root->makeArray(
+                    aabb, depthLevel,
+                    [&](const AABB& aabb, uint32_t depth, uint32_t& maxDepth) {
+                        if (depth == startLevel) {
+                            _debug_numIterations++;
+                            if (viewFrustum.isAABBInside(aabb)) {
+                                uint32_t bestFit = (uint32_t)calculateDepthLevel(aabb, width, height);
+                                maxDepth = std::min({ maxDepth, bestFit + depth });
+                            } else {
+                                maxDepth = 0;
+                                _debug_numCulling++;
+                            }
+                        }
+                    });
+            } else {
+                volumeData = root->makeArray(aabb, bestFitDepth);
+            }
+
+            if (volumeData.data.empty() == false) {
+                size_t numNodes = volumeData.data.size();
+                const auto dataLength = sizeof(VolumeArray::Node) * numNodes;
+
+                VolumeArray::Header header = { aabb.min, 0, aabb.max, 0 };
+
+                size_t bufferLength = sizeof(header) + dataLength;
+                auto buffer = device->makeBuffer(bufferLength,
+                                                 GPUBuffer::StorageModeShared,
+                                                 CPUCacheModeWriteCombined);
+                uint8_t* p = (uint8_t*)buffer->contents();
+                memcpy(p, &header, sizeof(header));
+                p += sizeof(header);
+                memcpy(p, volumeData.data.data(), dataLength);
+                buffer->flush();
+
+                VoxelLayer layer = {
+                    aabb,
+                    buffer
+                };
+                this->voxelLayers.push_back(layer);
+            }
+
+            auto t = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> d = t - timestamp;
+
+            if (printDebugInfo) {
+                Log::debug(std::format(enUS_UTF8,
+                                       "VoxelModel nodes:{:Ld} (start:{}, depth:{}, bestfit:{}). iteration:{} cull:{}, elapsed: {:.4f}",
+                                       volumeData.data.size(),
+                                       startLevel,
+                                       depthLevel,
+                                       bestFitDepth,
+                                       _debug_numIterations,
+                                       _debug_numCulling,
+                                       d.count()));
+            }
+        } else {
+            if (printDebugInfo) {
+                Log::debug("AABB is not visible!");
+            }
+        }
+    }
 }
 
 void VolumeRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
     if (outputImage && depthImage) {
-
         uint32_t width = outputImage->width();
         uint32_t height = outputImage->height();
         FVASSERT_DEBUG(depthImage->width() == width);
@@ -336,9 +394,8 @@ void VolumeRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
             Color ambientColor = { 0.7, 0.7, 0.7, 1 };
 
             auto nodeTM = transform.matrix4();
-            auto mvp = nodeTM
-                .concatenating(view.matrix4())
-                .concatenating(projection.matrix);
+            auto mvp = nodeTM.concatenating(viewFrustum.matrix());
+
             PushConstantData pcdata = {
                 nodeTM.inverted(),
                 mvp.inverted(),
@@ -372,7 +429,6 @@ void VolumeRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
                                 &layer,
                                 z / w
                             };
-
                             zlayers.push_back(zl);
                         }
                         if (ascending) {
@@ -394,9 +450,9 @@ void VolumeRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
                     }
                     return layers;
                 };
-            auto viewFrustum = ViewFrustum(view, projection);
 
             std::vector<VoxelLayer> layersCopy = sortLayers(voxelLayers, mvp);
+
             int drawLayers = 0;
             for (auto& layer : layersCopy) {
                 if (viewFrustum.isAABBInside(layer.aabb) == false)
