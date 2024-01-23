@@ -63,7 +63,9 @@ bool VoxelOctree::mergeSolidBranches() {
     return false;
 }
 
-VolumeArray VoxelOctree::makeArray(const AABB& aabb, uint32_t maxDepth) const {
+VolumeArray VoxelOctree::makeArray(const AABB& aabb,
+                                   uint32_t maxDepth,
+                                   MakeArrayFilter filter) const {
     if (aabb.isNull())
         return {};
 
@@ -71,22 +73,37 @@ VolumeArray VoxelOctree::makeArray(const AABB& aabb, uint32_t maxDepth) const {
         const VoxelOctree* node;
         const Vector3 center;
         uint32_t depth;
+        const AABB& rootAABB;
+        MakeArrayFilter& filter;
         void operator() (std::vector<VolumeArray::Node>& vector, uint32_t maxDepth) const {
             auto index = vector.size();
             vector.push_back({});
-            auto& n = vector.at(index);
-            constexpr float q = float(std::numeric_limits<uint16_t>::max());
-            n.x = static_cast<uint16_t>(center.x * q);
-            n.y = static_cast<uint16_t>(center.y * q);
-            n.z = static_cast<uint16_t>(center.z * q);
-            n.depth = depth;
-            n.flags = 0;
-            n.color = node->value.color;
+            {
+                auto& n = vector.at(index);
+                constexpr float q = float(std::numeric_limits<uint16_t>::max());
+                n.x = static_cast<uint16_t>(center.x * q);
+                n.y = static_cast<uint16_t>(center.y * q);
+                n.z = static_cast<uint16_t>(center.z * q);
+                n.depth = depth;
+                n.flags = 0;
+                n.color = node->value.color;
+            }
+
+            uint32_t exp = (126U - depth) << 23;
+            float halfExtent = std::bit_cast<float>(exp);
+
+            if (filter) {
+                AABB aabb = {
+                    center - Vector3(halfExtent, halfExtent, halfExtent),
+                    center + Vector3(halfExtent, halfExtent, halfExtent)
+                };
+                auto extents = rootAABB.extents();
+                aabb.min = rootAABB.min + aabb.min * extents;
+                aabb.max = rootAABB.min + aabb.max * extents;
+                filter(aabb, depth, maxDepth);
+            }
 
             if (depth < maxDepth) {
-                uint32_t exp = (126U - depth) << 23;
-                float halfExtent = std::bit_cast<float>(exp);
-
                 for (int i = 0; i < 8; ++i) {
                     auto p = node->subdivisions[i];
                     if (p) {
@@ -99,11 +116,12 @@ VolumeArray VoxelOctree::makeArray(const AABB& aabb, uint32_t maxDepth) const {
                              center.y + halfExtent * (float(y) - 0.5f),
                              center.z + halfExtent * (float(z) - 0.5f),
                         };
-                        MakeArray{ p, pt, depth + 1 }(vector, maxDepth);
+                        MakeArray{ p, pt, depth + 1, rootAABB, filter }(vector, maxDepth);
                     }
                 }
             }
             auto advance = (vector.size() - index);
+            auto& n = vector.at(index);
             FVASSERT_DEBUG(advance < std::numeric_limits<decltype(n.advance)>::max());
             n.advance = static_cast<decltype(n.advance)>(advance);
             if (n.advance == 1) { // leaf-node
@@ -114,10 +132,10 @@ VolumeArray VoxelOctree::makeArray(const AABB& aabb, uint32_t maxDepth) const {
     };
     VolumeArray volumes = {};
     volumes.aabb = aabb;
-    volumes.data.reserve(numDescendants());
+    //volumes.data.reserve(countNodesToDepth(maxDepth));
     maxDepth = std::clamp(maxDepth, 0U, VoxelOctree::maxDepth);
-    MakeArray{ this, Vector3(0.5f, 0.5f, 0.5f), 0 }(volumes.data, maxDepth);
-    volumes.data.shrink_to_fit();
+    MakeArray{ this, Vector3(0.5f, 0.5f, 0.5f), 0, aabb, filter }(volumes.data, maxDepth);
+    //volumes.data.shrink_to_fit();
     return volumes;
 }
 
@@ -565,9 +583,11 @@ int VoxelModel::enumerateLevel(int depth, std::function<void(const AABB&, uint32
                     aabb, [&](const AABB& aabb2, const VoxelOctree& tree) {
                         result += IterateDepth{ tree, aabb2, level + 1 }(depth, cb);
                     });
-                return result;
+                if (result > 0)
+                    return result;
             }
-            FVASSERT_DEBUG(level == depth);
+            // The level is equal to the depth, or no more children exist at the current level.
+            //FVASSERT_DEBUG(level == depth);
             cb(aabb, level, node);
             return 1;
         }
@@ -671,9 +691,9 @@ uint64_t VoxelModel::rayTest(const Vector3& rayOrigin, const Vector3& dir,
                     }
                 }
                 if (leafNode) {
-                    uint32_t x = std::floor(center.x * resolution);
-                    uint32_t y = std::floor(center.y * resolution);
-                    uint32_t z = std::floor(center.z * resolution);
+                    uint32_t x = (uint32_t)std::floor(center.x * resolution);
+                    uint32_t y = (uint32_t)std::floor(center.y * resolution);
+                    uint32_t z = (uint32_t)std::floor(center.z * resolution);
                     if (callback(RayHitResult{ r, node, {x, y, z}, depth }) == false) {
                         continueRayTest = false;
                     }

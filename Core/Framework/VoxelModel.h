@@ -43,6 +43,12 @@ namespace FV {
                 };
             }
         };
+        struct Header {
+            Vector3 aabbMin;
+            uint32_t _padding_offset12;
+            Vector3 aabbMax;
+            uint32_t _padding_offset28;
+        };
 #pragma pack(pop)
         static_assert(sizeof(Node) == 16);
 
@@ -66,7 +72,7 @@ namespace FV {
         Voxel value;
         VoxelOctree* subdivisions[8] = {};
 
-        static constexpr auto maxDepth = 10U; // 2^(10*3)
+        static constexpr auto maxDepth = 124U;
 
         bool isLeafNode() const {
             auto merge = [&]<int... N>(std::integer_sequence<int, N...>) {
@@ -85,6 +91,17 @@ namespace FV {
             for (auto p : subdivisions) {
                 if (p)
                     n += p->numDescendants();
+            }
+            return n;
+        }
+
+        size_t countNodesToDepth(uint32_t depth, uint32_t cdepth = 0) const {
+            size_t n = 1;
+            if (depth > cdepth) {
+                for (auto p : subdivisions) {
+                    if (p)
+                        n += p->countNodesToDepth(depth, cdepth + 1);
+                }
             }
             return n;
         }
@@ -137,8 +154,10 @@ namespace FV {
         }
 
         bool mergeSolidBranches();
-
-        VolumeArray makeArray(const AABB& aabb, uint32_t maxDepth) const;
+        /* Filter(current-AABB, current-depth, maxDepth) */
+        using MakeArrayFilter = std::function<void(const AABB&, uint32_t, uint32_t&)>;
+        VolumeArray makeArray(const AABB& aabb, uint32_t maxDepth,
+                              MakeArrayFilter = {}) const;
     };
 
     class VoxelOctreeBuilder {
