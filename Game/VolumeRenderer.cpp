@@ -287,7 +287,7 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
             uint32_t bestFitDepth = (uint32_t)calculateDepthLevel(aabb, width, height);
             uint32_t startLevel = 0;
             if (depthLevel > std::min(optimalDisplayLevel, maxDisplayDepth))
-                startLevel = 4;
+                startLevel = 8;
 
             uint32_t _debug_numIterations = 0;
             uint32_t _debug_numCulling = 0;
@@ -295,7 +295,7 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
             VolumeArray volumeData = {};
             if (startLevel > 0) {
                 volumeData = root->makeArray(
-                    aabb, depthLevel,
+                    aabb, maxDisplayDepth,
                     [&](const AABB& aabb, uint32_t depth, uint32_t& maxDepth) {
                         if (depth == startLevel) {
                             _debug_numIterations++;
@@ -357,8 +357,10 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
     }
 }
 
+bool stopRendering = false;
+
 void VolumeRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
-    if (outputImage && depthImage) {
+    if (!stopRendering && outputImage && depthImage) {
         uint32_t width = outputImage->width();
         uint32_t height = outputImage->height();
         FVASSERT_DEBUG(depthImage->width() == width);

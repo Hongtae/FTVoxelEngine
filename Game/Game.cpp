@@ -175,6 +175,17 @@ struct App : public Application {
             if (ImGui::SliderInt("Render Scale", &renderScale, 10, 100, nullptr, ImGuiSliderFlags_None)) {
                 volumeRenderer->renderScale = float(renderScale) * 0.01f;
             }
+            auto model = volumeRenderer->model().get();
+            float modelScale = 0.0f;
+            if (model) {
+                modelScale = model->scale();
+            }
+            ImGui::BeginDisabled(modelScale < 0.001f);
+            if (ImGui::InputFloat("Model Scale", &modelScale, 0.01f, 1.0f, "%.3f")) {
+                modelScale = std::max(modelScale, 0.001f);
+                model->setScale(modelScale);
+            }
+            ImGui::EndDisabled();
         }
         ImGui::End();
 
@@ -245,8 +256,8 @@ struct App : public Application {
         Vector3 dir = { 0, 0, -1 };
         Vector3 up = { 0, 1, 0 };
         float fov = degreeToRadian(80.f);
-        float nearZ = 0.01f;
-        float farZ = 10000.0f;
+        float nearZ = 0.001f;
+        float farZ = 1000.0f;
         float movementSpeed = 1.0f;
         float rotationSpeed = 0.01f;
     } camera;
@@ -466,6 +477,12 @@ struct App : public Application {
                     if (event.key == VirtualKey::U) {
                         hideUI = !hideUI;
                         Log::info("HideUI: {}", hideUI);
+                        return;
+                    }
+                    if (event.key == VirtualKey::P) {
+                        extern bool stopRendering;
+                        stopRendering = !stopRendering;
+                        Log::info("StopRendering: {}", stopRendering);
                         return;
                     }
                 }

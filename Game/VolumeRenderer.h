@@ -21,7 +21,7 @@ public:
     void setModel(std::shared_ptr<VoxelModel> model);
     std::shared_ptr<VoxelModel> model() const { return voxelModel; }
 
-    float renderScale = 0.25f;
+    float renderScale = 0.5f;
     uint32_t maxDisplayDepth = 10;
 
 private:
