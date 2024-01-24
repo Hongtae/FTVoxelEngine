@@ -81,8 +81,8 @@ VertexDescriptor Mesh::vertexDescriptor() const {
             };
             attributes.push_back(descriptor);
         } else {
-            Log::error(std::format("Cannot bind vertex buffer at location: {} (name:{})",
-                                   input.location, input.name));
+            Log::error("Cannot bind vertex buffer at location: {} (name:{})",
+                       input.location, input.name);
         }
     }
 
@@ -158,8 +158,7 @@ bool Mesh::initResources(GraphicsDevice* device, BufferUsagePolicy policy) {
                                              GPUBuffer::StorageModeShared,
                                              CPUCacheModeWriteCombined);
             if (buffer == nullptr) {
-                Log::error(std::format("failed to make buffer with length:{}",
-                                       bufferLength));
+                Log::error("failed to make buffer with length:{}", bufferLength);
                 return false;
             }
             numBuffersGenerated++;
@@ -207,8 +206,7 @@ bool Mesh::initResources(GraphicsDevice* device, BufferUsagePolicy policy) {
                                                  GPUBuffer::StorageModeShared,
                                                  CPUCacheMode::CPUCacheModeWriteCombined);
                 if (buffer == nullptr) {
-                    Log::error(std::format("failed to make buffer with length:{}",
-                                           bufferLength));
+                    Log::error("failed to make buffer with length:{}", bufferLength);
                     return false;
                 }
                 numBuffersGenerated++;
@@ -253,8 +251,8 @@ bool Mesh::initResources(GraphicsDevice* device, BufferUsagePolicy policy) {
                                                             GPUBuffer::StorageModeShared,
                                                             CPUCacheMode::CPUCacheModeWriteCombined);
                         if (gpuBuffer == nullptr) {
-                            Log::error(std::format("failed to make buffer with length:{}",
-                                                   bufferLength));
+                            Log::error("failed to make buffer with length:{}",
+                                       bufferLength);
                             return false;
                         }
                         numBuffersGenerated++;
@@ -275,8 +273,8 @@ bool Mesh::initResources(GraphicsDevice* device, BufferUsagePolicy policy) {
         this->bufferResources.merge(std::move(resourceMap));
     } else {
     }
-    Log::debug(std::format("initResources generated {:d} buffers, {:d} bytes.",
-                           numBuffersGenerated, totalBytesAllocated));
+    Log::debug("initResources generated {:d} buffers, {:d} bytes.",
+               numBuffersGenerated, totalBytesAllocated);
     return true;
 }
 
@@ -373,14 +371,14 @@ bool Mesh::buildPipelineState(GraphicsDevice* device, PipelineReflection* rep) {
                 resource.binding.arrayLength = descriptor.count;
                 rbset->resources.push_back(resource);
             } else {
-                Log::error(std::format(
+                Log::error(
                     "Unable to find shader resource information (set:{}, binding:{}, name:\"{}\")",
-                    res.set, res.binding, res.name));
+                    res.set, res.binding, res.name);
                 if (strict) return false;
             }
         } else {
-            Log::error(std::format(
-                "Cannot find shader resource descriptor (name:{})", res.name));
+            Log::error(
+                "Cannot find shader resource descriptor (name:{})", res.name);
             if (strict) return false;
         }
     }
@@ -460,9 +458,10 @@ void Mesh::updateShadingProperties(const SceneState* sceneState) {
                                               bindingOffset)
                         .bind(buffer + m.offset, length - m.offset);
                     if (s == 0) {
-                        Log::warning(std::format(
+                        Log::warning(
                             "Unable to bind shader uniform struct element: {} name:\"{}\"",
-                            ShaderBindingLocation{ set, binding, bindingOffset }, path));
+                            ShaderBindingLocation{ set, binding, bindingOffset },
+                            path);
                     }
                     copied = member.offset + s;
                 }
@@ -494,9 +493,9 @@ void Mesh::updateShadingProperties(const SceneState* sceneState) {
                                                         buffer, length);
                 }
                 if (copied == 0) {
-                    Log::warning(std::format(
+                    Log::warning(
                         "Unable to bind shader uniform struct ({}), arrayIndex:{}, name:\"{}\"",
-                        location, structArrayIndex, path));
+                        location, structArrayIndex, path);
                 }
             }
             return copied;
@@ -528,9 +527,10 @@ void Mesh::updateShadingProperties(const SceneState* sceneState) {
                         path = member.name;
 
                     if (member.offset + member.size - offset > bufferLength) {
-                        Log::error(std::format(
+                        Log::error(
                             "Insufficient buffer for shader uniform struct {}, size:{}, name:\"{}\"",
-                            ShaderBindingLocation{ set, binding, member.offset }, size, path));
+                            ShaderBindingLocation{ set, binding, member.offset },
+                            size, path);
                         break;
                     }
 
@@ -543,9 +543,10 @@ void Mesh::updateShadingProperties(const SceneState* sceneState) {
                     if (s > 0) {
                         copied += s;
                     } else {
-                        Log::warning(std::format(
+                        Log::warning(
                             "Unable to bind shader uniform struct {}, size:{}, name:\"{}\"",
-                            ShaderBindingLocation{ set, binding, member.offset }, size, path));
+                            ShaderBindingLocation{ set, binding, member.offset },
+                            size, path);
                     }
                 }
             } else {
@@ -567,9 +568,9 @@ void Mesh::updateShadingProperties(const SceneState* sceneState) {
                                                   name, offset, buffer, bufferLength);
                 }
                 if (copied == 0) {
-                    Log::warning(std::format(
+                    Log::warning(
                         "Unable to bind shader uniform struct ({}), arrayIndex:{}, name:\"{}\"",
-                        location, arrayIndex, name));
+                        location, arrayIndex, name);
                 }
             }
 
@@ -610,14 +611,14 @@ void Mesh::updateShadingProperties(const SceneState* sceneState) {
 
                                 updatedBuffers.push_back(bufferInfo);
                             } else {
-                                Log::error(std::format(
+                                Log::error(
                                     "Failed to map buffer for resource set:{}, binding:{} name:\"{}\"",
-                                    res.set, res.binding, res.name));
+                                    res.set, res.binding, res.name);
                             }
                         } else {
-                            Log::error(std::format(
+                            Log::error(
                                 "Buffer is too small for resource set:{}, binding:{} name:\"{}\"",
-                                res.set, res.binding, res.name));
+                                res.set, res.binding, res.name);
                             updatedBuffers.clear();
                             break;
                         }
@@ -628,9 +629,9 @@ void Mesh::updateShadingProperties(const SceneState* sceneState) {
                             uint32_t(updatedBuffers.size()),
                             updatedBuffers.data());
                     } else {
-                        Log::error(std::format(
+                        Log::error(
                             "failed to bind buffer resource set:{:d}, binding:{:d} name:\"{}\"",
-                            res.set, res.binding, res.name));
+                            res.set, res.binding, res.name);
                     }
                 }
             } else {
@@ -676,9 +677,8 @@ void Mesh::updateShadingProperties(const SceneState* sceneState) {
                 }
 
                 if (bounds == 0) {
-                    Log::error(std::format(
-                        "Failed to bind resource: {} (name: {}, type: {})",
-                        res.binding, res.name, uint32_t(res.type)));
+                    Log::error("Failed to bind resource: {} (name: {}, type: {})",
+                        res.binding, res.name, uint32_t(res.type));
                 }
             }
         }
@@ -844,9 +844,8 @@ uint32_t Mesh::bindShaderUniformTextures(ShaderUniformSemantic semantic,
                                          const std::string& name,
                                          const SceneState& sceneState,
                                          ShaderBindingSet* bindingSet) const {
-    Log::warning(std::format(
-        "No textures for ShaderUniformSemantic:{} name:\"{}\"",
-        (uint32_t)semantic, name));
+    Log::warning("No textures for ShaderUniformSemantic:{} name:\"{}\"",
+                 (uint32_t)semantic, name);
     return 0;
 }
 
@@ -854,9 +853,8 @@ uint32_t Mesh::bindShaderUniformSamplers(ShaderUniformSemantic semantic,
                                          const std::string& name,
                                          const SceneState& sceneState,
                                          ShaderBindingSet* bindingSet) const {
-    Log::warning(std::format(
-        "No samplers for ShaderUniformSemantic:{} name:\"{}\"",
-        (uint32_t)semantic, name));
+    Log::warning("No samplers for ShaderUniformSemantic:{} name:\"{}\"",
+                 (uint32_t)semantic, name);
     return 0;
 }
 
@@ -954,9 +952,9 @@ bool Mesh::encodeRenderCommand(RenderCommandEncoder* encoder,
                 std::vector<uint8_t> buffer(bufferSize, 0);
                 for (auto& pc : pushConstants) {
                     if (pc.data.size() < pc.layout.size) {
-                        Log::error(std::format(
+                        Log::error(
                             "PushConstant (name:\"{}\", offset:{}, size:{}) data is missing!",
-                            pc.layout.name, pc.layout.offset, pc.layout.size));
+                            pc.layout.name, pc.layout.offset, pc.layout.size);
                         continue;
                     }
                     memcpy(&(buffer.data()[pc.layout.offset]), pc.data.data(), pc.layout.size);

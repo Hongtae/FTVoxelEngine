@@ -69,17 +69,16 @@ VulkanGraphicsDevice::VulkanGraphicsDevice(std::shared_ptr<VulkanInstance> ins,
     for (auto& ext : requiredExtensions) {
         deviceExtensions.push_back(ext.c_str());
         if (physicalDevice.hasExtension(ext) == false) {
-            Log::warning(std::format(
+            Log::warning(
                 "Vulkan device extension: \"{}\" not supported, but required.",
-                ext));
+                ext);
         }
     }
     for (auto& ext : optionalExtensions) {
         if (physicalDevice.hasExtension(ext))
             deviceExtensions.push_back(ext.c_str());
         else {
-            Log::warning(std::format(
-                "Vulkan device extension: \"{}\" not supported.", ext));
+            Log::warning("Vulkan device extension: \"{}\" not supported.", ext);
         }
     }
 
@@ -126,7 +125,7 @@ VulkanGraphicsDevice::VulkanGraphicsDevice(std::shared_ptr<VulkanInstance> ins,
     VkResult err = vkCreateDevice(physicalDevice.device, &deviceCreateInfo,
                                   instance->allocationCallback, &device);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkCreateDevice failed: {}", err));
+        Log::error("vkCreateDevice failed: {}", err);
         throw std::runtime_error("vkCreateDevice failed");
     }
     this->device = device;
@@ -271,15 +270,15 @@ std::shared_ptr<ShaderModule> VulkanGraphicsDevice::makeShaderModule(const Shade
 
     for (auto& layout : shader.pushConstantLayouts()) {
         if (layout.offset >= maxPushConstantsSize) {
-            Log::error(std::format(
+            Log::error(
                 "PushConstant offset is out of range. (offset: {:d}, limit: {:d})",
-                layout.offset, maxPushConstantsSize));
+                layout.offset, maxPushConstantsSize);
             return nullptr;
         }
         if (layout.offset + layout.size > maxPushConstantsSize) {
-            Log::error(std::format(
+            Log::error(
                 "PushConstant range exceeded limit. (offset: {:d}, size: {:d}, limit: {:d})",
-                layout.offset, layout.size, maxPushConstantsSize));
+                layout.offset, layout.size, maxPushConstantsSize);
             return nullptr;
         }
     }
@@ -289,10 +288,10 @@ std::shared_ptr<ShaderModule> VulkanGraphicsDevice::makeShaderModule(const Shade
     if (threadWorkgroupSize.x > maxComputeWorkgroupSize[0] ||
         threadWorkgroupSize.y > maxComputeWorkgroupSize[1] ||
         threadWorkgroupSize.z > maxComputeWorkgroupSize[2]) {
-        Log::error(std::format(
+        Log::error(
             "Thread-WorkGroup size exceeded limit. Size:({:d},{:d},{:d}), Limit:({:d},{:d},{:d})",
             threadWorkgroupSize.x, threadWorkgroupSize.y, threadWorkgroupSize.z,
-            maxComputeWorkgroupSize[0], maxComputeWorkgroupSize[1], maxComputeWorkgroupSize[2]));
+            maxComputeWorkgroupSize[0], maxComputeWorkgroupSize[1], maxComputeWorkgroupSize[2]);
         return nullptr;
     }
 
@@ -310,7 +309,7 @@ std::shared_ptr<ShaderModule> VulkanGraphicsDevice::makeShaderModule(const Shade
     shaderModuleCreateInfo.pCode = spvData.data();
     VkResult err = vkCreateShaderModule(this->device, &shaderModuleCreateInfo, this->allocationCallbacks(), &shaderModule);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkCreateShaderModule failed: {}", err));
+        Log::error("vkCreateShaderModule failed: {}", err);
         return nullptr;
     }
 
@@ -375,7 +374,7 @@ std::shared_ptr<ShaderBindingSet> VulkanGraphicsDevice::makeShaderBindingSet(con
         VkDescriptorSetLayout setLayout = VK_NULL_HANDLE;
         VkResult err = vkCreateDescriptorSetLayout(device, &layoutCreateInfo, allocationCallbacks(), &setLayout);
         if (err != VK_SUCCESS) {
-            Log::error(std::format("vkCreateDescriptorSetLayout failed: {}", err));
+            Log::error("vkCreateDescriptorSetLayout failed: {}", err);
             return nullptr;
         }
         return std::make_shared<VulkanShaderBindingSet>(shared_from_this(), setLayout, poolID, layoutCreateInfo);
@@ -523,7 +522,7 @@ std::shared_ptr<GPUBuffer> VulkanGraphicsDevice::makeBuffer(size_t length, GPUBu
     auto& mem = memory.value();
     err = vkBindBufferMemory(device, buffer, mem.chunk->memory, mem.offset);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkBindBufferMemory failed: {}", err));
+        Log::error("vkBindBufferMemory failed: {}", err);
         return nullptr;
     }
     auto bufferObject = std::make_shared<VulkanBuffer>(shared_from_this(), mem, buffer, bufferCreateInfo);
@@ -614,7 +613,7 @@ std::shared_ptr<Texture> VulkanGraphicsDevice::makeTexture(const TextureDescript
 
     VkResult err = vkCreateImage(device, &imageCreateInfo, allocationCallbacks(), &image);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkCreateImage failed: {}", err));
+        Log::error("vkCreateImage failed: {}", err);
         return nullptr;
     }
 
@@ -652,7 +651,7 @@ std::shared_ptr<Texture> VulkanGraphicsDevice::makeTexture(const TextureDescript
     auto& mem = memory.value();
     err = vkBindImageMemory(device, image, mem.chunk->memory, mem.offset);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkBindImageMemory failed: {}", err));
+        Log::error("vkBindImageMemory failed: {}", err);
         return nullptr;
     }
 
@@ -719,7 +718,7 @@ std::shared_ptr<Texture> VulkanGraphicsDevice::makeTexture(const TextureDescript
         VkImageView imageView = VK_NULL_HANDLE;
         err = vkCreateImageView(device, &imageViewCreateInfo, allocationCallbacks(), &imageView);
         if (err != VK_SUCCESS) {
-            Log::error(std::format("vkCreateImageView failed: {}", err));
+            Log::error("vkCreateImageView failed: {}", err);
             return nullptr;
         }
         return std::make_shared<VulkanImageView>(imageObject, imageView, imageViewCreateInfo);
@@ -786,7 +785,7 @@ std::shared_ptr<Texture> VulkanGraphicsDevice::makeTransientRenderTarget(Texture
 
     VkResult err = vkCreateImage(device, &imageCreateInfo, allocationCallbacks(), &image);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkCreateImage failed: {}", err));
+        Log::error("vkCreateImage failed: {}", err);
         return nullptr;
     }
 
@@ -830,7 +829,7 @@ std::shared_ptr<Texture> VulkanGraphicsDevice::makeTransientRenderTarget(Texture
     auto& mem = memory.value();
     err = vkBindImageMemory(device, image, mem.chunk->memory, mem.offset);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkBindImageMemory failed: {}", err));
+        Log::error("vkBindImageMemory failed: {}", err);
         return nullptr;
     }
 
@@ -885,7 +884,7 @@ std::shared_ptr<Texture> VulkanGraphicsDevice::makeTransientRenderTarget(Texture
     VkImageView imageView = VK_NULL_HANDLE;
     err = vkCreateImageView(device, &imageViewCreateInfo, allocationCallbacks(), &imageView);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkCreateImageView failed: {}", err));
+        Log::error("vkCreateImageView failed: {}", err);
         return nullptr;
     }
     return std::make_shared<VulkanImageView>(imageObject, imageView, imageViewCreateInfo);
@@ -972,7 +971,7 @@ std::shared_ptr<SamplerState> VulkanGraphicsDevice::makeSamplerState(const Sampl
     VkSampler sampler = VK_NULL_HANDLE;
     VkResult err = vkCreateSampler(device, &createInfo, allocationCallbacks(), &sampler);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkCreateSampler failed: {}", err));
+        Log::error("vkCreateSampler failed: {}", err);
         return nullptr;
     }
     return std::make_shared<VulkanSampler>(shared_from_this(), sampler);
@@ -998,7 +997,7 @@ std::shared_ptr<GPUEvent> VulkanGraphicsDevice::makeEvent() {
 
     VkResult err = vkCreateSemaphore(device, &createInfo, allocationCallbacks(), &semaphore);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkCreateSemaphore failed: {}", err));
+        Log::error("vkCreateSemaphore failed: {}", err);
         return nullptr;
     }
     return std::make_shared<VulkanSemaphore>(shared_from_this(), semaphore);
@@ -1017,7 +1016,7 @@ std::shared_ptr<GPUSemaphore> VulkanGraphicsDevice::makeSemaphore() {
 
     VkResult err = vkCreateSemaphore(device, &createInfo, allocationCallbacks(), &semaphore);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkCreateSemaphore failed: {}", err));
+        Log::error("vkCreateSemaphore failed: {}", err);
         return nullptr;
     }
     return std::make_shared<VulkanTimelineSemaphore>(shared_from_this(), semaphore);
@@ -1041,7 +1040,8 @@ std::shared_ptr<RenderPipelineState> VulkanGraphicsDevice::makeRenderPipelineSta
 
     for (auto& attachment : desc.colorAttachments) {
         if (isColorFormat(attachment.pixelFormat) == false) {
-            Log::error(std::format("Invalid attachment pixel format: {}", int(attachment.pixelFormat)));
+            Log::error("Invalid attachment pixel format: {}",
+                       int(attachment.pixelFormat));
             return nullptr;
         }
     }
@@ -1053,9 +1053,9 @@ std::shared_ptr<RenderPipelineState> VulkanGraphicsDevice::makeRenderPipelineSta
             return std::max(result, item.index + 1);
         });
     if (colorAttachmentCount > this->properties().limits.maxColorAttachments) {
-        Log::error(std::format("The number of colors attached exceeds the device limit. {} > {}",
-                               colorAttachmentCount,
-                               this->properties().limits.maxColorAttachments));
+        Log::error("The number of colors attached exceeds the device limit. {} > {}",
+                   colorAttachmentCount,
+                   this->properties().limits.maxColorAttachments);
         return nullptr;
     }
 
@@ -1357,7 +1357,7 @@ std::shared_ptr<RenderPipelineState> VulkanGraphicsDevice::makeRenderPipelineSta
 
     err = vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineCreateInfo, allocationCallbacks(), &pipeline);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkCreateGraphicsPipelines failed: {}", err));
+        Log::error("vkCreateGraphicsPipelines failed: {}", err);
         return nullptr;
     }
     savePipelineCache();
@@ -1498,7 +1498,7 @@ std::shared_ptr<ComputePipelineState> VulkanGraphicsDevice::makeComputePipelineS
 
     err = vkCreateComputePipelines(device, pipelineCache, 1, &pipelineCreateInfo, allocationCallbacks(), &pipeline);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkCreateComputePipelines failed: {}", err));
+        Log::error("vkCreateComputePipelines failed: {}", err);
         return nullptr;
     }
     savePipelineCache();
@@ -1600,7 +1600,7 @@ void VulkanGraphicsDevice::loadPipelineCache() {
 
     VkResult err = vkCreatePipelineCache(this->device, &pipelineCreateInfo, allocationCallbacks(), &this->pipelineCache);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkCreatePipelineCache failed: {}", err));
+        Log::error("vkCreatePipelineCache failed: {}", err);
     }
 }
 
@@ -1628,7 +1628,7 @@ void VulkanGraphicsDevice::savePipelineCache() {
         if (err == VK_SUCCESS) {
             // save data to file!
         } else {
-            Log::error(std::format("vkGetPipelineCacheData failed: {}", err));
+            Log::error("vkGetPipelineCacheData failed: {}", err);
         }
     } else {
         Log::error("VkPipelineCache is NULL");
@@ -1723,9 +1723,9 @@ VkPipelineLayout VulkanGraphicsDevice::makePipelineLayout(std::initializer_list<
                                 b.descriptorCount = std::max(b.descriptorCount, desc.count);
                                 b.stageFlags |= module->stage;
                             } else {
-                                Log::error(std::format(
+                                Log::error(
                                     "descriptor binding conflict! (set={:d}, binding={:d})",
-                                    setIndex, desc.binding));
+                                    setIndex, desc.binding);
                                 return VK_NULL_HANDLE;
                             }
                         }
@@ -1757,7 +1757,7 @@ VkPipelineLayout VulkanGraphicsDevice::makePipelineLayout(std::initializer_list<
         VkDescriptorSetLayout setLayout = VK_NULL_HANDLE;
         err = vkCreateDescriptorSetLayout(device, &setLayoutCreateInfo, allocationCallbacks(), &setLayout);
         if (err != VK_SUCCESS) {
-            Log::error(std::format("vkCreateDescriptorSetLayout failed: {}", err));
+            Log::error("vkCreateDescriptorSetLayout failed: {}", err);
             return VK_NULL_HANDLE;
         }
         descriptorSetLayouts.push_back(setLayout);
@@ -1772,7 +1772,7 @@ VkPipelineLayout VulkanGraphicsDevice::makePipelineLayout(std::initializer_list<
     VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
     err = vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, allocationCallbacks(), &pipelineLayout);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkCreatePipelineLayout failed: {}", err));
+        Log::error("vkCreatePipelineLayout failed: {}", err);
         return VK_NULL_HANDLE;
     }
     return pipelineLayout;
@@ -1830,14 +1830,14 @@ void VulkanGraphicsDevice::fenceCompletionCallbackThreadProc(std::stop_token sto
                     err = vkResetFences(device,
                                         (uint32_t)fences.size(), fences.data());
                     if (err != VK_SUCCESS) {
-                        Log::error(std::format("vkResetFences failed: {}", err));
+                        Log::error("vkResetFences failed: {}", err);
                         // runtime error!
                         //FVASSERT(err == VK_SUCCESS);
                         FVERROR_ABORT("vkResetFences failed");
                     }
                 }
             } else if (err != VK_TIMEOUT) {
-                Log::error(std::format("vkResetFences failed: {}", err));
+                Log::error("vkResetFences failed: {}", err);
                 //FVASSERT(0);
                 FVERROR_ABORT("vkResetFences failed");
             }
@@ -1899,13 +1899,12 @@ VkFence VulkanGraphicsDevice::fence() {
         VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
         VkResult err = vkCreateFence(device, &fenceCreateInfo, allocationCallbacks(), &fence);
         if (err != VK_SUCCESS) {
-            Log::error(std::format("vkCreateFence failed: {}", err));
+            Log::error("vkCreateFence failed: {}", err);
             FVASSERT(err == VK_SUCCESS);
         }
         std::unique_lock lock(fenceCompletionMutex);
         this->numberOfFences += 1;
-        Log::info(std::format("Queue Completion Helper: Num-Fences: {:d}",
-                              numberOfFences));
+        Log::info("Queue Completion Helper: Num-Fences: {:d}", numberOfFences);
     }
     return fence;
 }

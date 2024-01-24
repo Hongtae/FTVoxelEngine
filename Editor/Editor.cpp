@@ -49,7 +49,7 @@ public:
 
     void initialize() override {
         appResourcesRoot = environmentPath(EnvironmentPath::AppRoot) / "Editor.Resources";
-        Log::debug(std::format("App-Resources: \"{}\"", appResourcesRoot.generic_u8string()));
+        Log::debug("App-Resources: \"{}\"", appResourcesRoot.generic_u8string());
 
         window = Window::makeWindow(u8"FV-Editor",
                                     Window::StyleGenericWindow,
@@ -166,7 +166,7 @@ public:
     }
 
     void loadModel(std::filesystem::path path) {
-        Log::info(std::format("Loading gltf-model: {}", path.generic_u8string()));
+        Log::info("Loading gltf-model: {}", path.generic_u8string());
         auto model = meshRenderer->loadModel(path, colorFormat, depthFormat);
         if (model) {
             AABB aabb = meshRenderer->aabb;
@@ -359,34 +359,34 @@ public:
                         return ss.str();
                     };
                     if (ImGui::MenuItem("Async test")) {
-                        Log::debug(std::format("async test - thread:{}", currentThreadID()));
+                        Log::debug("async test - thread:{}", currentThreadID());
                         auto t = async(
                             [&] {
-                                Log::debug(std::format("async - thread:{}", currentThreadID()));
+                                Log::debug("async - thread:{}", currentThreadID());
                             });
                         t->wait();
                     }
                     if (ImGui::MenuItem("Await test")) {
-                        Log::debug(std::format("await test - thread:{}", currentThreadID()));
+                        Log::debug("await test - thread:{}", currentThreadID());
                         auto t = await(
                             [&] {
-                                Log::debug(std::format("await - thread:{}", currentThreadID()));
+                                Log::debug("await - thread:{}", currentThreadID());
                                 return 1234;
                             });
-                        Log::debug(std::format("await result: {}, thread:{}", t, currentThreadID()));
+                        Log::debug("await result: {}, thread:{}", t, currentThreadID());
                     }
                     if (ImGui::MenuItem("Await await test")) {
-                        Log::debug(std::format("await await test - thread:{}", currentThreadID()));
+                        Log::debug("await await test - thread:{}", currentThreadID());
                         auto t = await(
                             [&] {
-                                Log::debug(std::format("await - 1 - thread:{}", currentThreadID()));
+                                Log::debug("await - 1 - thread:{}", currentThreadID());
                                 return await(
                                     [&] {
-                                        Log::debug(std::format("await - 2 - thread:{}", currentThreadID()));
+                                        Log::debug("await - 2 - thread:{}", currentThreadID());
                                         return 1234;
                                     });
                             });
-                        Log::debug(std::format("await result: {}, thread:{}", t, currentThreadID()));
+                        Log::debug("await result: {}, thread:{}", t, currentThreadID());
                     }
                     ImGui::EndMenu();
                 }
@@ -411,7 +411,7 @@ public:
                         }
                         const Voxel voxel = {};
 
-                        Log::debug(std::format("{} items generated. (resolution: {})", count, res));
+                        Log::debug("{} items generated. (resolution: {})", count, res);
 
                         auto t1 = std::chrono::high_resolution_clock::now();
                         for (auto& loc : locations) {
@@ -419,13 +419,13 @@ public:
                         }
                         auto t2 = std::chrono::high_resolution_clock::now();
                         std::chrono::duration<double> d = t2 - t1;
-                        Log::debug(std::format("insert {} items, {} elapsed.", count, d.count()));
+                        Log::debug("insert {} items, {} elapsed.", count, d.count());
 
                         int numLeafNodes = 0;
                         if (auto root = model.root(); root) {
                             numLeafNodes = root->numLeafNodes();
                         }
-                        Log::debug(std::format("Num-LeafNodes: {}", numLeafNodes));
+                        Log::debug("Num-LeafNodes: {}", numLeafNodes);
 
                         // shuffle
                         std::shuffle(locations.begin(), locations.end(), random);
@@ -441,13 +441,13 @@ public:
                         }
                         t2 = std::chrono::high_resolution_clock::now();
                         d = t2 - t1;
-                        Log::debug(std::format("erase {} items, {} elapsed.", count, d.count()));
+                        Log::debug("erase {} items, {} elapsed.", count, d.count());
 
                         numLeafNodes = 0;
                         if (auto root = model.root(); root) {
                             numLeafNodes = root->numLeafNodes();
                         }
-                        Log::debug(std::format("Num-LeafNodes: {}", numLeafNodes));
+                        Log::debug("Num-LeafNodes: {}", numLeafNodes);
                         Log::debug("done.");
                     }
                     if (ImGui::MenuItem("VoxelOctree fill test")) {
@@ -469,7 +469,7 @@ public:
                             }
                         }
                         std::shuffle(locations.begin(), locations.end(), random);
-                        Log::debug(std::format("{} items generated. (resolution: {})", locations.size(), res));
+                        Log::debug("{} items generated. (resolution: {})", locations.size(), res);
                         const Voxel voxel = {};
 
                         auto t1 = std::chrono::high_resolution_clock::now();
@@ -478,13 +478,13 @@ public:
                         }
                         auto t2 = std::chrono::high_resolution_clock::now();
                         std::chrono::duration<double> d = t2 - t1;
-                        Log::debug(std::format("insert {} items, {} elapsed.", locations.size(), d.count()));
+                        Log::debug("insert {} items, {} elapsed.", locations.size(), d.count());
 
                         int numLeafNodes = 0;
                         if (auto root = model.root(); root) {
                             numLeafNodes = root->numLeafNodes();
                         }
-                        Log::debug(std::format("Num-LeafNodes: {}", numLeafNodes));
+                        Log::debug("Num-LeafNodes: {}", numLeafNodes);
 
                         std::shuffle(locations.begin(), locations.end(), random);
                         t1 = std::chrono::high_resolution_clock::now();
@@ -493,14 +493,13 @@ public:
                         }
                         t2 = std::chrono::high_resolution_clock::now();
                         d = t2 - t1;
-                        Log::debug(std::format("erase {} items, {} elapsed.", locations.size(), d.count()));
+                        Log::debug("erase {} items, {} elapsed.", locations.size(), d.count());
 
                         numLeafNodes = 0;
                         if (auto root = model.root(); root) {
                             numLeafNodes = root->numLeafNodes();
                         }
-                        Log::debug(std::format("Num-LeafNodes: {}", numLeafNodes));
-
+                        Log::debug("Num-LeafNodes: {}", numLeafNodes);
                         Log::debug("done.");
                     }
                     ImGui::Separator();
@@ -516,10 +515,10 @@ public:
                                 ofile.close();
                                 auto nodes1 = model->numNodes();
                                 auto leaf1 = model->numLeafNodes();
-                                Log::debug(std::format(
+                                Log::debug(
                                     enUS_UTF8,
                                     "Serialized {:Ld} bytes, {:Ld} nodes, {:Ld} leaf-nodes",
-                                    bytes, nodes1, leaf1));
+                                    bytes, nodes1, leaf1);
                             } else {
                                 Log::debug("failed to open file.");
                             }
@@ -539,10 +538,10 @@ public:
                             auto leaf2 = model2->numLeafNodes();
 
                             if (r)
-                                Log::debug(std::format(
+                                Log::debug(
                                     enUS_UTF8,
                                     "Deserialized result: {}, {:Ld} nodes, {:Ld} leaf-nodes",
-                                    r, nodes2, leaf2));
+                                    r, nodes2, leaf2);
                             else
                                 Log::debug("Deserialization failed.");
                         } else {
@@ -649,18 +648,18 @@ public:
 
                 if (valueChanged) {
                     auto depth = std::min(uint32_t(layerDepth), aabbOctree->maxDepth);
-                    Log::info(std::format("make layer buffer. (maxDepth: {})", depth));
+                    Log::info("make layer buffer. (maxDepth: {})", depth);
 
                     auto start = std::chrono::high_resolution_clock::now();
                     auto layer = aabbOctree->makeLayer(depth);
                     auto end = std::chrono::high_resolution_clock::now();
                     auto elapsed = std::chrono::duration<double>(end - start);
-                    Log::info(std::format(enUS_UTF8,
-                                          "aabb-octree make layer with depth:{}, nodes:{:Ld} ({:Ld} bytes), elapsed: {}",
-                                          maxDepth,
-                                          layer->data.size(),
-                                          layer->data.size() * sizeof(AABBOctreeLayer::Node),
-                                          elapsed.count()));
+                    Log::info(enUS_UTF8,
+                              "aabb-octree make layer with depth:{}, nodes:{:Ld} ({:Ld} bytes), elapsed: {}",
+                              maxDepth,
+                              layer->data.size(),
+                              layer->data.size() * sizeof(AABBOctreeLayer::Node),
+                              elapsed.count());
                     volumeRenderer->setOctreeLayer(layer);
                 }
                 ImGui::EndDisabled();
@@ -702,10 +701,10 @@ public:
                                 numNodes = root->numDescendants();
                                 numLeafNodes = root->numLeafNodes();
                             }
-                            Log::info(std::format(
+                            Log::info(
                                 enUS_UTF8,
                                 "VoxelModel depth:{}, nodes: {:Ld}, leaf-nodes: {:Ld}, elapsed:{}",
-                                voxelModel->depth(), numNodes, numLeafNodes, elapsed.count()));
+                                voxelModel->depth(), numNodes, numLeafNodes, elapsed.count());
                             volumeRenderer2->setModel(voxelModel);
                         } else {
                             Log::info("No output.");
@@ -761,10 +760,10 @@ public:
                         auto nodes = model->numNodes();
                         auto leaf = model->numLeafNodes();
 
-                        Log::debug(std::format(
+                        Log::debug(
                             enUS_UTF8,
                             "Deserialized result: {}, {:Ld} nodes, {:Ld} leaf-nodes",
-                            r, nodes, leaf));
+                            r, nodes, leaf);
 
                         volumeRenderer2->setModel(model);
                     } else {
@@ -782,7 +781,7 @@ public:
             if (ImGuiFileDialog::Instance()->IsOk()) {
                 std::string path = ImGuiFileDialog::Instance()->GetFilePathName();
 
-                Log::debug(std::format("Export vxm to {}", path));
+                Log::debug("Export vxm to {}", path);
 
                 auto model = volumeRenderer2->model();
                 if (model) {
@@ -794,10 +793,10 @@ public:
                         ofile.close();
                         auto nodes1 = model->numNodes();
                         auto leaf1 = model->numLeafNodes();
-                        Log::debug(std::format(
+                        Log::debug(
                             enUS_UTF8,
                             "Serialized {:Ld} bytes, {:Ld} nodes, {:Ld} leaf-nodes",
-                            bytes, nodes1, leaf1));
+                            bytes, nodes1, leaf1);
                     } else {
                         Log::debug("failed to open file.");
                         messageBox("failed to open file.");

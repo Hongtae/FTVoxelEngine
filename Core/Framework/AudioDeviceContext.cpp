@@ -152,7 +152,7 @@ std::shared_ptr<AudioDeviceContext> AudioDeviceContext::makeDefault() {
                 defaultCtxt = ctxt; // store weak-ptr
                 return ctxt;
             } catch (const std::runtime_error& err) {
-                Log::error(std::format("Runtime-error: {}", err.what()));
+                Log::error("Runtime-error: {}", err.what());
             }
         }
     }

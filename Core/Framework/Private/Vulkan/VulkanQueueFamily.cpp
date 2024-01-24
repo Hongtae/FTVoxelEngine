@@ -30,9 +30,8 @@ std::shared_ptr<VulkanCommandQueue> VulkanQueueFamily::makeCommandQueue(std::sha
         VkQueue queue = freeQueues.back();
         freeQueues.pop_back();
         auto commandQueue = std::make_shared<VulkanCommandQueue>(dev, this, queue);
-        Log::info(std::format(
-            "Command-Queue with family-index: {:d} has been created.",
-            this->familyIndex));
+        Log::info("Command-Queue with family-index: {:d} has been created.",
+                  this->familyIndex);
         return commandQueue;
     }
     return nullptr;
@@ -40,9 +39,8 @@ std::shared_ptr<VulkanCommandQueue> VulkanQueueFamily::makeCommandQueue(std::sha
 
 void VulkanQueueFamily::recycleQueue(VkQueue queue) {
     std::scoped_lock guard(lock);
-    Log::info(std::format(
-        "Command-Queue with family-index: {:d} was reclaimed for recycling.",
-        this->familyIndex));
+    Log::info("Command-Queue with family-index: {:d} was reclaimed for recycling.",
+              this->familyIndex);
     freeQueues.push_back(queue);
 }
 

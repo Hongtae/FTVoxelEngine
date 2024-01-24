@@ -214,9 +214,9 @@ void main() {
     rayResultNearDepth = depth2;
     runTest(ray);
     if (rayResultNearDepth < depth2) {
-        vec3 normal = boxNormal(rayResultNormal);
-        normal = normalize((vec4(normal, 0.0) * info.inverseM).xyz);
-        float lum = max(dot(normal, normalize(-info.lightDir)), 0.0);
+        //vec3 normal = boxNormal(rayResultNormal);
+        //normal = normalize((vec4(normal, 0.0) * info.inverseM).xyz);
+        float lum = 1.0; //max(dot(normal, normalize(-info.lightDir)), 0.0);
         vec3 color = mix(info.ambientColor.rgb, info.lightColor.rgb * lum, info.lightColor.a);
         vec4 fragColor = rayResultNearColor * vec4(color, 1.0);
         imageStore(outputImage, ivec2(gl_GlobalInvocationID.xy), fragColor);

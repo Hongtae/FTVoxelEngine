@@ -285,10 +285,10 @@ bool Shader::compile() {
             if (wg_z.id)
                 localSizeZ = compiler.get_constant(wg_z.id).scalar();
 
-            Log::debug(std::format("ComputeShader.constantID: {:d}", constantID));
-            Log::debug(std::format("ComputeShader.LocalSize.X: {:d} (specialized: {:d}, specializationID: {:d})", localSizeX, (uint32_t)wg_x.id, wg_x.constant_id));
-            Log::debug(std::format("ComputeShader.LocalSize.Y: {:d} (specialized: {:d}, specializationID: {:d})", localSizeY, (uint32_t)wg_y.id, wg_y.constant_id));
-            Log::debug(std::format("ComputeShader.LocalSize.Z: {:d} (specialized: {:d}, specializationID: {:d})", localSizeZ, (uint32_t)wg_z.id, wg_z.constant_id));
+            Log::debug("ComputeShader.constantID: {:d}", constantID);
+            Log::debug("ComputeShader.LocalSize.X: {:d} (specialized: {:d}, specializationID: {:d})", localSizeX, (uint32_t)wg_x.id, wg_x.constant_id);
+            Log::debug("ComputeShader.LocalSize.Y: {:d} (specialized: {:d}, specializationID: {:d})", localSizeY, (uint32_t)wg_y.id, wg_y.constant_id);
+            Log::debug("ComputeShader.LocalSize.Z: {:d} (specialized: {:d}, specializationID: {:d})", localSizeZ, (uint32_t)wg_z.id, wg_z.constant_id);
 
             this->_threadgroupSize.x = std::max(localSizeX, 1U);
             this->_threadgroupSize.y = std::max(localSizeY, 1U);
@@ -580,9 +580,9 @@ bool Shader::compile() {
         this->_outputAttributes.shrink_to_fit();
         return true;
     } catch (const spirv_cross::CompilerError& err) {
-        Log::error(std::format("Compiler error: {}", err.what()));
+        Log::error("Compiler error: {}", err.what());
     } catch (const std::exception& err) {
-        Log::error(std::format("internal error: {}", err.what()));
+        Log::error("internal error: {}", err.what());
     } catch (...) {
         throw;
     }

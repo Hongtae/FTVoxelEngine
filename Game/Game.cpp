@@ -30,7 +30,7 @@ struct App : public Application {
 
     void initialize() override {
         appResourcesRoot = environmentPath(EnvironmentPath::AppRoot) / "Game.Resources";
-        Log::debug(std::format("App-Resources: \"{}\"", appResourcesRoot.generic_u8string()));
+        Log::debug("App-Resources: \"{}\"", appResourcesRoot.generic_u8string());
 
         window = Window::makeWindow(
             u8"FV Demo",
@@ -167,6 +167,14 @@ struct App : public Application {
                     volumeRenderer->lightDir = v;
                 }
             }
+            static int maxDisplayLevel = volumeRenderer->maxDisplayDepth;
+            if (ImGui::SliderInt("Max Display Level", &maxDisplayLevel, 0, 15, nullptr, ImGuiSliderFlags_None)) {
+                volumeRenderer->maxDisplayDepth = maxDisplayLevel;
+            }
+            static int renderScale = int(volumeRenderer->renderScale * 100.0f);
+            if (ImGui::SliderInt("Render Scale", &renderScale, 10, 100, nullptr, ImGuiSliderFlags_None)) {
+                volumeRenderer->renderScale = float(renderScale) * 0.01f;
+            }
         }
         ImGui::End();
 
@@ -175,7 +183,7 @@ struct App : public Application {
             // action if OK
             if (ImGuiFileDialog::Instance()->IsOk()) {
                 std::string path = ImGuiFileDialog::Instance()->GetFilePathName();
-                Log::debug(std::format("Load model: {}", path));
+                Log::debug("Load model: {}", path);
 
                 auto ifile = std::ifstream(path, std::ios::binary);
                 if (ifile) {
@@ -187,10 +195,10 @@ struct App : public Application {
                         auto nodes = model->numNodes();
                         auto leaf = model->numLeafNodes();
 
-                        Log::debug(std::format(
+                        Log::debug(
                             enUS_UTF8,
                             "Deserialized result: {}, {:Ld} nodes, {:Ld} leaf-nodes",
-                            r, nodes, leaf));
+                            r, nodes, leaf);
 
                         volumeRenderer->setModel(model);
 
@@ -423,7 +431,7 @@ struct App : public Application {
                 case Window::MouseEvent::Move:
                     if (mouseHidden) {
                         auto delta = event.delta;
-                        //Log::debug(std::format("Mouse move: {:.1f}, {:.1f}", delta.x, delta.y));
+                        //Log::debug("Mouse move: {:.1f}, {:.1f}", delta.x, delta.y);
 
                         auto up = camera.up;
                         auto dir = camera.dir;
@@ -457,7 +465,7 @@ struct App : public Application {
                 if (pressingKeys.contains(VirtualKey::LeftControl) || pressingKeys.contains(VirtualKey::RightControl)) {
                     if (event.key == VirtualKey::U) {
                         hideUI = !hideUI;
-                        Log::info(std::format("HideUI: {}", hideUI));
+                        Log::info("HideUI: {}", hideUI);
                         return;
                     }
                 }

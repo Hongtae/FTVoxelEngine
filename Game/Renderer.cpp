@@ -13,7 +13,7 @@ std::optional<RenderPipeline> makeRenderPipeline(
 
     auto loadShader = [device](std::filesystem::path path) -> std::shared_ptr<ShaderFunction> {
         if (Shader shader(path); shader.validate()) {
-            Log::info(std::format("Shader description: \"{}\"", path.generic_u8string()));
+            Log::info("Shader description: \"{}\"", path.generic_u8string());
             printShaderReflection(shader);
             if (auto module = device->makeShaderModule(shader); module) {
                 auto names = module->functionNames();
@@ -59,7 +59,7 @@ std::optional<ComputePipeline> makeComputePipeline(
 
     std::shared_ptr<ShaderFunction> fn;
     if (Shader shader(path); shader.validate()) {
-        Log::info(std::format("Shader description: \"{}\"", path.generic_u8string()));
+        Log::info("Shader description: \"{}\"", path.generic_u8string());
         printShaderReflection(shader);
         if (auto module = device->makeShaderModule(shader); module) {
             auto names = module->functionNames();

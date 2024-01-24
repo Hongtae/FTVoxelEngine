@@ -61,8 +61,7 @@ std::shared_ptr<Window> Window::makeWindow(const std::u8string& name, Style styl
         return std::make_shared<Win32Window>(name, style, cb);
 #endif
     } catch (const std::exception& err) {
-        Log::error(std::format("Window creation failed: {}",
-                               err.what()));
+        Log::error("Window creation failed: {}", err.what());
     }
     return nullptr;
 }

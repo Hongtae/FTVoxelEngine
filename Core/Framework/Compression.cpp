@@ -63,7 +63,7 @@ namespace FV {
             try {
                 ctx->stream.write((const char*)data, size);
             } catch (const std::exception& exp) {
-                Log::error(std::format("stream write failed: {}", exp.what()));
+                Log::error("stream write failed: {}", exp.what());
             }
             auto written = ctx->stream.tellp() - current;
             return written;
@@ -116,7 +116,7 @@ namespace FV {
             try {
                 ctx->stream.write((const char*)data, size);
             } catch (const std::exception& exp) {
-                Log::error(std::format("stream write failed: {}", exp.what()));
+                Log::error("stream write failed: {}", exp.what());
             }
             auto written = ctx->stream.tellp() - current;
             return written;

@@ -20,7 +20,7 @@ void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc, std::
     std::shared_ptr<ShaderFunction> fn;
     auto device = gc->device;
     if (Shader shader(path); shader.validate()) {
-        Log::info(std::format("Shader description: \"{}\"", path.generic_u8string()));
+        Log::info("Shader description: \"{}\"", path.generic_u8string());
         printShaderReflection(shader);
         if (auto module = device->makeShaderModule(shader); module) {
             auto names = module->functionNames();

@@ -30,8 +30,7 @@ AudioSource::~AudioSource() {
     // check error
     auto err = alGetError();
     if (err != AL_NO_ERROR) {
-        Log::error(std::format("AudioSource error: {}, {}",
-                               err, alGetString(err)));
+        Log::error("AudioSource error: {}, {}", err, alGetString(err));
     }
 }
 
@@ -70,8 +69,7 @@ void AudioSource::stop() {
     }
 
     if (buffersProcessed != buffers.size()) {
-        Log::error(std::format("Buffer mismatch! {}, {}",
-                               buffers.size(), buffersProcessed));
+        Log::error("Buffer mismatch! {}, {}", buffers.size(), buffersProcessed);
     }
 
     alSourcei(sourceID, AL_LOOPING, 0);
@@ -86,8 +84,7 @@ void AudioSource::stop() {
 
     // check error!
     if (ALenum err = alGetError(); err != AL_NO_ERROR) {
-        Log::error(std::format("AudioSource error: {}, {}",
-                               err, alGetString(err)));
+        Log::error("AudioSource error: {}, {}", err, alGetString(err));
     }
 }
 
@@ -99,8 +96,7 @@ size_t AudioSource::numberOfBuffersInQueue() const {
     ALint queuedBuffers = 0;
     alGetSourcei(sourceID, AL_BUFFERS_QUEUED, &queuedBuffers);
     if (queuedBuffers != buffers.size()) {
-        Log::error(std::format("AudioBuffer mismatch! {}, {}",
-                               buffers.size(), queuedBuffers));
+        Log::error("AudioBuffer mismatch! {}, {}", buffers.size(), queuedBuffers);
     }
     return buffers.size();
 }
@@ -120,15 +116,12 @@ void AudioSource::dequeueBuffers() const {
                 this->buffers.erase(it);
                 alDeleteBuffers(1, &bufferID);
         } else {
-            Log::error(
-                std::format("AudioSource failed to dequeue buffer! source:{}",
-                            sourceID));
+            Log::error("AudioSource failed to dequeue buffer! source:{}", sourceID);
         }
 
         // check error
         if (ALenum err = alGetError(); err != AL_NO_ERROR) {
-            Log::error(std::format("AudioSource error: {}, {}",
-                                   err, alGetString(err)));
+            Log::error("AudioSource error: {}, {}", err, alGetString(err));
         }
     }
 }
@@ -186,13 +179,11 @@ bool AudioSource::enqueueBuffer(int sampleRate,
 
             // check error
             if (ALenum err = alGetError(); err != AL_NO_ERROR) {
-                Log::error(std::format("AudioSource error: {}, {}",
-                                       err, alGetString(err)));
+                Log::error("AudioSource error: {}, {}", err, alGetString(err));
             }
             return true;
         } else {
-            Log::error(std::format("Unsupported autio format, bits:{}, channels:{}",
-                                   bits, channels));
+            Log::error("Unsupported autio format, bits:{}, channels:{}", bits, channels);
         }
     }
     dequeueBuffers();
@@ -240,8 +231,7 @@ void AudioSource::setTimePosition(double t) {
 
             // check error.
             if (ALenum err = alGetError(); err != AL_NO_ERROR) {
-                Log::error(std::format("AudioSource error: {}, {}",
-                                       err, alGetString(err)));
+                Log::error("AudioSource error: {}, {}", err, alGetString(err));
             }
         }
     }
@@ -284,8 +274,7 @@ void AudioSource::setTimeOffset(double t) {
         alSourcei(sourceID, AL_BYTE_OFFSET, bytesOffset);
 
         if (ALenum err = alGetError(); err != AL_NO_ERROR) {
-            Log::error(std::format("AudioSource error: {}, {}",
-                                   err, alGetString(err)));
+            Log::error("AudioSource error: {}, {}", err, alGetString(err));
         }
     }
 }

@@ -35,7 +35,7 @@ VkDescriptorSet VulkanDescriptorPool::allocateDescriptorSet(VkDescriptorSetLayou
         FVASSERT_DEBUG(descriptorSet != VK_NULL_HANDLE);
         numAllocatedSets++;
     } else {
-        //Log::error(std::format("vkAllocateDescriptorSets failed: {}", err));
+        //Log::error("vkAllocateDescriptorSets failed: {}", err);
     }
 
     return descriptorSet;
@@ -48,13 +48,13 @@ void VulkanDescriptorPool::releaseDescriptorSets(VkDescriptorSet* sets, uint32_t
     if (numAllocatedSets == 0) {
         VkResult err = vkResetDescriptorPool(gdevice->device, pool, 0);
         if (err != VK_SUCCESS) {
-            Log::error(std::format("vkResetDescriptorPool failed: {}", err));
+            Log::error("vkResetDescriptorPool failed: {}", err);
         }
     } else if (createFlags & VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT) {
         VkResult err = vkFreeDescriptorSets(gdevice->device, pool, n, sets);
         FVASSERT_DEBUG(err == VK_SUCCESS);
         if (err != VK_SUCCESS) {
-            Log::error(std::format("vkFreeDescriptorSets failed: {}", err));
+            Log::error("vkFreeDescriptorSets failed: {}", err);
         }
     }
 }

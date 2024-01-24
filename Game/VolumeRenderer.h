@@ -22,6 +22,8 @@ public:
     std::shared_ptr<VoxelModel> model() const { return voxelModel; }
 
     float renderScale = 0.25f;
+    uint32_t maxDisplayDepth = 10;
+
 private:
     ComputePipeline raycastVoxel;
     ComputePipeline clearBuffers;

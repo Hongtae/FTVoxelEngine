@@ -107,7 +107,7 @@ std::optional<VolumeRenderer2::PipelineState> VolumeRenderer2::loadPipeline(
     std::shared_ptr<ShaderFunction> fn;
     auto device = queue->device();
     if (Shader shader(path); shader.validate()) {
-        Log::info(std::format("Shader description: \"{}\"", path.generic_u8string()));
+        Log::info("Shader description: \"{}\"", path.generic_u8string());
         printShaderReflection(shader);
         if (auto module = device->makeShaderModule(shader); module) {
             auto names = module->functionNames();
@@ -172,10 +172,10 @@ void VolumeRenderer2::setModel(std::shared_ptr<VoxelModel> model) {
                 auto numNodes = octree.numDescendants();
                 auto numLeafNodes = octree.numLeafNodes();
                 auto maxLevels = octree.maxDepthLevels();
-                Log::debug(std::format(
+                Log::debug(
                     enUS_UTF8,
                     "node at depth:{} (max-depth:{}/{}), num-nodes:{:Ld}, num-leaf-nodes:{:Ld}",
-                    depth, maxDepthLevel, maxLevels, numNodes, numLeafNodes));
+                    depth, maxDepthLevel, maxLevels, numNodes, numLeafNodes);
 
                 auto volumeData = octree.makeArray(aabb, maxDepthLevel);
                 if (volumeData.data.empty() == false) {
@@ -210,15 +210,14 @@ void VolumeRenderer2::setModel(std::shared_ptr<VoxelModel> model) {
                         buffer
                     };
                     this->voxelLayers.push_back(layer);
-                    Log::debug(std::format(
+                    Log::debug(
                         enUS_UTF8,
                         "GPUBuffer {:Ld} bytes ({:Ld} nodes) has been created.",
                         bufferLength,
-                        numNodes));
+                        numNodes);
                 }
             });
-        Log::debug(std::format("VoxelModel-Enumerate depth:{}, num-nodes:{}",
-                               startDepth, numNodes));
+        Log::debug("VoxelModel-Enumerate depth:{}, num-nodes:{}", startDepth, numNodes);
     }
 }
 

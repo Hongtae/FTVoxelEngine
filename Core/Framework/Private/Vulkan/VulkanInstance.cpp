@@ -105,13 +105,13 @@ std::shared_ptr<VulkanInstance> VulkanInstance::makeInstance(
     uint32_t instanceVersion = 0;
     err = vkEnumerateInstanceVersion(&instanceVersion);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkEnumerateInstanceVersion failed: {}", err));
+        Log::error("vkEnumerateInstanceVersion failed: {}", err);
         return nullptr;
     }
-    Log::info(std::format("Vulkan Instance Version: {:d}.{:d}.{:d}",
-                          VK_VERSION_MAJOR(instanceVersion),
-                          VK_VERSION_MINOR(instanceVersion),
-                          VK_VERSION_PATCH(instanceVersion)));
+    Log::info("Vulkan Instance Version: {:d}.{:d}.{:d}",
+              VK_VERSION_MAJOR(instanceVersion),
+              VK_VERSION_MINOR(instanceVersion),
+              VK_VERSION_PATCH(instanceVersion));
 
     // checking layers
     auto availableLayers = []() {
@@ -151,8 +151,7 @@ std::shared_ptr<VulkanInstance> VulkanInstance::makeInstance(
                 }
             }
         } else {
-            Log::error(
-                std::format("vkEnumerateInstanceExtensionProperties failed: {}", err));
+            Log::error("vkEnumerateInstanceExtensionProperties failed: {}", err);
         }
         return extensions;
     };
@@ -184,27 +183,24 @@ std::shared_ptr<VulkanInstance> VulkanInstance::makeInstance(
 
     // print info
     if (true) {
-        Log::verbose(std::format("Vulkan available layers: {}",
-                                 output->layers.size()));
+        Log::verbose("Vulkan available layers: {}", output->layers.size());
         for (auto& iter : output->layers) {
             auto& layer = iter.second;
             auto spec = std::format("{:d}.{:d}.{:d}",
                                     VK_VERSION_MAJOR(layer.specVersion),
                                     VK_VERSION_MINOR(layer.specVersion),
                                     VK_VERSION_PATCH(layer.specVersion));
-            Log::verbose(
-                std::format(" -- Layer: {} ({}, spec:{}, implementation: {}",
-                            layer.name,
-                            layer.description,
-                            spec,
-                            layer.implementationVersion));
+            Log::verbose(" -- Layer: {} ({}, spec:{}, implementation: {}",
+                         layer.name,
+                         layer.description,
+                         spec,
+                         layer.implementationVersion);
         }
         for (auto& iter : output->extensions) {
             auto& ext = iter.first;
             auto specVersion = output->extensions[ext];
-            Log::verbose(
-                std::format(" -- Instance extension: {} (Version: {})",
-                            ext, specVersion));
+            Log::verbose(" -- Instance extension: {} (Version: {})", 
+                         ext, specVersion);
 
         }
     }
@@ -236,8 +232,8 @@ std::shared_ptr<VulkanInstance> VulkanInstance::makeInstance(
                                       iter->second.begin(), iter->second.end());
             }
         } else {
-            Log::warning(std::format(
-                "Instance extension: {} not supported, but required.", ext));
+            Log::warning("Instance extension: {} not supported, but required.",
+                         ext);
         }
     }
     // add layers for optional extensions
@@ -249,8 +245,7 @@ std::shared_ptr<VulkanInstance> VulkanInstance::makeInstance(
                                       iter->second.begin(), iter->second.end());
             }
         } else {
-            Log::warning(std::format("Instance extension: {} not supported.",
-                                     ext));
+            Log::warning("Instance extension: {} not supported.", ext);
         }
     }
 
@@ -260,13 +255,12 @@ std::shared_ptr<VulkanInstance> VulkanInstance::makeInstance(
         if (output->layers.contains(layer))
             requiredLayers.push_back(layer);
         else
-            Log::warning(std::format("Layer: {} not supported.", layer));
+            Log::warning("Layer: {} not supported.", layer);
     }
     for (auto& layer : requiredLayers) {
         enabledLayers.push_back(layer.c_str());
         if (output->layers.contains(layer) == false) {
-            Log::warning(std::format("Layer: {} not supported, but required",
-                                     layer));
+            Log::warning("Layer: {} not supported, but required", layer);
         }
     }
     // setup instance extensions!
@@ -327,8 +321,7 @@ std::shared_ptr<VulkanInstance> VulkanInstance::makeInstance(
     VkInstance instance = nullptr;
     err = vkCreateInstance(&instanceCreateInfo, allocationCallback, &instance);
     if (err != VK_SUCCESS) {
-        Log::error(
-            std::format("vkCreateInstance failed: {}", err));
+        Log::error("vkCreateInstance failed: {}", err);
         return nullptr;
     }
 
@@ -339,8 +332,7 @@ std::shared_ptr<VulkanInstance> VulkanInstance::makeInstance(
     else {
         int index = 0;
         for (auto& layer : enabledLayers) {
-            Log::verbose(std::format("VkInstance enabled layer[{:d}]: {}",
-                                     index, layer));
+            Log::verbose("VkInstance enabled layer[{:d}]: {}", index, layer);
             index++;
         }
     }
@@ -349,8 +341,7 @@ std::shared_ptr<VulkanInstance> VulkanInstance::makeInstance(
     else {
         int index = 0;
         for (auto& ext : enabledExtensions) {
-            Log::verbose(std::format("VkInstance enabled extension[{:d}]: {}",
-                                     index, ext));
+            Log::verbose("VkInstance enabled extension[{:d}]: {}", index, ext);
             index++;
         }
     }
@@ -388,20 +379,20 @@ std::shared_ptr<VulkanInstance> VulkanInstance::makeInstance(
             &output->debugMessenger);
 
         if (err != VK_SUCCESS)
-            Log::error(std::format("vkCreateDebugUtilsMessengerEXT failed: {}", err));
+            Log::error("vkCreateDebugUtilsMessengerEXT failed: {}", err);
     }
 
     // get physical device list
     uint32_t gpuCount = 0;
     err = vkEnumeratePhysicalDevices(instance, &gpuCount, nullptr);
     if (err != VK_SUCCESS)
-        Log::error(std::format("vkEnumeratePhysicalDevices failed: {}", err));
+        Log::error("vkEnumeratePhysicalDevices failed: {}", err);
     if (gpuCount > 0) {
         std::vector<VkPhysicalDevice> physicalDevices(gpuCount);
         err = vkEnumeratePhysicalDevices(instance, &gpuCount,
                                          physicalDevices.data());
         if (err != VK_SUCCESS) {
-            Log::error(std::format("vkEnumeratePhysicalDevices failed: {}", err));
+            Log::error("vkEnumeratePhysicalDevices failed: {}", err);
             return nullptr;
         }
         uint64_t maxQueueSize = 0;
@@ -427,8 +418,8 @@ std::shared_ptr<VulkanInstance> VulkanInstance::makeInstance(
 
     for (int index = 0; index < output->physicalDevices.size(); ++index) {
         const auto& device = output->physicalDevices.at(index);
-        Log::verbose(std::format("Vulkan physical device[{:d}]: {}",
-                                 index, device.description()));
+        Log::verbose("Vulkan physical device[{:d}]: {}", 
+                     index, device.description());
     }
     return output;
 }
@@ -468,8 +459,7 @@ std::shared_ptr<GraphicsDevice> VulkanInstance::makeDevice(
                                                     requiredExtensions,
                                                     optionalExtensions);
         } catch (const std::exception& err) {
-            Log::error(std::format("GrahicsDevice creation failed: {}",
-                                   err.what()));
+            Log::error("GrahicsDevice creation failed: {}", err.what());
         }
     }
     return nullptr;
@@ -485,8 +475,7 @@ std::shared_ptr<GraphicsDevice> VulkanInstance::makeDevice(
                                                     requiredExtensions,
                                                     optionalExtensions);
         } catch (const std::exception& err) {
-            Log::error(std::format("GrahicsDevice creation failed: {}",
-                                   err.what()));
+            Log::error("GrahicsDevice creation failed: {}", err.what());
         }
     }
     return nullptr;

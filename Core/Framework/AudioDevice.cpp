@@ -68,8 +68,7 @@ AudioDevice::AudioDevice(const std::string& deviceName)
     this->majorVersion = majorVersion;
     this->minorVersion = minorVersion;
 
-    Log::info(std::format("OpenAL device: {} Version: {:d}.{:d}.",
-                          deviceName, majorVersion, minorVersion));
+    Log::info("OpenAL device: {} Version: {:d}.{:d}.", deviceName, majorVersion, minorVersion);
 
     // update format table
     formatTable[BitsChannels{4, 1}.value] = alGetEnumValue("AL_FORMAT_MONO_IMA4");

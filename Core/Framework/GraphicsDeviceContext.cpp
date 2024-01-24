@@ -56,8 +56,7 @@ std::shared_ptr<GraphicsDeviceContext> GraphicsDeviceContext::makeDefault() {
         }
 #endif
     } catch (const std::exception& err) {
-        Log::error(std::format("GraphicsDeviceContext creation failed: {}",
-                               err.what()));
+        Log::error("GraphicsDeviceContext creation failed: {}", err.what());
     }
     if (device) {
         return std::make_shared<GraphicsDeviceContext>(device);

@@ -25,7 +25,7 @@ VulkanSwapChain::VulkanSwapChain(std::shared_ptr<VulkanCommandQueue> q, std::sha
     VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
     VkResult err = vkCreateSemaphore(device, &semaphoreCreateInfo, gdevice->allocationCallbacks(), &frameReadySemaphore);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkCreateSemaphore failed: {}", err));
+        Log::error("vkCreateSemaphore failed: {}", err);
         FVASSERT_DEBUG(0);
     }
 
@@ -78,7 +78,7 @@ bool VulkanSwapChain::setup() {
     surfaceCreateInfo.window = (ANativeWindow*)window->platformHandle();
     err = vkCreateAndroidSurfaceKHR(instance, &surfaceCreateInfo, gdevice->allocationCallbacks, &surface);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkCreateAndroidSurfaceKHR failed: {}", err));
+        Log::error("vkCreateAndroidSurfaceKHR failed: {}", err);
         return false;
     }
 #endif
@@ -88,7 +88,7 @@ bool VulkanSwapChain::setup() {
     surfaceCreateInfo.hwnd = (HWND)window->platformHandle();
     err = instance->extensionProc.vkCreateWin32SurfaceKHR(instance->instance, &surfaceCreateInfo, gdevice->allocationCallbacks(), &surface);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkCreateWin32SurfaceKHR failed: {}", err));
+        Log::error("vkCreateWin32SurfaceKHR failed: {}", err);
         return false;
     }
 #endif
@@ -96,11 +96,11 @@ bool VulkanSwapChain::setup() {
     VkBool32 surfaceSupported = VK_FALSE;
     err = vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice.device, queueFamilyIndex, surface, &surfaceSupported);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkGetPhysicalDeviceSurfaceSupportKHR failed: {}", err));
+        Log::error("vkGetPhysicalDeviceSurfaceSupportKHR failed: {}", err);
         return false;
     }
     if (!surfaceSupported) {
-        Log::error(std::format("VkSurfaceKHR not support with QueueFamily at index: {:d}", queueFamilyIndex));
+        Log::error("VkSurfaceKHR not support with QueueFamily at index: {:d}", queueFamilyIndex);
         return false;
     }
 
@@ -109,11 +109,11 @@ bool VulkanSwapChain::setup() {
     uint32_t surfaceFormatCount;
     err = instance->extensionProc.vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.device, surface, &surfaceFormatCount, NULL);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkGetPhysicalDeviceSurfaceFormatsKHR failed: {}", err));
+        Log::error("vkGetPhysicalDeviceSurfaceFormatsKHR failed: {}", err);
         return false;
     }
     if (surfaceFormatCount == 0) {
-        Log::error(std::format("vkGetPhysicalDeviceSurfaceFormatsKHR failed: {}", err));
+        Log::error("vkGetPhysicalDeviceSurfaceFormatsKHR failed: {}", err);
         return false;
     }
 
@@ -121,7 +121,7 @@ bool VulkanSwapChain::setup() {
     availableSurfaceFormats.resize(surfaceFormatCount);
     err = instance->extensionProc.vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.device, surface, &surfaceFormatCount, availableSurfaceFormats.data());
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkGetPhysicalDeviceSurfaceFormatsKHR failed: {}", err));
+        Log::error("vkGetPhysicalDeviceSurfaceFormatsKHR failed: {}", err);
         return false;
     }
 
@@ -158,7 +158,7 @@ bool VulkanSwapChain::updateDevice() {
     VkSurfaceCapabilitiesKHR surfaceCaps;
     err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice.device, surface, &surfaceCaps);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkGetPhysicalDeviceSurfaceCapabilitiesKHR failed: {}", err));
+        Log::error("vkGetPhysicalDeviceSurfaceCapabilitiesKHR failed: {}", err);
         return false;
     }
 
@@ -166,11 +166,11 @@ bool VulkanSwapChain::updateDevice() {
     uint32_t presentModeCount;
     err = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice.device, surface, &presentModeCount, nullptr);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkGetPhysicalDeviceSurfacePresentModesKHR failed: {}", err));
+        Log::error("vkGetPhysicalDeviceSurfacePresentModesKHR failed: {}", err);
         return false;
     }
     if (presentModeCount == 0) {
-        Log::error(std::format("vkGetPhysicalDeviceSurfacePresentModesKHR failed: {}", err));
+        Log::error("vkGetPhysicalDeviceSurfacePresentModesKHR failed: {}", err);
         return false;
     }
 
@@ -179,7 +179,7 @@ bool VulkanSwapChain::updateDevice() {
 
     err = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice.device, surface, &presentModeCount, presentModes.data());
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkGetPhysicalDeviceSurfacePresentModesKHR failed: {}", err));
+        Log::error("vkGetPhysicalDeviceSurfacePresentModesKHR failed: {}", err);
         return false;
     }
 
@@ -264,26 +264,26 @@ bool VulkanSwapChain::updateDevice() {
 
     err = vkCreateSwapchainKHR(device, &swapchainCI, gdevice->allocationCallbacks(), &this->swapchain);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkCreateSwapchainKHR failed: {}", err));
+        Log::error("vkCreateSwapchainKHR failed: {}", err);
         return false;
     }
 
-    Log::info(std::format("VkSwapchainKHR created. ({:d} x {:d}, V-sync: {}, {})",
-                          swapchainExtent.width, swapchainExtent.height,
-                          this->enableVSync,
-                          [](VkPresentModeKHR mode)->const char* {
-                              switch (mode) {
-                              case VK_PRESENT_MODE_IMMEDIATE_KHR:
-                                  return "VK_PRESENT_MODE_IMMEDIATE_KHR";
-                              case VK_PRESENT_MODE_MAILBOX_KHR:
-                                  return "VK_PRESENT_MODE_MAILBOX_KHR";
-                              case VK_PRESENT_MODE_FIFO_KHR:
-                                  return "VK_PRESENT_MODE_FIFO_KHR";
-                              case VK_PRESENT_MODE_FIFO_RELAXED_KHR:
-                                  return "VK_PRESENT_MODE_FIFO_RELAXED_KHR";
-                              }
-                              return "## UNKNOWN ##";
-                          }(swapchainPresentMode)));
+    Log::info("VkSwapchainKHR created. ({:d} x {:d}, V-sync: {}, {})",
+              swapchainExtent.width, swapchainExtent.height,
+              this->enableVSync,
+              [](VkPresentModeKHR mode)->const char* {
+                  switch (mode) {
+                  case VK_PRESENT_MODE_IMMEDIATE_KHR:
+                      return "VK_PRESENT_MODE_IMMEDIATE_KHR";
+                  case VK_PRESENT_MODE_MAILBOX_KHR:
+                      return "VK_PRESENT_MODE_MAILBOX_KHR";
+                  case VK_PRESENT_MODE_FIFO_KHR:
+                      return "VK_PRESENT_MODE_FIFO_KHR";
+                  case VK_PRESENT_MODE_FIFO_RELAXED_KHR:
+                      return "VK_PRESENT_MODE_FIFO_RELAXED_KHR";
+                  }
+                  return "## UNKNOWN ##";
+              }(swapchainPresentMode));
 
     // If an existing swap chain is re-created, destroy the old swap chain
     // This also cleans up all the presentable images
@@ -303,7 +303,7 @@ bool VulkanSwapChain::updateDevice() {
     uint32_t swapchainImageCount = 0;
     err = vkGetSwapchainImagesKHR(device, this->swapchain, &swapchainImageCount, nullptr);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkGetSwapchainImagesKHR failed: {}", err));
+        Log::error("vkGetSwapchainImagesKHR failed: {}", err);
         return false;
     }
 
@@ -311,7 +311,7 @@ bool VulkanSwapChain::updateDevice() {
     std::vector<VkImage> swapchainImages(swapchainImageCount, VK_NULL_HANDLE);
     err = vkGetSwapchainImagesKHR(device, this->swapchain, &swapchainImageCount, swapchainImages.data());
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkGetSwapchainImagesKHR failed: {}", err));
+        Log::error("vkGetSwapchainImagesKHR failed: {}", err);
         return false;
     }
 
@@ -338,7 +338,7 @@ bool VulkanSwapChain::updateDevice() {
         VkImageView imageView = VK_NULL_HANDLE;
         err = vkCreateImageView(device, &imageViewCreateInfo, gdevice->allocationCallbacks(), &imageView);
         if (err != VK_SUCCESS) {
-            Log::error(std::format("vkCreateImageView failed: {}", err));
+            Log::error("vkCreateImageView failed: {}", err);
             return false;
         }
 
@@ -426,7 +426,7 @@ void VulkanSwapChain::setupFrame() {
     case VK_SUBOPTIMAL_KHR:
         break;
     default:
-        Log::error(std::format("vkAcquireNextImageKHR failed: {}", err));
+        Log::error("vkAcquireNextImageKHR failed: {}", err);
     }
 
     RenderPassColorAttachmentDescriptor colorAttachment = {};
@@ -482,7 +482,7 @@ bool VulkanSwapChain::present(GPUEvent** waitEvents, size_t numEvents) {
 
     VkResult err = vkQueuePresentKHR(cqueue->queue, &presentInfo);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkQueuePresentKHR failed: {}", err));
+        Log::error("vkQueuePresentKHR failed: {}", err);
         //FVASSERT_DEBUG(err == VK_SUCCESS);
     }
 

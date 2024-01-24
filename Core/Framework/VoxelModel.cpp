@@ -86,7 +86,7 @@ VolumeArray VoxelOctree::makeArray(const AABB& aabb,
                 n.z = static_cast<uint16_t>(center.z * q);
                 n.depth = depth;
                 n.flags = 0;
-                n.color = node->value.color;
+                n.color.value = node->value.color.value;
             }
 
             uint32_t exp = (126U - depth) << 23;
@@ -771,8 +771,7 @@ bool VoxelModel::deserialize(std::istream& stream) {
             try {
                 Deserializer{ node }(stream);
             } catch (const std::ios::failure& fail) {
-                Log::error(std::format("IO ERROR! deserialization failed: {}",
-                                       fail.what()));
+                Log::error("IO ERROR! deserialization failed: {}", fail.what());
                 deleteNode(node);
                 node = nullptr;
 #if FVCORE_DEBUG_ENABLED

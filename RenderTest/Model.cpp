@@ -143,7 +143,7 @@ void loadImages(LoaderContext& context) {
         if (auto texture = image->makeTexture(context.queue); texture) {
             context.images.at(index) = texture;
         } else {
-            Log::error(std::format("Failed to load image: {}", glTFImage.name));
+            Log::error("Failed to load image: {}", glTFImage.name);
         }
     }
     FVASSERT(context.images.size() == model.images.size());
@@ -322,8 +322,7 @@ void loadMeshes(LoaderContext& context) {
                     attribute.format = VertexFormat::Float4;
                     break;
                 default:
-                    Log::error(std::format("Unhandled vertex attribute type: {}",
-                                           glTFAccessor.type));
+                    Log::error("Unhandled vertex attribute type: {}", glTFAccessor.type);
                 }
 
                 // Note: 
@@ -340,8 +339,7 @@ void loadMeshes(LoaderContext& context) {
                 else if (_stricmp(attributeName.c_str(), "COLOR_0") == 0)
                     attribute.semantic = VertexAttributeSemantic::Color;
                 else {
-                    Log::warning(std::format("Unhandled vertex buffer attribute: {}",
-                                             attributeName));
+                    Log::warning("Unhandled vertex buffer attribute: {}", attributeName);
                 }
                 buffer.attributes.push_back(attribute);
 
@@ -524,9 +522,9 @@ std::shared_ptr<Model> loadModel(std::filesystem::path path, MaterialShaderMap s
     std::string err, warn;
     bool result = loader.LoadBinaryFromFile(&context.model, &err, &warn, path.generic_string());
     if (warn.empty() == false)
-        Log::warning(std::format("glTF warning: {}", warn));
+        Log::warning("glTF warning: {}", warn);
     if (err.empty() == false)
-        Log::error(std::format("glTF error: {}", err));
+        Log::error("glTF error: {}", err);
 
     if (result) {
         tinygltf::Model& model = context.model;
@@ -552,7 +550,7 @@ std::shared_ptr<Model> loadModel(std::filesystem::path path, MaterialShaderMap s
 
 std::optional<MaterialShaderMap::Function> loadShader(std::filesystem::path path, GraphicsDevice* device) {
     if (Shader shader(path); shader.validate()) {
-        Log::info(std::format("Shader description: \"{}\"", path.generic_u8string()));
+        Log::info("Shader description: \"{}\"", path.generic_u8string());
         printShaderReflection(shader);
         if (auto module = device->makeShaderModule(shader); module) {
             auto names = module->functionNames();

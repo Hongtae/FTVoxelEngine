@@ -26,7 +26,7 @@ public:
 
     void initialize() override {
         appResourcesRoot = environmentPath(EnvironmentPath::AppRoot) / "RenderTest.Resources";
-        Log::debug(std::format("App-Resources: \"{}\"", appResourcesRoot.generic_u8string()));
+        Log::debug("App-Resources: \"{}\"", appResourcesRoot.generic_u8string());
 
         graphicsContext = GraphicsDeviceContext::makeDefault();
 

@@ -106,7 +106,7 @@ bool VulkanCommandBuffer::commit() {
             VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
             VkResult err = vkAllocateCommandBuffers(device, &bufferInfo, &commandBuffer);
             if (err != VK_SUCCESS) {
-                Log::error(std::format("vkAllocateCommandBuffers failed: {}", err));
+                Log::error("vkAllocateCommandBuffers failed: {}", err);
                 return cleanup(false);
             }
             VkCommandBufferSubmitInfo cbufferSubmitInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO };

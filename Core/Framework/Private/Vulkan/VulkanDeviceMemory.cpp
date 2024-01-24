@@ -60,7 +60,7 @@ VulkanMemoryChunk::VulkanMemoryChunk(VulkanGraphicsDevice* dev,
         auto device = gdevice->device;
         VkResult err = vkMapMemory(device, memory, offset, size, 0, &mapped);
         if (err != VK_SUCCESS) {
-            Log::error(std::format("vkMapMemory failed: {}", err));
+            Log::error("vkMapMemory failed: {}", err);
         }
     }
 
@@ -120,7 +120,7 @@ bool VulkanMemoryChunk::invalidate(uint64_t offset, uint64_t size) const {
             if (err == VK_SUCCESS) {
                 return true;
             } else {
-                Log::error(std::format("vkInvalidateMappedMemoryRanges failed: {}", err));
+                Log::error("vkInvalidateMappedMemoryRanges failed: {}", err);
             }
         } else {
             Log::error("VulkanMemoryChunk::invalidate() failed: Out of range");
@@ -145,7 +145,7 @@ bool VulkanMemoryChunk::flush(uint64_t offset, uint64_t size) const {
             if (err == VK_SUCCESS) {
                 return true;
             } else {
-                Log::error(std::format("vkFlushMappedMemoryRanges failed: {}", err));
+                Log::error("vkFlushMappedMemoryRanges failed: {}", err);
             }
         } else {
             Log::error("VulkanMemoryChunk::flush() failed: Out of range");
@@ -227,7 +227,7 @@ std::optional<VulkanMemoryBlock> VulkanMemoryAllocator::alloc(uint64_t size) {
     VkDeviceMemory memory = VK_NULL_HANDLE;
     VkResult err = vkAllocateMemory(device, &memAllocInfo, allocationCallbacks, &memory);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkAllocateMemory failed: {}", err));
+        Log::error("vkAllocateMemory failed: {}", err);
         return {};
     }
 
@@ -348,7 +348,7 @@ std::optional<VulkanMemoryBlock> VulkanMemoryPool::alloc(uint64_t size) {
     VkDeviceMemory memory = VK_NULL_HANDLE;
     VkResult err = vkAllocateMemory(device, &memAllocInfo, allocationCallbacks, &memory);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkAllocateMemory failed: {}", err));
+        Log::error("vkAllocateMemory failed: {}", err);
         return {};
     }
     auto chunk = new VulkanMemoryChunk(gdevice, this, nullptr,
@@ -385,7 +385,7 @@ std::optional<VulkanMemoryBlock> VulkanMemoryPool::allocDedicated(uint64_t size,
     VkDeviceMemory memory = VK_NULL_HANDLE;
     VkResult err = vkAllocateMemory(device, &memAllocInfo, allocationCallbacks, &memory);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkAllocateMemory failed: {}", err));
+        Log::error("vkAllocateMemory failed: {}", err);
         return {};
     }
     auto chunk = new VulkanMemoryChunk(gdevice, this, nullptr,

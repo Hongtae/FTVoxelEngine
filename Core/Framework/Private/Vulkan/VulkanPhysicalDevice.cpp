@@ -101,7 +101,7 @@ VulkanPhysicalDeviceDescription::VulkanPhysicalDeviceDescription(VkPhysicalDevic
             }
         }
     } else {
-        Log::error(std::format("vkEnumerateDeviceExtensionProperties failed: {}", err));
+        Log::error("vkEnumerateDeviceExtensionProperties failed: {}", err);
     }
 }
 

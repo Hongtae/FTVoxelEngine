@@ -892,8 +892,7 @@ std::shared_ptr<Image> Image::fromTextureBuffer(std::shared_ptr<GPUBuffer> buffe
     }
 
     if (getPixel == nullptr) {
-        Log::error(std::format("Unsupported texture format! ({:d})",
-                               (int)pixelFormat));
+        Log::error("Unsupported texture format! ({:d})", (int)pixelFormat);
         return nullptr;
     }
     FVASSERT_DEBUG(imageFormat != ImagePixelFormat::Invalid);

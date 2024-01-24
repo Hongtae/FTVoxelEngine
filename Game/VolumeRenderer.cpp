@@ -120,7 +120,7 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
 
         raycastVoxel.bindingSet->setTexture(0, outputImage);
         raycastVoxel.bindingSet->setTexture(1, depthImage);
-        Log::debug("VolumeRenderer: resetImages");
+        Log::debug("VolumeRenderer: resetImages ({}x{})", width, height);
     }
 
     if (outputImage) {
@@ -274,7 +274,7 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
             }
         }
 
-        constexpr uint32_t bestDisplayLevel = 6U;
+        constexpr uint32_t optimalDisplayLevel = 6U;
         constexpr uint32_t maxStartLevel = 4U;
 
         AABB aabb = voxelModel->aabb();
@@ -286,7 +286,7 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
 
             uint32_t bestFitDepth = (uint32_t)calculateDepthLevel(aabb, width, height);
             uint32_t startLevel = 0;
-            if (depthLevel > bestDisplayLevel)
+            if (depthLevel > std::min(optimalDisplayLevel, maxDisplayDepth))
                 startLevel = 4;
 
             uint32_t _debug_numIterations = 0;
@@ -301,7 +301,7 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
                             _debug_numIterations++;
                             if (viewFrustum.isAABBInside(aabb)) {
                                 uint32_t bestFit = (uint32_t)calculateDepthLevel(aabb, width, height);
-                                maxDepth = std::min({ maxDepth, bestFit + depth });
+                                maxDepth = std::min({ maxDepth, bestFit + depth, maxDisplayDepth });
                             } else {
                                 maxDepth = 0;
                                 _debug_numCulling++;
@@ -339,15 +339,15 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
             std::chrono::duration<double> d = t - timestamp;
 
             if (printDebugInfo) {
-                Log::debug(std::format(enUS_UTF8,
-                                       "VoxelModel nodes:{:Ld} (start:{}, depth:{}, bestfit:{}). iteration:{} cull:{}, elapsed: {:.4f}",
-                                       volumeData.data.size(),
-                                       startLevel,
-                                       depthLevel,
-                                       bestFitDepth,
-                                       _debug_numIterations,
-                                       _debug_numCulling,
-                                       d.count()));
+                Log::debug(enUS_UTF8,
+                           "VoxelModel nodes:{:Ld} (start:{}, depth:{}, bestfit:{}). iteration:{} cull:{}, elapsed: {:.4f}",
+                           volumeData.data.size(),
+                           startLevel,
+                           depthLevel,
+                           bestFitDepth,
+                           _debug_numIterations,
+                           _debug_numCulling,
+                           d.count());
             }
         } else {
             if (printDebugInfo) {

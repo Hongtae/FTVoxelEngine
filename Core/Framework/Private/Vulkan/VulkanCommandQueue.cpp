@@ -25,7 +25,7 @@ std::shared_ptr<CommandBuffer> VulkanCommandQueue::makeCommandBuffer() {
     VkCommandPool commandPool = VK_NULL_HANDLE;
     VkResult err = vkCreateCommandPool(gdevice->device, &cmdPoolCreateInfo, gdevice->allocationCallbacks(), &commandPool);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkCreateCommandPool failed: {}", err));
+        Log::error("vkCreateCommandPool failed: {}", err);
         return nullptr;
     }
 
@@ -46,7 +46,7 @@ std::shared_ptr<SwapChain> VulkanCommandQueue::makeSwapChain(std::shared_ptr<Win
                                                       swapChain->surface,
                                                       &supported);
             if (err != VK_SUCCESS) {
-                Log::error(std::format("vkGetPhysicalDeviceSurfaceSupportKHR failed: {}", err));
+                Log::error("vkGetPhysicalDeviceSurfaceSupportKHR failed: {}", err);
                 return nullptr;
             }
             if (!supported) {
@@ -69,7 +69,7 @@ bool VulkanCommandQueue::submit(const VkSubmitInfo2* submits, uint32_t submitCou
     guard.unlock();
 
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkQueueSubmit2 failed: {}", err));
+        Log::error("vkQueueSubmit2 failed: {}", err);
         FVASSERT(err == VK_SUCCESS);
     }
     if (fence)

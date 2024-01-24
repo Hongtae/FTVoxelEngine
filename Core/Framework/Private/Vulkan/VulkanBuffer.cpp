@@ -82,7 +82,7 @@ std::shared_ptr<VulkanBufferView> VulkanBuffer::makeBufferView(PixelFormat pixel
                 std::shared_ptr<VulkanBufferView> bufferView = std::make_shared<VulkanBufferView>(shared_from_this(), view, bufferViewCreateInfo);
                 return bufferView;
             } else {
-                Log::error(std::format("vkCreateBufferView failed: {}", err));
+                Log::error("vkCreateBufferView failed: {}", err);
             }
         } else {
             Log::error("Buffer::CreateBufferView failed: Invalid pixel format!");

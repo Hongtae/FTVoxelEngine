@@ -116,9 +116,8 @@ Win32Window::Win32Window(const std::u8string& title, Style s, const WindowCallba
         DWORD err = ::GetLastError();
         if (err) {
             // error!
-            Log::error(std::format(
-                "SetWindowLongPtr failed with error {:d}, {}",
-                err, win32ErrorString(err)));
+            Log::error("SetWindowLongPtr failed with error {:d}, {}",
+                       err, win32ErrorString(err));
 
             ::DestroyWindow(hWnd);
             hWnd = nullptr;
@@ -135,9 +134,7 @@ Win32Window::Win32Window(const std::u8string& title, Style s, const WindowCallba
         } else {
             delete dropTarget;
 
-            Log::error(std::format(
-                "RegisterDragDrop failed: {}", win32ErrorString(err)));
-
+            Log::error("RegisterDragDrop failed: {}", win32ErrorString(err));
             throw std::runtime_error("RegisterDragDrop failed");
         }
     }
@@ -183,9 +180,8 @@ void Win32Window::destroy() {
             ULONG ref = this->dropTarget->Release();
             this->dropTarget = nullptr;
             if (ref > 0) {
-                Log::warning(std::format(
-                    "DropTarget for Window:{} in use! ref-count:{:d}", name, ref
-                ));
+                Log::warning("DropTarget for Window:{} in use! ref-count:{:d}",
+                             name, ref);
             }
         }
 

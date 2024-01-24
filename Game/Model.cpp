@@ -147,7 +147,7 @@ void loadImages(LoaderContext& context) {
         if (auto texture = image->makeTexture(context.queue); texture) {
             context.images.at(index) = texture;
         } else {
-            Log::error(std::format("Failed to load image: {}", glTFImage.name));
+            Log::error("Failed to load image: {}", glTFImage.name);
         }
     }
     FVASSERT(context.images.size() == model.images.size());
@@ -445,8 +445,7 @@ void loadMeshes(LoaderContext& context) {
                     break;
                 }
                 if (attribute.format == VertexFormat::Invalid) {
-                    Log::error(std::format("Unhandled vertex attribute type: {}",
-                                           glTFAccessor.type));
+                    Log::error("Unhandled vertex attribute type: {}", glTFAccessor.type);
                     continue;
                 }
 
@@ -481,8 +480,7 @@ void loadMeshes(LoaderContext& context) {
                     attribute.semantic = VertexAttributeSemantic::Color;
                     hasVertexColor = true;
                 }  else {
-                    Log::warning(std::format("Unhandled vertex buffer attribute: {}",
-                                             attributeName));
+                    Log::warning("Unhandled vertex buffer attribute: {}", attributeName);
                     continue;
                 }
                 buffer.attributes.push_back(attribute);
@@ -508,8 +506,7 @@ void loadMeshes(LoaderContext& context) {
                 break;
             default:
                 //throw std::runtime_error("Unknown primitive type");
-                Log::error(std::format(
-                    "Unsupported primitive type: {}", glTFPrimitive.mode));
+                Log::error("Unsupported primitive type: {}", glTFPrimitive.mode);
                 continue;
             }
             
@@ -766,9 +763,9 @@ std::shared_ptr<Model> loadModel(std::filesystem::path path, CommandQueue* queue
         result = loader.LoadBinaryFromFile(&context.model, &err, &warn, path.generic_string());
     }
     if (warn.empty() == false)
-        Log::warning(std::format("glTF warning: {}", warn));
+        Log::warning("glTF warning: {}", warn);
     if (err.empty() == false)
-        Log::error(std::format("glTF error: {}", err));
+        Log::error("glTF error: {}", err);
 
     if (result) {
         tinygltf::Model& model = context.model;
