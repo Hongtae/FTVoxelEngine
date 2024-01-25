@@ -72,8 +72,8 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
     uint32_t width = renderTarget->width();
     uint32_t height = renderTarget->height();
 
-    width = width * renderScale;
-    height = height * renderScale;
+    width = width * config.renderScale;
+    height = height * config.renderScale;
 
     bool resetImages = true;
     if (outputImage) {
@@ -178,9 +178,22 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
 
         FVASSERT_DEBUG(imageBlit);
 
-        auto imageBlitSampler = device->makeSamplerState({});
+        blitSamplerLinear = device->makeSamplerState(
+            {
+                .minFilter = SamplerMinMagFilter::Linear,
+                .magFilter = SamplerMinMagFilter::Linear,
+            });
+        blitSamplerNearest = device->makeSamplerState(
+            {
+                .minFilter = SamplerMinMagFilter::Nearest,
+                .magFilter = SamplerMinMagFilter::Nearest,
+            });
         FVASSERT_DEBUG(imageBlitSampler);
-        imageBlit.value().bindingSet->setSamplerState(0, imageBlitSampler);
+        if (config.linearFilter)
+            imageBlit.value().bindingSet->setSamplerState(0, blitSamplerLinear);
+        else
+            imageBlit.value().bindingSet->setSamplerState(0, blitSamplerNearest);
+
         imageBlit.value().bindingSet->setTexture(0, outputImage);
     }
     if (imageBlitVB == nullptr)
@@ -226,6 +239,8 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
 
         auto nodeTM = transform.matrix4();
         auto mvp = nodeTM.concatenating(view.matrix4()).concatenating(projection.matrix);
+
+        auto viewPosition = view.position();
 
         auto calculateDepthLevel = [&](const AABB& aabb, uint32_t width, uint32_t height) {
             Vector3 aabbCornerVertices[8] = {
@@ -274,34 +289,43 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
             }
         }
 
-        constexpr uint32_t optimalDisplayLevel = 6U;
-        constexpr uint32_t maxStartLevel = 4U;
-
         AABB aabb = voxelModel->aabb();
-        
         if (viewFrustum.isAABBInside(aabb)) {
             const VoxelOctree* root = voxelModel->root();
 
-            uint32_t depthLevel = voxelModel->depth();
+            uint32_t minDetailLevel = config.minDetailLevel;
+            uint32_t maxDetailLevel = std::max(config.maxDetailLevel, minDetailLevel);
 
+            uint32_t depthLevel = voxelModel->depth();
             uint32_t bestFitDepth = (uint32_t)calculateDepthLevel(aabb, width, height);
             uint32_t startLevel = 0;
-            if (depthLevel > std::min(optimalDisplayLevel, maxDisplayDepth))
-                startLevel = 8;
+            if (depthLevel > minDetailLevel)
+                startLevel = minDetailLevel;
 
             uint32_t _debug_numIterations = 0;
             uint32_t _debug_numCulling = 0;
 
             VolumeArray volumeData = {};
             if (startLevel > 0) {
+                auto distMaxDetailSq = config.distanceToMaxDetail * config.distanceToMaxDetail;
+                auto distMinDetailSq = config.distanceToMinDetail * config.distanceToMinDetail;
+                distMinDetailSq = std::max(distMinDetailSq, distMaxDetailSq + 0.001f);
+
                 volumeData = root->makeArray(
-                    aabb, maxDisplayDepth,
+                    aabb, maxDetailLevel,
                     [&](const AABB& aabb, uint32_t depth, uint32_t& maxDepth) {
                         if (depth == startLevel) {
                             _debug_numIterations++;
                             if (viewFrustum.isAABBInside(aabb)) {
-                                uint32_t bestFit = (uint32_t)calculateDepthLevel(aabb, width, height);
-                                maxDepth = std::min({ maxDepth, bestFit + depth, maxDisplayDepth });
+                                auto c = aabb.center().applying(transform);
+                                float distanceFromViewSq = (c - viewPosition).magnitudeSquared();
+                                float bestFit = calculateDepthLevel(aabb, width, height);
+                                if (auto k = distanceFromViewSq - distMaxDetailSq; k > 0.0f) {
+                                    k = k / (distMinDetailSq - distMaxDetailSq);
+                                    k = 1.0f - std::clamp(k, 0.0f, 1.0f);
+                                    bestFit = bestFit * k;
+                                }
+                                maxDepth = std::min({ maxDepth, uint32_t(bestFit) + depth, maxDetailLevel });
                             } else {
                                 maxDepth = 0;
                                 _debug_numCulling++;
@@ -309,7 +333,7 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
                         }
                     });
             } else {
-                volumeData = root->makeArray(aabb, bestFitDepth);
+                volumeData = root->makeArray(aabb, std::min(maxDetailLevel, bestFitDepth));
             }
 
             if (volumeData.data.empty() == false) {
@@ -478,6 +502,12 @@ void VolumeRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
 
             if (drawLayers > 0) {
                 // blit outputImage to back-buffer.
+
+                if (config.linearFilter)
+                    imageBlit.value().bindingSet->setSamplerState(0, blitSamplerLinear);
+                else
+                    imageBlit.value().bindingSet->setSamplerState(0, blitSamplerNearest);
+
                 auto encoder = cbuffer->makeRenderCommandEncoder(rp);
                 encoder->setRenderPipelineState(imageBlit.value().state);
                 encoder->setResource(0, imageBlit.value().bindingSet);

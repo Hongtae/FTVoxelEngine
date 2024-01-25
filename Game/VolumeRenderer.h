@@ -21,14 +21,24 @@ public:
     void setModel(std::shared_ptr<VoxelModel> model);
     std::shared_ptr<VoxelModel> model() const { return voxelModel; }
 
-    float renderScale = 0.5f;
-    uint32_t maxDisplayDepth = 10;
+    struct {
+        float renderScale = 0.5f;
+        // distance from camera position
+        float distanceToMaxDetail = 10.0f;
+        float distanceToMinDetail = 100.0f;
+        uint32_t minDetailLevel = 8U;
+        uint32_t maxDetailLevel = 13U;
+        bool linearFilter = false;
+    } config;
+
 
 private:
     ComputePipeline raycastVoxel;
     ComputePipeline clearBuffers;
     std::optional<RenderPipeline> imageBlit;
     std::shared_ptr<GPUBuffer> imageBlitVB;
+    std::shared_ptr<SamplerState> blitSamplerLinear;
+    std::shared_ptr<SamplerState> blitSamplerNearest;
 
     std::shared_ptr<Texture> outputImage;  // storage-image
     std::shared_ptr<Texture> depthImage;

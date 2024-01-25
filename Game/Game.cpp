@@ -114,7 +114,24 @@ struct App : public Application {
                 }
                 ImGui::EndMenu();
             }
-
+            if (ImGui::BeginMenu("Window")) {
+                if (ImGui::BeginMenu("Resolution")) {
+                    if (ImGui::MenuItem("1280x720")) {
+                        window->setResolution({ 1280, 720 });
+                    }
+                    if (ImGui::MenuItem("1024x768")) {
+                        window->setResolution({ 1024, 768 });
+                    }
+                    if (ImGui::MenuItem("800x600")) {
+                        window->setResolution({ 800, 600 });
+                    }
+                    if (ImGui::MenuItem("640x480")) {
+                        window->setResolution({ 640, 480 });
+                    }
+                    ImGui::EndMenu();
+                }
+                ImGui::EndMenu();
+            }
             if (delta > 0.0f)
                 ImGui::Text(std::format(" ({:.2f} FPS)", 1.0 / delta).c_str());
             ImGui::EndMainMenuBar();
@@ -167,13 +184,33 @@ struct App : public Application {
                     volumeRenderer->lightDir = v;
                 }
             }
-            static int maxDisplayLevel = volumeRenderer->maxDisplayDepth;
-            if (ImGui::SliderInt("Max Display Level", &maxDisplayLevel, 0, 15, nullptr, ImGuiSliderFlags_None)) {
-                volumeRenderer->maxDisplayDepth = maxDisplayLevel;
-            }
-            static int renderScale = int(volumeRenderer->renderScale * 100.0f);
-            if (ImGui::SliderInt("Render Scale", &renderScale, 10, 100, nullptr, ImGuiSliderFlags_None)) {
-                volumeRenderer->renderScale = float(renderScale) * 0.01f;
+            if (ImGui::CollapsingHeader("Rendering")) {
+                int minDetailLevel = volumeRenderer->config.minDetailLevel;
+                int maxDetailLevel = volumeRenderer->config.maxDetailLevel;
+                if (ImGui::SliderInt("Min Detail Level", &minDetailLevel, 0, 10)) {
+                    volumeRenderer->config.minDetailLevel = minDetailLevel;
+                    maxDetailLevel = std::max(maxDetailLevel, minDetailLevel);
+                    volumeRenderer->config.maxDetailLevel = maxDetailLevel;
+                }
+                if (ImGui::SliderInt("Max Detail Level", &maxDetailLevel, minDetailLevel, 15)) {
+                    volumeRenderer->config.maxDetailLevel = std::max(maxDetailLevel, minDetailLevel);
+                }
+                int renderScale = int(volumeRenderer->config.renderScale * 100.0f);
+                if (ImGui::SliderInt("Render Scale", &renderScale, 10, 100, nullptr, ImGuiSliderFlags_None)) {
+                    volumeRenderer->config.renderScale = float(renderScale) * 0.01f;
+                }
+                float distanceToMaxDetail = volumeRenderer->config.distanceToMaxDetail;
+                if (ImGui::InputFloat("Distance To Maximum Detail", &distanceToMaxDetail, 0.01f, 1.0f, "%.2f")) {
+                    volumeRenderer->config.distanceToMaxDetail = distanceToMaxDetail;
+                }
+                float distanceToMinDetail = volumeRenderer->config.distanceToMinDetail;
+                if (ImGui::InputFloat("Distance To Minimum Detail", &distanceToMinDetail, 0.01f, 1.0f, "%.2f")) {
+                    volumeRenderer->config.distanceToMinDetail = distanceToMinDetail;
+                }
+                bool linearFilter = volumeRenderer->config.linearFilter;
+                if (ImGui::Checkbox("Linear filter", &linearFilter)) {
+                    volumeRenderer->config.linearFilter = linearFilter;
+                }
             }
             auto model = volumeRenderer->model().get();
             float modelScale = 0.0f;
@@ -256,8 +293,8 @@ struct App : public Application {
         Vector3 dir = { 0, 0, -1 };
         Vector3 up = { 0, 1, 0 };
         float fov = degreeToRadian(80.f);
-        float nearZ = 0.001f;
-        float farZ = 1000.0f;
+        float nearZ = 0.01f;
+        float farZ = 10000.0f;
         float movementSpeed = 1.0f;
         float rotationSpeed = 0.01f;
     } camera;
