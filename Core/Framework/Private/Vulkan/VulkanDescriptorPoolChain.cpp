@@ -83,7 +83,7 @@ std::shared_ptr<VulkanDescriptorPool> VulkanDescriptorPoolChain::addNewPool(VkDe
                                           gdevice->allocationCallbacks(),
                                           &pool);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkCreateDescriptorPool failed: {}", err));
+        Log::error("vkCreateDescriptorPool failed: {}", err);
         return nullptr;
     }
     FVASSERT_DEBUG(pool);

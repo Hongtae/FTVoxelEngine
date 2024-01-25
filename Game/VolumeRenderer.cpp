@@ -188,7 +188,9 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
                 .minFilter = SamplerMinMagFilter::Nearest,
                 .magFilter = SamplerMinMagFilter::Nearest,
             });
-        FVASSERT_DEBUG(imageBlitSampler);
+        FVASSERT_DEBUG(blitSamplerLinear);
+        FVASSERT_DEBUG(blitSamplerNearest);
+
         if (config.linearFilter)
             imageBlit.value().bindingSet->setSamplerState(0, blitSamplerLinear);
         else

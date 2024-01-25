@@ -476,7 +476,7 @@ std::shared_ptr<GPUBuffer> VulkanGraphicsDevice::makeBuffer(size_t length, GPUBu
 
     VkResult err = vkCreateBuffer(device, &bufferCreateInfo, allocationCallbacks(), &buffer);
     if (err != VK_SUCCESS) {
-        Log::error(std::format("vkCreateBuffer failed: {}", err));
+        Log::error("vkCreateBuffer failed: {}", err);
         return nullptr;
     }
     VkMemoryPropertyFlags memProperties;
