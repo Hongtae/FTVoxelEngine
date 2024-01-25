@@ -5,6 +5,7 @@
 #include "Matrix4.h"
 #include "Quaternion.h"
 
+#pragma pack(push, 4)
 namespace FV {
     struct FVCORE_API Transform {
         Transform(const Quaternion& q = Quaternion::identity,
@@ -37,3 +38,4 @@ namespace FV {
         bool operator==(const Transform& rhs) const;
     };
 }
+#pragma pack(pop)

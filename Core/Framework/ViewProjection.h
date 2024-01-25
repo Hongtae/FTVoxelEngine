@@ -11,7 +11,7 @@
 namespace FV {
     struct ViewTransform {
         Matrix3 matrix;
-        Vector3 position;
+        Vector3 t;
 
         Matrix3 matrix3() const {
             return matrix;
@@ -22,13 +22,13 @@ namespace FV {
                 matrix._11, matrix._12, matrix._13, 0.0,
                 matrix._21, matrix._22, matrix._23, 0.0,
                 matrix._31, matrix._32, matrix._33, 0.0,
-                position.x, position.y, position.z, 1.0
+                t.x, t.y, t.z, 1.0
             };
         }
 
         ViewTransform(const Matrix3& mat = Matrix3::identity,
-                      const Vector3& pos = Vector3::zero)
-            : matrix(mat), position(pos) {
+                      const Vector3& trans = Vector3::zero)
+            : matrix(mat), t(trans) {
         }
         ViewTransform(const Vector3& pos, const Vector3& dir, const Vector3& up) {
             FVASSERT_DEBUG(dir.magnitudeSquared() > 0.0f);
@@ -45,7 +45,7 @@ namespace FV {
             this->matrix = Matrix3(axisX.x, axisY.x, axisZ.x,
                                    axisX.y, axisY.y, axisZ.y,
                                    axisX.z, axisY.z, axisZ.z);
-            this->position = Vector3(tX, tY, tZ);
+            this->t = Vector3(tX, tY, tZ);
         }
 
         Vector3 direction() const {
@@ -54,6 +54,10 @@ namespace FV {
 
         Vector3 up() const {
             return matrix.column2().normalized();
+        }
+
+        Vector3 position() const {
+            return (-t).applying(matrix.inverted());
         }
     };
 

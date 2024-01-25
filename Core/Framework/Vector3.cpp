@@ -2,8 +2,9 @@
 #include "Vector3.h"
 #include "Vector4.h"
 #include "Matrix3.h"
-#include "AffineTransform3.h"
 #include "Quaternion.h"
+#include "AffineTransform3.h"
+#include "Transform.h"
 
 using namespace FV;
 
@@ -34,6 +35,10 @@ Vector3 Vector3::applying(const Matrix3& m) const {
 
 Vector3 Vector3::applying(const AffineTransform3& t) const {
     return applying(t.matrix3) + t.translation;
+}
+
+Vector3 Vector3::applying(const Transform& t) const {
+    return applying(t.orientation) + t.position;
 }
 
 Vector3 Vector3::applying(const Quaternion& q) const {

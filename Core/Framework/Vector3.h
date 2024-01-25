@@ -6,8 +6,9 @@ namespace FV {
     struct Vector2;
     struct Matrix3;
     struct Matrix4;
-    struct AffineTransform3;
     struct Quaternion;
+    struct AffineTransform3;
+    struct Transform;
     struct FVCORE_API Vector3 {
         Vector3() : x(0), y(0), z(0) {}
         Vector3(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
@@ -24,11 +25,13 @@ namespace FV {
 
         Vector3 applying(const Matrix3&) const;
         Vector3 applying(const AffineTransform3&) const;
+        Vector3 applying(const Transform&) const;
         Vector3 applying(const Quaternion&) const;
         Vector3 applying(const Matrix4&, float w = 1.0f) const;
 
         Vector3& apply(const Matrix3& m)          { *this = applying(m); return *this; }
         Vector3& apply(const AffineTransform3& t) { *this = applying(t); return *this; }
+        Vector3& apply(const Transform& t)        { *this = applying(t); return *this; }
         Vector3& apply(const Quaternion& q)       { *this = applying(q); return *this; }
         Vector3& apply(const Matrix4& m, float w = 1.0f) { *this = applying(m, w); return *this; }
 
