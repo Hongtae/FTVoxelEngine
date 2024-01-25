@@ -76,18 +76,6 @@ VolumeArray VoxelOctree::makeArray(const AABB& aabb,
         const AABB& rootAABB;
         MakeArrayFilter& filter;
         void operator() (std::vector<VolumeArray::Node>& vector, uint32_t maxDepth) const {
-            auto index = vector.size();
-            vector.push_back({});
-            {
-                auto& n = vector.at(index);
-                constexpr float q = float(std::numeric_limits<uint16_t>::max());
-                n.x = static_cast<uint16_t>(center.x * q);
-                n.y = static_cast<uint16_t>(center.y * q);
-                n.z = static_cast<uint16_t>(center.z * q);
-                n.depth = depth;
-                n.flags = 0;
-                n.color.value = node->value.color.value;
-            }
 
             uint32_t exp = (126U - depth) << 23;
             float halfExtent = std::bit_cast<float>(exp);
@@ -101,6 +89,19 @@ VolumeArray VoxelOctree::makeArray(const AABB& aabb,
                 aabb.min = rootAABB.min + aabb.min * extents;
                 aabb.max = rootAABB.min + aabb.max * extents;
                 filter(aabb, depth, maxDepth);
+            }
+
+            auto index = vector.size();
+            vector.push_back({});
+            {
+                auto& n = vector.at(index);
+                constexpr float q = float(std::numeric_limits<uint16_t>::max());
+                n.x = static_cast<uint16_t>(center.x * q);
+                n.y = static_cast<uint16_t>(center.y * q);
+                n.z = static_cast<uint16_t>(center.z * q);
+                n.depth = depth;
+                n.flags = 0;
+                n.color.value = node->value.color.value;
             }
 
             if (depth < maxDepth) {

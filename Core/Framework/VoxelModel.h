@@ -154,8 +154,8 @@ namespace FV {
         }
 
         bool mergeSolidBranches();
-        /* Filter(current-AABB, current-depth, maxDepth) */
-        using MakeArrayFilter = std::function<void(const AABB&, uint32_t, uint32_t&)>;
+        /* Filter (current-AABB, current-depth, maxDepth) */
+        using MakeArrayFilter = std::function<void (const AABB&, uint32_t, uint32_t&)>;
         VolumeArray makeArray(const AABB& aabb, uint32_t maxDepth,
                               MakeArrayFilter = {}) const;
     };
