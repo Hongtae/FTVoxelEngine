@@ -10,7 +10,8 @@
 
 namespace FV {
     class VulkanGraphicsDevice;
-    class VulkanImage {
+    class VulkanImageView;
+    class VulkanImage : public std::enable_shared_from_this<VulkanImage> {
     public:
         VulkanImage(std::shared_ptr<VulkanGraphicsDevice>, const VulkanMemoryBlock&, VkImage, const VkImageCreateInfo&);
         VulkanImage(std::shared_ptr<VulkanGraphicsDevice>, VkImage);
@@ -45,6 +46,8 @@ namespace FV {
         PixelFormat pixelFormat() const {
             return getPixelFormat(format);
         }
+
+        std::shared_ptr<VulkanImageView> makeImageView(PixelFormat);
 
         VkImageLayout setLayout(VkImageLayout layout,
                                 VkAccessFlags2 accessMask,

@@ -545,6 +545,7 @@ std::shared_ptr<Texture> VulkanGraphicsDevice::makeTexture(const TextureDescript
     };
 
     VkImageCreateInfo imageCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+    imageCreateInfo.flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
     switch (desc.textureType) {
     case TextureType1D:
         imageCreateInfo.imageType = VK_IMAGE_TYPE_1D;
@@ -659,71 +660,7 @@ std::shared_ptr<Texture> VulkanGraphicsDevice::makeTexture(const TextureDescript
     image = VK_NULL_HANDLE;
     memory.reset();
 
-    if (imageCreateInfo.usage & (VK_IMAGE_USAGE_SAMPLED_BIT |
-                                 VK_IMAGE_USAGE_STORAGE_BIT |
-                                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-                                 VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
-        VkImageViewCreateInfo imageViewCreateInfo = {
-            VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO
-        };
-        imageViewCreateInfo.image = imageObject->image;
-
-        switch (desc.textureType) {
-        case TextureType1D:
-            if (desc.arrayLength > 1)
-                imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_1D_ARRAY;
-            else
-                imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_1D;
-            break;
-        case TextureType2D:
-            if (desc.arrayLength > 1)
-                imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-            else
-                imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            break;
-        case TextureType3D:
-            imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_3D;
-            break;
-        case TextureTypeCube:
-            if (desc.arrayLength > 1)
-                imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
-            else
-                imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
-            break;
-        default:
-            FVASSERT_DEBUG("Uknown texture type!");
-            return nullptr;
-        }
-
-        imageViewCreateInfo.format = imageCreateInfo.format;
-        imageViewCreateInfo.components = {
-            VK_COMPONENT_SWIZZLE_R,
-            VK_COMPONENT_SWIZZLE_G,
-            VK_COMPONENT_SWIZZLE_B,
-            VK_COMPONENT_SWIZZLE_A
-        };
-
-        if (isColorFormat(desc.pixelFormat))
-            imageViewCreateInfo.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_COLOR_BIT;
-        if (isDepthFormat(desc.pixelFormat))
-            imageViewCreateInfo.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
-        if (isStencilFormat(desc.pixelFormat))
-            imageViewCreateInfo.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-
-        imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
-        imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
-        imageViewCreateInfo.subresourceRange.layerCount = imageCreateInfo.arrayLayers;
-        imageViewCreateInfo.subresourceRange.levelCount = imageCreateInfo.mipLevels;
-
-        VkImageView imageView = VK_NULL_HANDLE;
-        err = vkCreateImageView(device, &imageViewCreateInfo, allocationCallbacks(), &imageView);
-        if (err != VK_SUCCESS) {
-            Log::error("vkCreateImageView failed: {}", err);
-            return nullptr;
-        }
-        return std::make_shared<VulkanImageView>(imageObject, imageView, imageViewCreateInfo);
-    }
-    return nullptr;
+    return imageObject->makeImageView(desc.pixelFormat);
 }
 
 std::shared_ptr<Texture> VulkanGraphicsDevice::makeTransientRenderTarget(TextureType textureType, PixelFormat pixelFormat, uint32_t width, uint32_t height, uint32_t depth) {
