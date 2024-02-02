@@ -774,57 +774,7 @@ std::shared_ptr<Texture> VulkanGraphicsDevice::makeTransientRenderTarget(Texture
     image = VK_NULL_HANDLE;
     memory.reset();
 
-    // create imageView
-    VkImageViewCreateInfo imageViewCreateInfo = {
-        VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO
-    };
-    imageViewCreateInfo.image = imageObject->image;
-
-    switch (textureType) {
-    case TextureType1D:
-        imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_1D;
-        break;
-    case TextureType2D:
-        imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        break;
-    case TextureType3D:
-        imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_3D;
-        break;
-    case TextureTypeCube:
-        imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
-        break;
-    default:
-        FVASSERT_DEBUG("Uknown texture type!");
-        return nullptr;
-    }
-
-    imageViewCreateInfo.format = imageCreateInfo.format;
-    imageViewCreateInfo.components = {
-        VK_COMPONENT_SWIZZLE_R,
-        VK_COMPONENT_SWIZZLE_G,
-        VK_COMPONENT_SWIZZLE_B,
-        VK_COMPONENT_SWIZZLE_A
-    };
-
-    if (isColorFormat(pixelFormat))
-        imageViewCreateInfo.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_COLOR_BIT;
-    if (isDepthFormat(pixelFormat))
-        imageViewCreateInfo.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
-    if (isStencilFormat(pixelFormat))
-        imageViewCreateInfo.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-
-    imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
-    imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
-    imageViewCreateInfo.subresourceRange.layerCount = imageCreateInfo.arrayLayers;
-    imageViewCreateInfo.subresourceRange.levelCount = imageCreateInfo.mipLevels;
-
-    VkImageView imageView = VK_NULL_HANDLE;
-    err = vkCreateImageView(device, &imageViewCreateInfo, allocationCallbacks(), &imageView);
-    if (err != VK_SUCCESS) {
-        Log::error("vkCreateImageView failed: {}", err);
-        return nullptr;
-    }
-    return std::make_shared<VulkanImageView>(imageObject, imageView, imageViewCreateInfo);
+    return imageObject->makeImageView(pixelFormat);
 }
 
 std::shared_ptr<SamplerState> VulkanGraphicsDevice::makeSamplerState(const SamplerDescriptor& desc) {

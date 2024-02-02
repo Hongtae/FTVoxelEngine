@@ -47,7 +47,7 @@ namespace FV {
             return getPixelFormat(format);
         }
 
-        std::shared_ptr<VulkanImageView> makeImageView(PixelFormat);
+        std::shared_ptr<VulkanImageView> makeImageView(PixelFormat, std::shared_ptr<VulkanImageView> = nullptr);
 
         VkImageLayout setLayout(VkImageLayout layout,
                                 VkAccessFlags2 accessMask,

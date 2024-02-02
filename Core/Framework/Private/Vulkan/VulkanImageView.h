@@ -9,7 +9,7 @@ namespace FV {
     class VulkanGraphicsDevice;
     class VulkanImageView : public Texture {
     public:
-        VulkanImageView(std::shared_ptr<VulkanImage>, VkImageView, const VkImageViewCreateInfo&);
+        VulkanImageView(std::shared_ptr<VulkanImage>, VkImageView, std::shared_ptr<VulkanImageView> = nullptr);
         VulkanImageView(std::shared_ptr<VulkanGraphicsDevice>, VkImageView);
         ~VulkanImageView();
 
@@ -19,6 +19,7 @@ namespace FV {
 
         std::shared_ptr<VulkanImage> image;
         std::shared_ptr<VulkanGraphicsDevice> gdevice;
+        std::shared_ptr<VulkanImageView> parentView;
 
         uint32_t width() const override {
             return image->width();
@@ -43,6 +44,8 @@ namespace FV {
         }
 
         std::shared_ptr<GraphicsDevice> device() const override;
+        std::shared_ptr<Texture> parent() const override;
+        std::shared_ptr<Texture> makeTextureView(PixelFormat) const override;
     };
 }
 

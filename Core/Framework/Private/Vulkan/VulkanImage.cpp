@@ -67,11 +67,12 @@ VulkanImage::~VulkanImage() {
         memory.value().chunk->pool->dealloc(memory.value());
 }
 
-std::shared_ptr<VulkanImageView> VulkanImage::makeImageView(PixelFormat format) {
+std::shared_ptr<VulkanImageView> VulkanImage::makeImageView(PixelFormat format, std::shared_ptr<VulkanImageView> parent) {
     if (this->usage & (VK_IMAGE_USAGE_SAMPLED_BIT |
-                 VK_IMAGE_USAGE_STORAGE_BIT |
-                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-                 VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
+                       VK_IMAGE_USAGE_STORAGE_BIT |
+                       VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT |
+                       VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                       VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
         VkImageViewCreateInfo imageViewCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
         imageViewCreateInfo.image = this->image;
 
@@ -131,7 +132,7 @@ std::shared_ptr<VulkanImageView> VulkanImage::makeImageView(PixelFormat format) 
             Log::error("vkCreateImageView failed: {}", err);
             return nullptr;
         }
-        return std::make_shared<VulkanImageView>(shared_from_this(), imageView, imageViewCreateInfo);
+        return std::make_shared<VulkanImageView>(shared_from_this(), imageView, parent);
     }
     return nullptr;
 }

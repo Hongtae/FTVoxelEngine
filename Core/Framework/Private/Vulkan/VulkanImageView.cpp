@@ -6,10 +6,11 @@
 #if FVCORE_ENABLE_VULKAN
 using namespace FV;
 
-VulkanImageView::VulkanImageView(std::shared_ptr<VulkanImage> img, VkImageView view, const VkImageViewCreateInfo& ci)
+VulkanImageView::VulkanImageView(std::shared_ptr<VulkanImage> img, VkImageView view, std::shared_ptr<VulkanImageView> pv)
     : image(img)
     , imageView(view)
     , gdevice(img->gdevice)
+    , parentView(pv)
     , signalSemaphore(VK_NULL_HANDLE)
     , waitSemaphore(VK_NULL_HANDLE) {
 }
@@ -18,6 +19,7 @@ VulkanImageView::VulkanImageView(std::shared_ptr<VulkanGraphicsDevice> dev, VkIm
     : image(nullptr)
     , imageView(view)
     , gdevice(dev)
+    , parentView(nullptr)
     , signalSemaphore(VK_NULL_HANDLE)
     , waitSemaphore(VK_NULL_HANDLE) {
 }
@@ -34,4 +36,16 @@ VulkanImageView::~VulkanImageView() {
 std::shared_ptr<GraphicsDevice> VulkanImageView::device() const {
     return gdevice;
 }
+
+std::shared_ptr<Texture> VulkanImageView::parent() const {
+    return parentView;
+}
+
+std::shared_ptr<Texture> VulkanImageView::makeTextureView(PixelFormat pf) const {
+    if (image) {
+        return image->makeImageView(pf);
+    }
+    return nullptr;
+}
+
 #endif //#if FVCORE_ENABLE_VULKAN

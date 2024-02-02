@@ -38,6 +38,9 @@ namespace FV {
         virtual TextureType type() const = 0;
         virtual PixelFormat pixelFormat() const = 0;
 
+        virtual std::shared_ptr<Texture> parent() const = 0;
+        virtual std::shared_ptr<Texture> makeTextureView(PixelFormat) const = 0;
+
         virtual std::shared_ptr<GraphicsDevice> device() const = 0;
     };
 
