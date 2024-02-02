@@ -67,7 +67,7 @@ struct AABB {
     vec3 max;
 };
 
-float rayTest(const AABB aabb, const Ray ray) {
+float rayTest2(const AABB aabb, const Ray ray) {
     bool inside = true;
     vec3 maxT = vec3(-1, -1, -1);
     vec3 coord = vec3(0, 0, 0);
@@ -105,6 +105,35 @@ float rayTest(const AABB aabb, const Ray ray) {
         }
     }
     return length(coord - ray.origin);
+}
+
+float rayTest(const AABB aabb, const Ray ray) {
+    vec3 boxmin = aabb.min;
+    vec3 boxmax = aabb.max;
+    vec3 raypos = ray.origin;
+    vec3 raydir = ray.dir;
+
+    float t1 = (boxmin.x - raypos.x) / raydir.x;
+    float t2 = (boxmax.x - raypos.x) / raydir.x;
+    float t3 = (boxmin.y - raypos.y) / raydir.y;
+    float t4 = (boxmax.y - raypos.y) / raydir.y;
+    float t5 = (boxmin.z - raypos.z) / raydir.z;
+    float t6 = (boxmax.z - raypos.z) / raydir.z;
+
+    float tmin = max(max(min(t1, t2), min(t3, t4)), min(t5, t6));
+    float tmax = min(min(max(t1, t2), max(t3, t4)), max(t5, t6));
+
+    if (tmax < 0.0) // box on ray but behind ray origin
+    {
+        return -1.0;
+    }
+
+    if (tmin > tmax) // ray doesn't intersect box
+    {
+        return -1.0;
+    }
+
+    return tmin;
 }
 
 AABB normalizedAABB(EncodedAABB e) {
