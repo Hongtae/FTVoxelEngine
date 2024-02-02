@@ -140,6 +140,74 @@ VolumeArray VoxelOctree::makeArray(const AABB& aabb,
     return volumes;
 }
 
+VolumeArray VoxelOctree::makeSubarray(const AABB& aabb,
+                                      const Vector3& center,
+                                      uint32_t currentLevel,
+                                      uint32_t maxDepth) const {
+
+    if (aabb.isNull())
+        return {};
+    if (aabb.isPointInside(center) == false)
+        return {};
+
+    struct MakeArray {
+        const VoxelOctree* node;
+        const Vector3 center;
+        uint32_t depth;
+        void operator() (std::vector<VolumeArray::Node>& vector, uint32_t maxDepth) const {
+
+            uint32_t exp = (126U - depth) << 23;
+            float halfExtent = std::bit_cast<float>(exp);
+
+            auto index = vector.size();
+            vector.push_back({});
+            {
+                auto& n = vector.at(index);
+                constexpr float q = float(std::numeric_limits<uint16_t>::max());
+                n.x = static_cast<uint16_t>(center.x * q);
+                n.y = static_cast<uint16_t>(center.y * q);
+                n.z = static_cast<uint16_t>(center.z * q);
+                n.depth = depth;
+                n.flags = 0;
+                n.color.value = node->value.color.value;
+            }
+
+            if (depth < maxDepth) {
+                for (int i = 0; i < 8; ++i) {
+                    auto p = node->subdivisions[i];
+                    if (p) {
+                        const int x = i & 1;
+                        const int y = (i >> 1) & 1;
+                        const int z = (i >> 2) & 1;
+
+                        Vector3 pt = {
+                             center.x + halfExtent * (float(x) - 0.5f),
+                             center.y + halfExtent * (float(y) - 0.5f),
+                             center.z + halfExtent * (float(z) - 0.5f),
+                        };
+                        MakeArray{ p, pt, depth + 1 }(vector, maxDepth);
+                    }
+                }
+            }
+            auto advance = (vector.size() - index);
+            auto& n = vector.at(index);
+            FVASSERT_DEBUG(advance < std::numeric_limits<decltype(n.advance)>::max());
+            n.advance = static_cast<decltype(n.advance)>(advance);
+            if (n.advance == 1) { // leaf-node
+                n.flags |= VolumeArray::FlagLeafNode;
+                n.flags |= VolumeArray::FlagMaterial;
+            }
+        }
+    };
+
+    VolumeArray volumes = {};
+    volumes.aabb = aabb;
+    maxDepth = std::clamp(maxDepth, 0U, VoxelOctree::maxDepth);
+    Vector3 normalizedCenter = center / aabb.extents();
+    MakeArray{ this, normalizedCenter, currentLevel, }(volumes.data, maxDepth);
+    return volumes;
+}
+
 VoxelModel::VoxelModel(const AABB& aabb, int depth)
     : _root(nullptr)
     , _scale(0.0f)

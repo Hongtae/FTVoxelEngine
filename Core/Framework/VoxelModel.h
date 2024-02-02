@@ -158,6 +158,10 @@ namespace FV {
         using MakeArrayFilter = std::function<void (const AABB&, uint32_t, uint32_t&)>;
         VolumeArray makeArray(const AABB& aabb, uint32_t maxDepth,
                               MakeArrayFilter = {}) const;
+
+        VolumeArray makeSubarray(const AABB& modelAABB,
+                                 const Vector3& nodeCenter,
+                                 uint32_t currentLevel, uint32_t maxDepth) const;
     };
 
     class VoxelOctreeBuilder {
