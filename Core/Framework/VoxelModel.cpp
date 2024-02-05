@@ -591,18 +591,18 @@ void VoxelModel::optimize() {
     ForEachNode{ _root }(fn);
 }
 
-int VoxelModel::enumerateLevel(int depth, std::function<void(const AABB&, uint32_t, const VoxelOctree&)> cb) const {
-    using Callback = std::function<void(const AABB&, uint32_t, const VoxelOctree&)>;
+int VoxelModel::enumerateLevel(int depth, std::function<void(const AABB&, uint32_t, const VoxelOctree*)> cb) const {
+    using Callback = std::function<void(const AABB&, uint32_t, const VoxelOctree*)>;
 
     struct IterateDepth {
-        const VoxelOctree& node;
+        const VoxelOctree* node;
         const AABB aabb;
         uint32_t level;
         uint32_t operator() (uint32_t depth, Callback& cb) {
             if (level < depth) {
                 int result = 0;
-                node.enumerateSubtree(
-                    aabb, [&](const AABB& aabb2, const VoxelOctree& tree) {
+                node->enumerateSubtree(
+                    aabb, [&](const AABB& aabb2, const VoxelOctree* tree) {
                         result += IterateDepth{ tree, aabb2, level + 1 }(depth, cb);
                     });
                 if (result > 0)
@@ -615,23 +615,23 @@ int VoxelModel::enumerateLevel(int depth, std::function<void(const AABB&, uint32
     };
     if (_root) {
         auto volume = AABB{ {0,0,0}, {1,1,1} };
-        return IterateDepth{ *_root, volume, 0 }(depth, cb);
+        return IterateDepth{ _root, volume, 0 }(depth, cb);
     }
     return 0;
 }
 
-int VoxelModel::enumerateLevel(int depth, std::function<void(const Vector3&, uint32_t, const VoxelOctree&)> cb) const {
-    using Callback = std::function<void(const Vector3&, uint32_t, const VoxelOctree&)>;
+int VoxelModel::enumerateLevel(int depth, std::function<void(const Vector3&, uint32_t, const VoxelOctree*)> cb) const {
+    using Callback = std::function<void(const Vector3&, uint32_t, const VoxelOctree*)>;
 
     struct IterateDepth {
-        const VoxelOctree& node;
+        const VoxelOctree* node;
         const Vector3 center;
         uint32_t level;
         uint32_t operator() (uint32_t depth, Callback& cb) {
             if (level < depth) {
                 int result = 0;
-                node.enumerateSubtree(
-                    center, level, [&](const Vector3& center, uint32_t level, const VoxelOctree& tree) {
+                node->enumerateSubtree(
+                    center, level, [&](const Vector3& center, uint32_t level, const VoxelOctree* tree) {
                     result += IterateDepth{ tree, center, level }(depth, cb);
                 });
                 if (result > 0)
@@ -643,7 +643,7 @@ int VoxelModel::enumerateLevel(int depth, std::function<void(const Vector3&, uin
         }
     };
     if (_root) {
-        return IterateDepth{ *_root, {0.5f, 0.5f, 0.5f}, 0}(depth, cb);
+        return IterateDepth{ _root, {0.5f, 0.5f, 0.5f}, 0}(depth, cb);
     }
     return 0;
 }

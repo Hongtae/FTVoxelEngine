@@ -124,7 +124,7 @@ namespace FV {
             return level;
         }
 
-        template <typename T> requires std::is_invocable_v<T, const AABB&, const VoxelOctree&>
+        template <typename T> requires std::is_invocable_v<T, const AABB&, const VoxelOctree*>
         void enumerateSubtree(const AABB& aabb, T&& fn) const {
             const auto pivot = aabb.min;
             const auto halfExtents = aabb.extents() * 0.5f;
@@ -143,11 +143,11 @@ namespace FV {
                     pivot.z + halfExtents.z * z
                 };
                 AABB aabb2 = { pt, pt + halfExtents };
-                fn(aabb2, *node);
+                fn(aabb2, node);
             }
         }
 
-        template <typename T> requires std::is_invocable_v<T, const Vector3&, uint32_t, const VoxelOctree&>
+        template <typename T> requires std::is_invocable_v<T, const Vector3&, uint32_t, const VoxelOctree*>
         void enumerateSubtree(const Vector3& center, uint32_t depth, T&& fn) const {
             const auto hext = halfExtent(depth);
 
@@ -164,7 +164,7 @@ namespace FV {
                     center.y + hext * (float(y) - 0.5f),
                     center.z + hext * (float(z) - 0.5f),
                 };
-                fn(pt, depth+1, *node);
+                fn(pt, depth+1, node);
             }
         }
 
@@ -202,8 +202,8 @@ namespace FV {
         void erase(uint32_t x, uint32_t y, uint32_t z);
         std::optional<Voxel> lookup(uint32_t x, uint32_t y, uint32_t z) const;
 
-        int enumerateLevel(int depth, std::function<void(const AABB&, uint32_t, const VoxelOctree&)>) const;
-        int enumerateLevel(int depth, std::function<void(const Vector3&, uint32_t, const VoxelOctree&)>) const;
+        int enumerateLevel(int depth, std::function<void(const AABB&, uint32_t, const VoxelOctree*)>) const;
+        int enumerateLevel(int depth, std::function<void(const Vector3&, uint32_t, const VoxelOctree*)>) const;
 
         const VoxelOctree* root() const { return _root; }
         uint32_t resolution() const { return 1ULL << _maxDepth; }

@@ -165,16 +165,16 @@ void VolumeRenderer2::setModel(std::shared_ptr<VoxelModel> model) {
         auto device = queue->device().get();
 
         auto numNodes = voxelModel->enumerateLevel(
-            startDepth, [&](const AABB& aabb, uint32_t depth, const VoxelOctree& octree) {
-                auto numNodes = octree.numDescendants();
-                auto numLeafNodes = octree.numLeafNodes();
-                auto maxLevels = octree.maxDepthLevels();
+            startDepth, [&](const AABB& aabb, uint32_t depth, const VoxelOctree* octree) {
+                auto numNodes = octree->numDescendants();
+                auto numLeafNodes = octree->numLeafNodes();
+                auto maxLevels = octree->maxDepthLevels();
                 Log::debug(
                     enUS_UTF8,
                     "node at depth:{} (max-depth:{}/{}), num-nodes:{:Ld}, num-leaf-nodes:{:Ld}",
                     depth, maxDepthLevel, maxLevels, numNodes, numLeafNodes);
 
-                auto volumeData = octree.makeSubarray(aabb.center(), depth, maxDepthLevel);
+                auto volumeData = octree->makeSubarray(aabb.center(), depth, maxDepthLevel);
                 if (volumeData.data.empty() == false) {
                     size_t numNodes = volumeData.data.size();
                     const auto dataLength = sizeof(VolumeArray::Node) * numNodes;
