@@ -59,6 +59,10 @@ namespace FV {
         Vector3 position() const {
             return (-t).applying(matrix.inverted());
         }
+
+        bool operator==(const ViewTransform& other) const {
+            return matrix == other.matrix && t == other.t;
+        }
     };
 
     struct ProjectionTransform {
@@ -137,6 +141,10 @@ namespace FV {
 
         bool isPerspective() const { return matrix._44 != 1.0f; }
         bool isOrthographic() const { return matrix._44 == 1.0; }
+
+        bool operator==(const ProjectionTransform& other) const {
+            return matrix == other.matrix;
+        }
     };
 
     struct ViewFrustum {
@@ -240,6 +248,10 @@ namespace FV {
             }
             // inside
             return true;
+        }
+
+        bool operator==(const ViewFrustum& other) const {
+            return view == other.view && projection == other.projection;
         }
     };
 }
