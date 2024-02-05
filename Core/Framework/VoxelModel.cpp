@@ -63,17 +63,13 @@ bool VoxelOctree::mergeSolidBranches() {
     return false;
 }
 
-VolumeArray VoxelOctree::makeArray(const AABB& aabb,
-                                   uint32_t maxDepth,
-                                   MakeArrayFilter filter) const {
-    if (aabb.isNull())
-        return {};
 
+VolumeArray VoxelOctree::makeArray(uint32_t maxDepth,
+                                   MakeArrayFilter filter) const {
     struct MakeArray {
         const VoxelOctree* node;
         const Vector3 center;
         uint32_t depth;
-        const AABB& rootAABB;
         MakeArrayFilter& filter;
         void operator() (std::vector<VolumeArray::Node>& vector, uint32_t maxDepth) const {
 
@@ -85,9 +81,6 @@ VolumeArray VoxelOctree::makeArray(const AABB& aabb,
                     center - Vector3(halfExtent, halfExtent, halfExtent),
                     center + Vector3(halfExtent, halfExtent, halfExtent)
                 };
-                auto extents = rootAABB.extents();
-                aabb.min = rootAABB.min + aabb.min * extents;
-                aabb.max = rootAABB.min + aabb.max * extents;
                 filter(aabb, depth, maxDepth);
             }
 
@@ -117,7 +110,7 @@ VolumeArray VoxelOctree::makeArray(const AABB& aabb,
                              center.y + halfExtent * (float(y) - 0.5f),
                              center.z + halfExtent * (float(z) - 0.5f),
                         };
-                        MakeArray{ p, pt, depth + 1, rootAABB, filter }(vector, maxDepth);
+                        MakeArray{ p, pt, depth + 1, filter }(vector, maxDepth);
                     }
                 }
             }
@@ -132,21 +125,18 @@ VolumeArray VoxelOctree::makeArray(const AABB& aabb,
         }
     };
     VolumeArray volumes = {};
-    volumes.aabb = aabb;
+    volumes.aabb = { Vector3::zero, {1,1,1} };
     //volumes.data.reserve(countNodesToDepth(maxDepth));
     maxDepth = std::clamp(maxDepth, 0U, VoxelOctree::maxDepth);
-    MakeArray{ this, Vector3(0.5f, 0.5f, 0.5f), 0, aabb, filter }(volumes.data, maxDepth);
+    MakeArray{ this, Vector3(0.5f, 0.5f, 0.5f), 0, filter }(volumes.data, maxDepth);
     //volumes.data.shrink_to_fit();
     return volumes;
 }
 
-VolumeArray VoxelOctree::makeSubarray(const AABB& aabb,
-                                      const Vector3& center,
+VolumeArray VoxelOctree::makeSubarray(const Vector3& center,
                                       uint32_t currentLevel,
                                       uint32_t maxDepth) const {
-
-    if (aabb.isNull())
-        return {};
+    auto aabb = AABB{ {0,0,0}, {1,1,1} };
     if (aabb.isPointInside(center) == false)
         return {};
 
@@ -203,36 +193,26 @@ VolumeArray VoxelOctree::makeSubarray(const AABB& aabb,
     VolumeArray volumes = {};
     volumes.aabb = aabb;
     maxDepth = std::clamp(maxDepth, 0U, VoxelOctree::maxDepth);
-    Vector3 normalizedCenter = center / aabb.extents();
-    MakeArray{ this, normalizedCenter, currentLevel, }(volumes.data, maxDepth);
+    MakeArray{ this, center, currentLevel, }(volumes.data, maxDepth);
     return volumes;
 }
 
-VoxelModel::VoxelModel(const AABB& aabb, int depth)
+VoxelModel::VoxelModel(int depth)
     : _root(nullptr)
-    , _scale(0.0f)
-    , _center(Vector3::zero)
     , _maxDepth(std::max(depth, 0)) {
-    if (aabb.isNull() == false) {
-        auto extents = aabb.extents();
-        _center = aabb.center();
-        _scale = std::max({ extents.x, extents.y, extents.z });
-    }
 }
 
 VoxelModel::VoxelModel(VoxelOctreeBuilder* builder, int depth)
     : _root(nullptr)
-    , _scale(0.0f)
-    , _center(Vector3::zero)
     , _maxDepth(std::max(depth, 0)) {
     if (builder) {
         AABB aabb = builder->aabb();
         if (aabb.isNull() == false) {
             auto extents = aabb.extents();
-            _center = aabb.center();
-            _scale = std::max({ extents.x, extents.y, extents.z });
+            auto center = aabb.center();
+            auto scale = std::max({ extents.x, extents.y, extents.z });
 
-            if (_scale > epsilon) {
+            if (scale > epsilon) {
 
                 struct Subdivide {
                     VoxelOctreeBuilder* builder;
@@ -284,8 +264,8 @@ VoxelModel::VoxelModel(VoxelOctreeBuilder* builder, int depth)
                 };
 
                 AABB aabb = {
-                    _center - Vector3(_scale, _scale, _scale) * 0.5f,
-                    _center + Vector3(_scale, _scale, _scale) * 0.5f
+                    center - Vector3(scale, scale, scale) * 0.5f,
+                    center + Vector3(scale, scale, scale) * 0.5f
                 };
                 auto p = new VoxelOctree();
                 if (builder->volumeTest(aabb, p, nullptr)) {
@@ -300,8 +280,6 @@ VoxelModel::VoxelModel(VoxelOctreeBuilder* builder, int depth)
                     p = nullptr;
                 }
                 _root = p;
-            } else {
-                _scale = 0.0f;
             }
         }
     }
@@ -309,17 +287,15 @@ VoxelModel::VoxelModel(VoxelOctreeBuilder* builder, int depth)
 
 VoxelModel::VoxelModel(VoxelOctreeBuilder* builder, int depth, DispatchQueue& queue)
     : _root(nullptr)
-    , _scale(0.0f)
-    , _center(Vector3::zero)
     , _maxDepth(std::max(depth, 0)) {
     if (builder) {
         AABB aabb = builder->aabb();
         if (aabb.isNull() == false) {
             auto extents = aabb.extents();
-            _center = aabb.center();
-            _scale = std::max({ extents.x, extents.y, extents.z });
+            auto center = aabb.center();
+            auto scale = std::max({ extents.x, extents.y, extents.z });
 
-            if (_scale > epsilon) {
+            if (scale > epsilon) {
 
                 struct SubdivideAsync {
                     DispatchQueue& queue;
@@ -384,8 +360,8 @@ VoxelModel::VoxelModel(VoxelOctreeBuilder* builder, int depth, DispatchQueue& qu
                 };
 
                 AABB aabb = {
-                    _center - Vector3(_scale, _scale, _scale) * 0.5f,
-                    _center + Vector3(_scale, _scale, _scale) * 0.5f
+                    center - Vector3(scale, scale, scale) * 0.5f,
+                    center + Vector3(scale, scale, scale) * 0.5f
                 };
                 auto p = new VoxelOctree();
                 if (builder->volumeTest(aabb, p, nullptr)) {
@@ -401,8 +377,6 @@ VoxelModel::VoxelModel(VoxelOctreeBuilder* builder, int depth, DispatchQueue& qu
                     p = nullptr;
                 }
                 _root = p;
-            } else {
-                _scale = 0.0f;
             }
         }
     }
@@ -452,9 +426,6 @@ void VoxelModel::update(uint32_t x, uint32_t y, uint32_t z, const Voxel& value) 
             return updated;
         }
     };
-    if (_scale < epsilon) {
-        throw std::runtime_error("Invalid object (AABB is null)");
-    }
     if (_root == nullptr) {
         _root = new VoxelOctree(value);
     }
@@ -561,8 +532,6 @@ std::optional<Voxel> VoxelModel::lookup(uint32_t x, uint32_t y, uint32_t z) cons
             return node;
         }
     };
-    if (_scale < epsilon)
-        return {};
     if (_root) {
         if (res > 1) {
             if (auto p = Lookup{ res >> 1, _root }(x, y, z); p->isLeafNode())
@@ -605,22 +574,6 @@ void VoxelModel::setDepth(uint32_t depth) {
     }
 }
 
-void VoxelModel::setScale(float scale) {
-    FVASSERT_DEBUG(scale > epsilon);
-    _scale = std::max(scale, epsilon);
-}
-
-AABB VoxelModel::aabb() const {
-    if (_scale < epsilon) {
-        return AABB::null;
-    }
-    auto halfExt = Vector3(_scale, _scale, _scale) * 0.5f;
-    return AABB{
-        _center - halfExt,
-        _center + halfExt
-    };
-}
-
 void VoxelModel::optimize() {
     struct ForEachNode {
         VoxelOctree* node;
@@ -656,18 +609,41 @@ int VoxelModel::enumerateLevel(int depth, std::function<void(const AABB&, uint32
                     return result;
             }
             // The level is equal to the depth, or no more children exist at the current level.
-            //FVASSERT_DEBUG(level == depth);
             cb(aabb, level, node);
             return 1;
         }
     };
     if (_root) {
-        auto volume = this->aabb();
-        FVASSERT_DEBUG(volume.isNull() == false);
+        auto volume = AABB{ {0,0,0}, {1,1,1} };
+        return IterateDepth{ *_root, volume, 0 }(depth, cb);
+    }
+    return 0;
+}
 
-        if (volume.isNull() == false) {
-            return IterateDepth{ *_root, volume, 0 }(depth, cb);
+int VoxelModel::enumerateLevel(int depth, std::function<void(const Vector3&, uint32_t, const VoxelOctree&)> cb) const {
+    using Callback = std::function<void(const Vector3&, uint32_t, const VoxelOctree&)>;
+
+    struct IterateDepth {
+        const VoxelOctree& node;
+        const Vector3 center;
+        uint32_t level;
+        uint32_t operator() (uint32_t depth, Callback& cb) {
+            if (level < depth) {
+                int result = 0;
+                node.enumerateSubtree(
+                    center, level, [&](const Vector3& center, uint32_t level, const VoxelOctree& tree) {
+                    result += IterateDepth{ tree, center, level }(depth, cb);
+                });
+                if (result > 0)
+                    return result;
+            }
+            // The level is equal to the depth, or no more children exist at the current level.
+            cb(center, level, node);
+            return 1;
         }
+    };
+    if (_root) {
+        return IterateDepth{ *_root, {0.5f, 0.5f, 0.5f}, 0}(depth, cb);
     }
     return 0;
 }
@@ -712,23 +688,13 @@ std::optional<VoxelModel::RayHitResult> VoxelModel::rayTest(const Vector3& rayOr
 
 uint64_t VoxelModel::rayTest(const Vector3& rayOrigin, const Vector3& dir,
                              std::function<bool(const RayHitResult&)> filter) const {
-    if (_scale < epsilon)
-        return 0;
-
-    Vector3 scale = Vector3(_scale, _scale, _scale);
-    auto quantize = AffineTransform3::identity.scaled(scale).translated(_center);
-    auto normalize = quantize.inverted();
-
-    auto rayStart = rayOrigin.applying(normalize);
-    auto rayDir = dir.applying(normalize.matrix3);
-
     struct RayTestNode {
         const VoxelOctree* node;
         const Vector3 center;
         const uint32_t depth;
         uint32_t resolution;
         bool& continueRayTest;
-        std::function<bool(const RayHitResult&)> callback;
+        std::function<bool(const RayHitResult&)>& callback;
         uint64_t rayTest(const Vector3& start, const Vector3& dir) const {
             float halfExtent = VoxelOctree::halfExtent(depth);
             AABB aabb = {
@@ -779,18 +745,14 @@ uint64_t VoxelModel::rayTest(const Vector3& rayOrigin, const Vector3& dir,
     bool continueRayTest = true;
     std::function<bool(const RayHitResult&)> callback;
     if (filter) {
-        callback = [&](const RayHitResult& r) {
-            Vector3 hit = rayStart + rayDir * r.t;
-            hit.apply(quantize);
-            return filter({ (hit - rayOrigin).magnitude(), r.node });
-        };
+        callback = filter;
     } else {
         callback = [](auto&&) { return true; };
     }
 
     return RayTestNode{
         _root, Vector3(0.5f, 0.5f, 0.5f), 0, resolution(), continueRayTest, callback 
-    }.rayTest(rayStart, rayDir);
+    }.rayTest(rayOrigin, dir);
 }
 
 void VoxelModel::deleteNode(VoxelOctree* node) {
@@ -813,8 +775,8 @@ bool VoxelModel::deserialize(std::istream& stream) {
     stream.read((char*)&header, sizeof(header));
     if (strcmp(header.tag, fileTag) == 0) {
 
-        _center = Vector3(header.bounds[0], header.bounds[1], header.bounds[2]);
-        _scale = header.bounds[3];
+        auto center = Vector3(header.bounds[0], header.bounds[1], header.bounds[2]);
+        auto scale = header.bounds[3];
         _maxDepth = 0;
 
         struct Deserializer {
@@ -885,10 +847,10 @@ uint64_t VoxelModel::serialize(std::ostream& stream) const {
         uint64_t totalNodes = 0;
     } header;
     strcpy_s(header.tag, std::size(header.tag), fileTag);
-    header.bounds[0] = _center.x;
-    header.bounds[1] = _center.y;
-    header.bounds[2] = _center.z;
-    header.bounds[3] = _scale;
+    header.bounds[0] = 0.5f;
+    header.bounds[1] = 0.5f;
+    header.bounds[2] = 0.5f;
+    header.bounds[3] = 1.0f;
 
     if (_root) {
         header.totalNodes = _root->numDescendants();

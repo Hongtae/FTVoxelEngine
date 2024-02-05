@@ -143,9 +143,6 @@ void VolumeRenderer2::setModel(std::shared_ptr<VoxelModel> model) {
     voxelLayers.clear();
 
     if (voxelModel) {
-        AABB aabb = voxelModel->aabb();
-        FVASSERT_DEBUG(aabb.isNull() == false);
-
 #pragma pack(push, 1)
         struct VolumeArrayHeader {
             Vector3 aabbMin;
@@ -177,7 +174,7 @@ void VolumeRenderer2::setModel(std::shared_ptr<VoxelModel> model) {
                     "node at depth:{} (max-depth:{}/{}), num-nodes:{:Ld}, num-leaf-nodes:{:Ld}",
                     depth, maxDepthLevel, maxLevels, numNodes, numLeafNodes);
 
-                auto volumeData = octree.makeArray(aabb, maxDepthLevel);
+                auto volumeData = octree.makeSubarray(aabb.center(), depth, maxDepthLevel);
                 if (volumeData.data.empty() == false) {
                     size_t numNodes = volumeData.data.size();
                     const auto dataLength = sizeof(VolumeArray::Node) * numNodes;

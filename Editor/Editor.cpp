@@ -392,7 +392,7 @@ public:
                 }
                 if (ImGui::BeginMenu("VoxelOctree Test")) {
                     if (ImGui::MenuItem("VoxelOctree random update test")) {
-                        VoxelModel model(AABB(Vector3(0, 0, 0), Vector3(1, 1, 1)), 12);
+                        VoxelModel model(12);
                         int res = model.resolution();
 
                         struct Location { uint32_t x, y, z; };
@@ -451,7 +451,7 @@ public:
                         Log::debug("done.");
                     }
                     if (ImGui::MenuItem("VoxelOctree fill test")) {
-                        VoxelModel model(AABB(Vector3(0, 0, 0), Vector3(1, 1, 1)), 8);
+                        VoxelModel model(8);
                         int res = model.resolution();
 
                         struct Location { uint32_t x, y, z; };

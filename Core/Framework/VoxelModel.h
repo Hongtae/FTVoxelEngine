@@ -43,12 +43,6 @@ namespace FV {
                 };
             }
         };
-        struct Header {
-            Vector3 aabbMin;
-            uint32_t _padding_offset12;
-            Vector3 aabbMax;
-            uint32_t _padding_offset28;
-        };
 #pragma pack(pop)
         static_assert(sizeof(Node) == 16);
 
@@ -153,15 +147,36 @@ namespace FV {
             }
         }
 
+        template <typename T> requires std::is_invocable_v<T, const Vector3&, uint32_t, const VoxelOctree&>
+        void enumerateSubtree(const Vector3& center, uint32_t depth, T&& fn) const {
+            const auto hext = halfExtent(depth);
+
+            for (int i = 0; i < 8; ++i) {
+                auto node = subdivisions[i];
+                if (node == nullptr) continue;
+
+                const int x = i & 1;
+                const int y = (i >> 1) & 1;
+                const int z = (i >> 2) & 1;
+
+                Vector3 pt = {
+                    center.x + hext * (float(x) - 0.5f),
+                    center.y + hext * (float(y) - 0.5f),
+                    center.z + hext * (float(z) - 0.5f),
+                };
+                fn(pt, depth+1, *node);
+            }
+        }
+
         bool mergeSolidBranches();
         /* Filter (current-AABB, current-depth, maxDepth) */
         using MakeArrayFilter = std::function<void (const AABB&, uint32_t, uint32_t&)>;
-        VolumeArray makeArray(const AABB& aabb, uint32_t maxDepth,
+        VolumeArray makeArray(uint32_t maxDepth, 
                               MakeArrayFilter = {}) const;
 
-        VolumeArray makeSubarray(const AABB& modelAABB,
-                                 const Vector3& nodeCenter,
-                                 uint32_t currentLevel, uint32_t maxDepth) const;
+        VolumeArray makeSubarray(const Vector3& nodeCenter,
+                                 uint32_t currentLevel,
+                                 uint32_t maxDepth) const;
     };
 
     class VoxelOctreeBuilder {
@@ -178,7 +193,7 @@ namespace FV {
     class DispatchQueue;
     class FVCORE_API VoxelModel {
     public:
-        VoxelModel(const AABB& aabb, int depth);
+        VoxelModel(int depth);
         VoxelModel(VoxelOctreeBuilder*, int depth);
         VoxelModel(VoxelOctreeBuilder*, int depth, DispatchQueue&);
         ~VoxelModel();
@@ -188,6 +203,7 @@ namespace FV {
         std::optional<Voxel> lookup(uint32_t x, uint32_t y, uint32_t z) const;
 
         int enumerateLevel(int depth, std::function<void(const AABB&, uint32_t, const VoxelOctree&)>) const;
+        int enumerateLevel(int depth, std::function<void(const Vector3&, uint32_t, const VoxelOctree&)>) const;
 
         const VoxelOctree* root() const { return _root; }
         uint32_t resolution() const { return 1ULL << _maxDepth; }
@@ -203,9 +219,6 @@ namespace FV {
 
         void setDepth(uint32_t depth);
         uint32_t depth() const { return _maxDepth; }
-        void setScale(float scale);
-        float scale() const { return _scale; }
-        AABB aabb() const;
 
         void optimize();
 
@@ -260,8 +273,6 @@ namespace FV {
 
     private:
         VoxelOctree* _root;
-        Vector3 _center;
-        float _scale;
         uint32_t _maxDepth;
 
         static void deleteNode(VoxelOctree*);

@@ -10,7 +10,7 @@
 #extension GL_EXT_debug_printf : enable
 
 layout (push_constant) uniform SceneInfo {
-    layout(row_major) mat4 inverseM; // inverse of model projection
+    layout(row_major) mat4 inverseM;   // inverse of model transform
     layout(row_major) mat4 inverseMVP; // inverse of model-view-projection
     layout(row_major) mat4 mvp;
     vec4 ambientColor;
@@ -32,10 +32,6 @@ layout (binding=0, rgba8) uniform image2D outputImage;
 layout (binding=1, r32f) uniform image2D depthBuffer;
 
 layout (std140, binding=2) readonly buffer AABBArray {
-    vec3 aabbMin;
-    float _padding_12;
-    vec3 aabbMax;
-    float _padding_28;
     EncodedAABB volumes[];
 } data;
 
@@ -59,10 +55,6 @@ Ray getRay() {
     vec4 end4 = vec4(x, y, 1.0, 1.0) * info.inverseMVP;
     vec3 start = start4.xyz / start4.w;
     vec3 end = end4.xyz / end4.w;
-
-    vec3 aabbScale = data.aabbMax - data.aabbMin;
-    start = (start - data.aabbMin) / aabbScale;
-    end = (end - data.aabbMin) / aabbScale;
 
     return Ray(start, normalize(end - start));
 }
@@ -191,16 +183,11 @@ vec3 ndcToAABB(float d) {
     y = 1.0 - y * 2.0;
     vec4 pt = vec4(x, y, d, 1.0) * info.inverseMVP;
     vec3 p = pt.xyz / pt.w;
-
-    vec3 aabbScale = data.aabbMax - data.aabbMin;
-    return (p - data.aabbMin) / aabbScale;
+    return p;
 }
 
 float aabbPtToNDC(const Ray ray, float depth) {
-    vec3 end = ray.origin + ray.dir * depth;
-    vec3 aabbScale = data.aabbMax - data.aabbMin;
-    vec3 pt = end * aabbScale + data.aabbMin;
-
+    vec3 pt = ray.origin + ray.dir * depth;
     vec4 v = vec4(pt.xyz, 1.0) * info.mvp;
     return v.z / v.w;
 }

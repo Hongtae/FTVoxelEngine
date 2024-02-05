@@ -60,6 +60,17 @@ namespace FV {
             return (-t).applying(matrix.inverted());
         }
 
+        ViewTransform concatenating(const ViewTransform& rhs) const {
+            auto m = matrix.concatenating(rhs.matrix);
+            auto p = t.applying(rhs.matrix) + rhs.t;
+            return { m, p };
+        }
+
+        ViewTransform& concatenate(const ViewTransform& rhs) {
+            *this = concatenating(rhs);
+            return *this;
+        }
+
         bool operator==(const ViewTransform& other) const {
             return matrix == other.matrix && t == other.t;
         }

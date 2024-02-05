@@ -99,6 +99,26 @@ struct App : public Application {
     }
 
     void uiLoop(float delta) {
+        auto resetCamera = [this] {
+            auto& trans = volumeRenderer->transform;
+            auto scale = volumeRenderer->scale;
+
+            auto t = AffineTransform3{ trans.orientation.matrix3(), trans.position };
+            t.scale({ scale, scale, scale });
+
+            auto position = Vector3(1, 1, 1).apply(t);
+            auto target = Vector3(0, 0, 0).apply(t);
+
+            this->camera.position = position;
+            this->camera.dir = (target - position).normalized();
+            this->camera.up = { 0, 1, 0 };
+            this->camera.fov = degreeToRadian(80.f);
+            this->camera.nearZ = 0.01f;
+            this->camera.farZ = 10000.0f;
+            this->camera.movementSpeed = 1.0f;
+            this->camera.rotationSpeed = 0.01f;
+        };
+
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("File")) {
                 if (ImGui::MenuItem("New", "Ctrl+N")) {
@@ -145,32 +165,34 @@ struct App : public Application {
                                         pos.x, pos.y, pos.z).c_str());
                 ImGui::Text(std::format("Direction ({:.3f}, {:.3f}, {:.3f})",
                                         dir.x, dir.y, dir.z).c_str());
-                static auto fov = radianToDegree(camera.fov);
+                auto fov = radianToDegree(camera.fov);
                 if (ImGui::SliderFloat("FOV", &fov, 30.0, 160.0, "%.1f")) {
                     camera.fov = degreeToRadian(fov);
                 }
-                static auto nz = camera.nearZ;
-                if (ImGui::SliderFloat("Near", &nz, 0.001f, 1000.0f, "%.3f",
+                auto nz = camera.nearZ;
+                if (ImGui::SliderFloat("Near", &nz, 0.001f, 999.0f, "%.3f",
                                        ImGuiSliderFlags_Logarithmic)) {
                     camera.nearZ = nz;
-
                 }
-                static auto fz = camera.farZ;
+                auto fz = camera.farZ;
                 if (ImGui::SliderFloat("Far", &fz, 1000.0f, 100000.0f, "%.3f",
                                        ImGuiSliderFlags_None)) {
                     camera.farZ = fz;
                 }
-                static auto mspeed = camera.movementSpeed;
+                auto mspeed = camera.movementSpeed;
                 if (ImGui::SliderFloat("Movement speed", &mspeed,
                                        0.001f, 1000.0, "%.3f",
                                        ImGuiSliderFlags_Logarithmic)) {
                     camera.movementSpeed = mspeed;
                 }
-                static auto rspeed = camera.rotationSpeed;
+                auto rspeed = camera.rotationSpeed;
                 if (ImGui::SliderFloat("Rotation speed", &rspeed,
                                        0.001f, 1.0f, "%.3f",
                                        ImGuiSliderFlags_Logarithmic)) {
                     camera.rotationSpeed = rspeed;
+                }
+                if (ImGui::Button("Reset")) {
+                    resetCamera();
                 }
             }
             if (ImGui::CollapsingHeader("Lighting")) {
@@ -212,17 +234,11 @@ struct App : public Application {
                     volumeRenderer->config.linearFilter = linearFilter;
                 }
             }
-            auto model = volumeRenderer->model().get();
-            float modelScale = 0.0f;
-            if (model) {
-                modelScale = model->scale();
+            float scale = volumeRenderer->scale;
+            if (ImGui::InputFloat("Scale", &scale, 0.01f, 1.0f, "%.3f")) {
+                scale = std::max(scale, 0.001f);
+                volumeRenderer->scale = scale;
             }
-            ImGui::BeginDisabled(modelScale < 0.001f);
-            if (ImGui::InputFloat("Model Scale", &modelScale, 0.01f, 1.0f, "%.3f")) {
-                modelScale = std::max(modelScale, 0.001f);
-                model->setScale(modelScale);
-            }
-            ImGui::EndDisabled();
         }
         ImGui::End();
 
@@ -249,14 +265,7 @@ struct App : public Application {
                             r, nodes, leaf);
 
                         volumeRenderer->setModel(model);
-
-                        AABB aabb = model->aabb();
-                        auto camPosition = Vector3(aabb.max);
-                        auto camTarget = Vector3(aabb.min);
-
-                        this->camera.position = camPosition;
-                        this->camera.dir = (camTarget - camPosition).normalized();
-
+                        resetCamera();
                     } else {
                         Log::debug("Deserialization failed.");
                         messageBox("Deserialization failed.");

@@ -245,8 +245,13 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
     voxelLayers.clear();
     if (voxelModel) {
 
-        auto nodeTM = transform.matrix4();
-        auto mvp = nodeTM.concatenating(view.matrix4()).concatenating(projection.matrix);
+        auto trans = AffineTransform3{ transform.orientation.matrix3(), transform.position };
+        trans.scale({ scale, scale, scale });
+        auto mat = ViewTransform{ trans.matrix3, trans.translation }.concatenate(view);
+        ViewFrustum mvpFrustum = { mat, projection };
+
+        auto nodeTM = trans.matrix4();
+        auto mvp = mvpFrustum.matrix();
 
         auto viewPosition = view.position();
 
@@ -297,8 +302,8 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
             }
         }
 
-        AABB aabb = voxelModel->aabb();
-        if (viewFrustum.isAABBInside(aabb)) {
+        AABB aabb = { Vector3::zero, {1, 1, 1} };
+        if (mvpFrustum.isAABBInside(aabb)) {
             const VoxelOctree* root = voxelModel->root();
 
             uint32_t minDetailLevel = config.minDetailLevel;
@@ -320,43 +325,37 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
                 distMinDetailSq = std::max(distMinDetailSq, distMaxDetailSq + 0.001f);
 
                 volumeData = root->makeArray(
-                    aabb, maxDetailLevel,
+                    maxDetailLevel,
                     [&](const AABB& aabb, uint32_t depth, uint32_t& maxDepth) {
-                        if (depth == startLevel) {
-                            _debug_numIterations++;
-                            if (viewFrustum.isAABBInside(aabb)) {
-                                auto c = aabb.center().applying(transform);
-                                float distanceFromViewSq = (c - viewPosition).magnitudeSquared();
-                                float bestFit = calculateDepthLevel(aabb, width, height);
-                                if (auto k = distanceFromViewSq - distMaxDetailSq; k > 0.0f) {
-                                    k = k / (distMinDetailSq - distMaxDetailSq);
-                                    k = 1.0f - std::clamp(k, 0.0f, 1.0f);
-                                    bestFit = bestFit * k;
-                                }
-                                maxDepth = std::min({ maxDepth, uint32_t(bestFit) + depth, maxDetailLevel });
-                            } else {
-                                maxDepth = 0;
-                                _debug_numCulling++;
+                    if (depth == startLevel) {
+                        _debug_numIterations++;
+                        if (mvpFrustum.isAABBInside(aabb)) {
+                            auto c = aabb.center().applying(trans);
+                            float distanceFromViewSq = (c - viewPosition).magnitudeSquared();
+                            float bestFit = calculateDepthLevel(aabb, width, height);
+                            if (auto k = distanceFromViewSq - distMaxDetailSq; k > 0.0f) {
+                                k = k / (distMinDetailSq - distMaxDetailSq);
+                                k = 1.0f - std::clamp(k, 0.0f, 1.0f);
+                                bestFit = bestFit * k;
                             }
+                            maxDepth = std::min({ maxDepth, uint32_t(bestFit) + depth, maxDetailLevel });
+                        } else {
+                            maxDepth = 0;
+                            _debug_numCulling++;
                         }
-                    });
+                    }
+                });
             } else {
-                volumeData = root->makeArray(aabb, std::min(maxDetailLevel, bestFitDepth));
+                volumeData = root->makeArray(std::min(maxDetailLevel, bestFitDepth));
             }
 
             if (volumeData.data.empty() == false) {
                 size_t numNodes = volumeData.data.size();
                 const auto dataLength = sizeof(VolumeArray::Node) * numNodes;
-
-                VolumeArray::Header header = { aabb.min, 0, aabb.max, 0 };
-
-                size_t bufferLength = sizeof(header) + dataLength;
-                auto buffer = device->makeBuffer(bufferLength,
+                auto buffer = device->makeBuffer(dataLength,
                                                  GPUBuffer::StorageModeShared,
                                                  CPUCacheModeWriteCombined);
                 uint8_t* p = (uint8_t*)buffer->contents();
-                memcpy(p, &header, sizeof(header));
-                p += sizeof(header);
                 memcpy(p, volumeData.data.data(), dataLength);
                 buffer->flush();
 
@@ -427,8 +426,18 @@ void VolumeRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
             Color lightColor = { 1, 1, 1, 0.2 };
             Color ambientColor = { 0.7, 0.7, 0.7, 1 };
 
-            auto nodeTM = transform.matrix4();
-            auto mvp = nodeTM.concatenating(viewFrustum.matrix());
+            auto& view = viewFrustum.view;
+            auto& projection = viewFrustum.projection;
+
+            auto modelTransform = AffineTransform3{ transform.orientation.matrix3(), transform.position };
+            modelTransform.scale({ scale, scale, scale });
+            auto modelView = ViewTransform{
+                modelTransform.matrix3,
+                modelTransform.translation }.concatenate(view);
+            ViewFrustum mvpFrustum = { modelView, projection };
+
+            auto nodeTM = modelTransform.matrix4();
+            auto mvp = mvpFrustum.matrix();
 
             PushConstantData pcdata = {
                 nodeTM.inverted(),
@@ -489,7 +498,7 @@ void VolumeRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
 
             int drawLayers = 0;
             for (auto& layer : layersCopy) {
-                if (viewFrustum.isAABBInside(layer.aabb) == false)
+                if (mvpFrustum.isAABBInside(layer.aabb) == false)
                     continue;
 
                 raycastVoxel.bindingSet->setBuffer(2, layer.buffer, 0, layer.buffer->length());

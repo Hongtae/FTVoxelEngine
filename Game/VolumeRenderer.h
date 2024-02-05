@@ -15,6 +15,7 @@ public:
     ViewFrustum viewFrustum;
     Transform transform;
     Vector3 lightDir;
+    float scale = 1.0f;
 
     std::shared_ptr<CommandQueue> queue;
 
