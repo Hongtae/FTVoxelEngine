@@ -63,6 +63,8 @@ void VolumeRenderer::setModel(std::shared_ptr<VoxelModel> model) {
     voxelLayers.clear();
 }
 
+bool stopUpdating = false;
+
 void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTransform& v, const ProjectionTransform& p) {
     ViewTransform view = v;
     ProjectionTransform projection = p;
@@ -235,6 +237,10 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
         imageBlit.value().bindingSet->setTexture(0, outputImage);
 
     this->viewFrustum = { view, projection };
+
+    if (stopUpdating)
+        return;
+
     // calculate volume depth
     voxelLayers.clear();
     if (voxelModel) {

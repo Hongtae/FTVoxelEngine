@@ -522,6 +522,12 @@ struct App : public Application {
                         Log::info("StopRendering: {}", stopRendering);
                         return;
                     }
+                    if (event.key == VirtualKey::O) {
+                        extern bool stopUpdating;
+                        stopUpdating = !stopUpdating;
+                        Log::info("StopUpdating: {}", stopUpdating);
+                        return;
+                    }
                 }
                 pressingKeys.erase(event.key);
                 break;
