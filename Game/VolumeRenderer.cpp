@@ -64,6 +64,7 @@ void VolumeRenderer::setModel(std::shared_ptr<VoxelModel> model) {
 }
 
 bool stopUpdating = false;
+bool stopCaching = false;
 
 void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTransform& v, const ProjectionTransform& p) {
     ViewTransform view = v;
@@ -340,7 +341,14 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
                     void operator() (const Vector3& center, uint32_t depth, const VoxelOctree* node, std::vector<VolumeArray::Node>& vector) const {
                         if (depth == startLevel) {
                             uint32_t maxDepth = bestFit(center, depth);
-                            generator(center, depth, node, maxDepth, vector);
+                            if (stopCaching || maxDepth < depth) {
+                                if (stopCaching)
+                                    node->makeSubarray(center, depth, vector, MaxDepthRecursion{ maxDepth });
+                                else
+                                    node->makeSubarray(center, depth, vector, {});
+                            } else {
+                                generator(center, depth, node, maxDepth, vector);
+                            }
                         } else {
                             node->makeSubarray(center, depth, vector, DepthResolveRecursion{ startLevel, bestFit, generator });
                         }
@@ -371,11 +379,50 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
                 };
 
                 std::function generator = [&]
-                (const Vector3& center, uint32_t depth, const VoxelOctree* node, uint32_t maxDepth, std::vector<VolumeArray::Node>& vector) {
-                    node->makeSubarray(center, depth, vector, MaxDepthRecursion{ maxDepth });
+                (const Vector3& center, uint32_t depth, const VoxelOctree* node,
+                 uint32_t maxDepth, std::vector<VolumeArray::Node>& vector) {
+                    bool build = true;
+                    if (auto iter = cachedData.volumeMap.find(node);
+                        iter != cachedData.volumeMap.end()) {
+                        VolumeDataCache& cache = iter->second;
+                        if (cache.depth == maxDepth) {
+                            build = false;
+                        }
+                    } else {
+                        cachedData.volumeMap[node] = { {}, maxDepth };
+                    }
+                    VolumeDataCache& cache = cachedData.volumeMap.at(node);
+                    if (build) {
+                        cache.data.clear();
+                        cache.depth = maxDepth;
+                        node->makeSubarray(center, depth, cache.data, MaxDepthRecursion{ maxDepth });
+                    }
+                    //auto s1 = vector.size();
+                    //auto s2 = cache.data.size();
+                    //vector.resize(s1 + s2);
+                    //memcpy(&(vector.data()[s1]), cache.data.data(), s2 * sizeof(VolumeArray::Node));
+                    vector.insert(vector.end(), cache.data.begin(), cache.data.end());
                 };
 
-                volumeData = root->makeArray(DepthResolveRecursion{ startLevel, bestFit, generator });
+                if (startLevel != cachedData.layerDepth) {
+                    Log::info(enUS_UTF8,
+                              "Volume cache clear with new depth-level:{}, (previous depth:{}), peak-count:{:Ld}",
+                              startLevel,
+                              cachedData.layerDepth,
+                              cachedData.maxNodeCount);
+                    cachedData.volumeMap.clear();
+                    cachedData.layerDepth = startLevel;
+                    cachedData.maxNodeCount = 0;
+                }
+
+                volumeData = root->makeArray([&](const Vector3& center,
+                                                 uint32_t depth,
+                                                 const VoxelOctree* node,
+                                                 std::vector<VolumeArray::Node>& vector) {
+                    vector.reserve(cachedData.maxNodeCount);
+                    DepthResolveRecursion{ startLevel, bestFit, generator }(center, depth, node, vector);
+                });
+                cachedData.maxNodeCount = std::max(volumeData.data.size(), cachedData.maxNodeCount);
             } else {
                 volumeData = root->makeArray(std::min(maxDetailLevel, bestFitDepth));
             }

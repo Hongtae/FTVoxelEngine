@@ -537,6 +537,12 @@ struct App : public Application {
                         Log::info("StopUpdating: {}", stopUpdating);
                         return;
                     }
+                    if (event.key == VirtualKey::C) {
+                        extern bool stopCaching;
+                        stopCaching = !stopCaching;
+                        Log::info("StopCaching: {}", stopCaching);
+                        return;
+                    }
                 }
                 pressingKeys.erase(event.key);
                 break;

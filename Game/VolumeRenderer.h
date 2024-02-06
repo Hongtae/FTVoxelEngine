@@ -15,7 +15,7 @@ public:
     ViewFrustum viewFrustum;
     Transform transform;
     Vector3 lightDir;
-    float scale = 1.0f;
+    float scale = 100.0f;
 
     std::shared_ptr<CommandQueue> queue;
 
@@ -25,13 +25,12 @@ public:
     struct {
         float renderScale = 0.5f;
         // distance from camera position
-        float distanceToMaxDetail = 10.0f;
+        float distanceToMaxDetail = 0.0f;
         float distanceToMinDetail = 100.0f;
-        uint32_t minDetailLevel = 8U;
+        uint32_t minDetailLevel = 7U;
         uint32_t maxDetailLevel = 13U;
         bool linearFilter = false;
     } config;
-
 
 private:
     ComputePipeline raycastVoxel;
@@ -55,5 +54,9 @@ private:
         std::vector<VolumeArray::Node> data;
         uint32_t depth;
     };
-    std::unordered_map<const VoxelOctree*, VolumeDataCache> cachedVolumeData;
+    struct {
+        std::unordered_map<const VoxelOctree*, VolumeDataCache> volumeMap;
+        uint32_t layerDepth = VoxelOctree::maxDepth + 1;
+        size_t maxNodeCount = 0;
+    } cachedData;
 };

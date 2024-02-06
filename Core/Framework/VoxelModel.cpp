@@ -111,7 +111,8 @@ void VoxelOctree::makeSubarray(const Vector3& center,
 VolumeArray VoxelOctree::makeArray(MakeArrayCallback callback) const {
     VolumeArray volume = {};
     volume.aabb = { Vector3::zero, {1,1,1} };
-    makeSubarray(volume.aabb.center(), 0, volume.data, callback);
+    callback(volume.aabb.center(), 0, this, volume.data);
+    //makeSubarray(volume.aabb.center(), 0, volume.data, callback);
     return volume;
 }
 
