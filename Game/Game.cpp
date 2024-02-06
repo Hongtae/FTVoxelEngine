@@ -440,15 +440,13 @@ struct App : public Application {
                 swapchain->present();
             } while (0);
 
-            //auto t = std::chrono::high_resolution_clock::now();
-            //std::chrono::duration<double> d = t - timestamp;
-
-            //auto interval = std::max(frameInterval - d.count(), 0.0);
-            //if (interval > 0.0) {
-            //    std::this_thread::sleep_for(std::chrono::duration<double>(interval));
-            //} else {
+            double interval;
+            do {
                 std::this_thread::yield();
-            //}
+                auto t = std::chrono::high_resolution_clock::now();
+                std::chrono::duration<double> d = t - timestamp;
+                interval = std::max(frameInterval - d.count(), 0.0);
+            } while (interval > 0.0);
         }
         for (auto& renderer : this->renderers) {
             renderer->finalize();

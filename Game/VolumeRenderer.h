@@ -26,9 +26,9 @@ public:
         float renderScale = 0.5f;
         // distance from camera position
         float distanceToMaxDetail = 0.0f;
-        float distanceToMinDetail = 100.0f;
+        float distanceToMinDetail = 40.0f;
         uint32_t minDetailLevel = 7U;
-        uint32_t maxDetailLevel = 13U;
+        uint32_t maxDetailLevel = 12U;
         bool linearFilter = false;
     } config;
 
