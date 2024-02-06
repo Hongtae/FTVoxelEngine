@@ -271,6 +271,10 @@ namespace FV {
         bool deserialize(std::istream&);
         uint64_t serialize(std::ostream&) const;
 
+        struct {
+            Vector3 center = { 0, 0, 0 };
+            float scale = 0.0f;
+        } metadata;
     private:
         VoxelOctree* _root;
         uint32_t _maxDepth;

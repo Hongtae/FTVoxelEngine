@@ -214,6 +214,9 @@ VoxelModel::VoxelModel(VoxelOctreeBuilder* builder, int depth)
 
             if (scale > epsilon) {
 
+                metadata.center = center;
+                metadata.scale = scale;
+
                 struct Subdivide {
                     VoxelOctreeBuilder* builder;
                     const Matrix4& transform; // transform to original volume scale
@@ -296,6 +299,9 @@ VoxelModel::VoxelModel(VoxelOctreeBuilder* builder, int depth, DispatchQueue& qu
             auto scale = std::max({ extents.x, extents.y, extents.z });
 
             if (scale > epsilon) {
+
+                metadata.center = center;
+                metadata.scale = scale;
 
                 struct SubdivideAsync {
                     DispatchQueue& queue;
@@ -818,6 +824,8 @@ bool VoxelModel::deserialize(std::istream& stream) {
         if (_root)
             _maxDepth = _root->maxDepthLevels();
 
+        metadata.center = center;
+        metadata.scale = scale;
         return true;
     }
     return false;
@@ -847,10 +855,10 @@ uint64_t VoxelModel::serialize(std::ostream& stream) const {
         uint64_t totalNodes = 0;
     } header;
     strcpy_s(header.tag, std::size(header.tag), fileTag);
-    header.bounds[0] = 0.5f;
-    header.bounds[1] = 0.5f;
-    header.bounds[2] = 0.5f;
-    header.bounds[3] = 1.0f;
+    header.bounds[0] = metadata.center.x;
+    header.bounds[1] = metadata.center.y;
+    header.bounds[2] = metadata.center.z;
+    header.bounds[3] = metadata.scale;
 
     if (_root) {
         header.totalNodes = _root->numDescendants();
