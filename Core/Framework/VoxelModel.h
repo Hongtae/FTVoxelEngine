@@ -177,6 +177,14 @@ namespace FV {
         VolumeArray makeSubarray(const Vector3& nodeCenter,
                                  uint32_t currentLevel,
                                  uint32_t maxDepth) const;
+
+        using MakeArrayCallback = std::function<void(const Vector3&, uint32_t, const VoxelOctree*, std::vector<VolumeArray::Node>&)>;
+        VolumeArray makeArray(MakeArrayCallback) const;
+
+        void makeSubarray(const Vector3& center,
+                          uint32_t level,
+                          std::vector<VolumeArray::Node>& vector,
+                          const MakeArrayCallback&) const;
     };
 
     class VoxelOctreeBuilder {

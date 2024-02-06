@@ -324,27 +324,58 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
                 auto distMinDetailSq = config.distanceToMinDetail * config.distanceToMinDetail;
                 distMinDetailSq = std::max(distMinDetailSq, distMaxDetailSq + 0.001f);
 
-                volumeData = root->makeArray(
-                    maxDetailLevel,
-                    [&](const AABB& aabb, uint32_t depth, uint32_t& maxDepth) {
-                    if (depth == startLevel) {
-                        _debug_numIterations++;
-                        if (mvpFrustum.isAABBInside(aabb)) {
-                            auto c = aabb.center().applying(trans);
-                            float distanceFromViewSq = (c - viewPosition).magnitudeSquared();
-                            float bestFit = calculateDepthLevel(aabb, width, height);
-                            if (auto k = distanceFromViewSq - distMaxDetailSq; k > 0.0f) {
-                                k = k / (distMinDetailSq - distMaxDetailSq);
-                                k = 1.0f - std::clamp(k, 0.0f, 1.0f);
-                                bestFit = bestFit * k;
-                            }
-                            maxDepth = std::min({ maxDepth, uint32_t(bestFit) + depth, maxDetailLevel });
-                        } else {
-                            maxDepth = 0;
-                            _debug_numCulling++;
+                struct MaxDepthRecursion {
+                    uint32_t maxDepth;
+                    void operator() (const Vector3& center, uint32_t depth, const VoxelOctree* node, std::vector<VolumeArray::Node>& vector) const {
+                        if (depth <= maxDepth) {
+                            node->makeSubarray(center, depth, vector, MaxDepthRecursion{ maxDepth });
                         }
                     }
-                });
+                };
+
+                struct DepthResolveRecursion {
+                    uint32_t startLevel;
+                    std::function<uint32_t(const Vector3&, uint32_t)>& bestFit;
+                    std::function<void (const Vector3&, uint32_t, const VoxelOctree*, uint32_t, std::vector<VolumeArray::Node>&)>& generator;
+                    void operator() (const Vector3& center, uint32_t depth, const VoxelOctree* node, std::vector<VolumeArray::Node>& vector) const {
+                        if (depth == startLevel) {
+                            uint32_t maxDepth = bestFit(center, depth);
+                            generator(center, depth, node, maxDepth, vector);
+                        } else {
+                            node->makeSubarray(center, depth, vector, DepthResolveRecursion{ startLevel, bestFit, generator });
+                        }
+                    }
+                };
+
+                std::function bestFit = [&]
+                (const Vector3& pos, uint32_t depth) -> uint32_t {
+                    _debug_numIterations++;
+                    float hext = VoxelOctree::halfExtent(depth);
+                    AABB aabb = {
+                        pos - Vector3(hext, hext, hext),
+                        pos + Vector3(hext, hext, hext)
+                    };
+                    if (mvpFrustum.isAABBInside(aabb)) {
+                        auto c = pos.applying(trans);
+                        float distanceFromViewSq = (c - viewPosition).magnitudeSquared();
+                        float bestFit = calculateDepthLevel(aabb, width, height);
+                        if (auto k = distanceFromViewSq - distMaxDetailSq; k > 0.0f) {
+                            k = k / (distMinDetailSq - distMaxDetailSq);
+                            k = 1.0f - std::clamp(k, 0.0f, 1.0f);
+                            bestFit = bestFit * k;
+                        }
+                        return std::min(uint32_t(bestFit) + depth, maxDetailLevel);
+                    }
+                    _debug_numCulling++;
+                    return 0;
+                };
+
+                std::function generator = [&]
+                (const Vector3& center, uint32_t depth, const VoxelOctree* node, uint32_t maxDepth, std::vector<VolumeArray::Node>& vector) {
+                    node->makeSubarray(center, depth, vector, MaxDepthRecursion{ maxDepth });
+                };
+
+                volumeData = root->makeArray(DepthResolveRecursion{ startLevel, bestFit, generator });
             } else {
                 volumeData = root->makeArray(std::min(maxDetailLevel, bestFitDepth));
             }

@@ -63,6 +63,57 @@ bool VoxelOctree::mergeSolidBranches() {
     return false;
 }
 
+void VoxelOctree::makeSubarray(const Vector3& center,
+                               uint32_t depth,
+                               std::vector<VolumeArray::Node>& vector,
+                               const MakeArrayCallback& callback) const {
+    auto index = vector.size();
+    vector.push_back({});
+    {
+        auto& n = vector.at(index);
+        constexpr float q = float(std::numeric_limits<uint16_t>::max());
+        n.x = static_cast<uint16_t>(center.x * q);
+        n.y = static_cast<uint16_t>(center.y * q);
+        n.z = static_cast<uint16_t>(center.z * q);
+        n.depth = depth;
+        n.flags = 0;
+        n.color.value = this->value.color.value;
+    }
+    if (callback) {
+        uint32_t exp = (126U - depth) << 23;
+        float halfExtent = std::bit_cast<float>(exp);
+        for (int i = 0; i < 8; ++i) {
+            auto p = this->subdivisions[i];
+            if (p) {
+                const int x = i & 1;
+                const int y = (i >> 1) & 1;
+                const int z = (i >> 2) & 1;
+
+                Vector3 pt = {
+                     center.x + halfExtent * (float(x) - 0.5f),
+                     center.y + halfExtent * (float(y) - 0.5f),
+                     center.z + halfExtent * (float(z) - 0.5f),
+                };
+                callback(pt, depth + 1, p, vector);
+            }
+        }
+    }
+    auto advance = (vector.size() - index);
+    auto& n = vector.at(index);
+    FVASSERT_DEBUG(advance < std::numeric_limits<decltype(n.advance)>::max());
+    n.advance = static_cast<decltype(n.advance)>(advance);
+    if (n.advance == 1) { // leaf-node
+        n.flags |= VolumeArray::FlagLeafNode;
+        n.flags |= VolumeArray::FlagMaterial;
+    }
+}
+
+VolumeArray VoxelOctree::makeArray(MakeArrayCallback callback) const {
+    VolumeArray volume = {};
+    volume.aabb = { Vector3::zero, {1,1,1} };
+    makeSubarray(volume.aabb.center(), 0, volume.data, callback);
+    return volume;
+}
 
 VolumeArray VoxelOctree::makeArray(uint32_t maxDepth,
                                    MakeArrayFilter filter) const {

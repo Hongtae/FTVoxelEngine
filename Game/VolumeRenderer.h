@@ -50,4 +50,10 @@ private:
         std::shared_ptr<GPUBuffer> buffer;
     };
     std::vector<VoxelLayer> voxelLayers;
+
+    struct VolumeDataCache {
+        std::vector<VolumeArray::Node> data;
+        uint32_t depth;
+    };
+    std::unordered_map<const VoxelOctree*, VolumeDataCache> cachedVolumeData;
 };
