@@ -61,8 +61,8 @@ AABB AABB::applying(const Matrix4& transform) const {
     return aabb;
 }
 
-float AABB::rayTest(const Vector3& origin, const Vector3& dir) const {
-    if (isNull()) return {};
+float AABB::rayTest1(const Vector3& origin, const Vector3& dir) const {
+    if (isNull()) return -1.0;
 
     bool inside = true;
     Vector3 maxT(-1, -1, -1);
@@ -106,6 +106,35 @@ float AABB::rayTest(const Vector3& origin, const Vector3& dir) const {
         }
     }
     return (coord - origin).magnitude();
+}
+
+float AABB::rayTest2(const Vector3& origin, const Vector3& dir) const {
+    if (isNull()) return -1.0;
+
+    float t1 = (this->min.x - origin.x) / dir.x;
+    float t2 = (this->max.x - origin.x) / dir.x;
+    float t3 = (this->min.y - origin.y) / dir.y;
+    float t4 = (this->max.y - origin.y) / dir.y;
+    float t5 = (this->min.z - origin.z) / dir.z;
+    float t6 = (this->max.z - origin.z) / dir.z;
+
+    float tmin = std::max({ std::min(t1, t2), std::min(t3, t4), std::min(t5, t6) });
+    float tmax = std::min({ std::max(t1, t2), std::max(t3, t4), std::max(t5, t6) });
+
+    if (tmax < 0.0)     // box on ray but behind ray origin
+        return -1.0f;
+    if (tmin > tmax)    // ray doesn't intersect box
+        return -1.0f;
+    if (std::isnan(tmin))   // NaN
+        return -1.0f;
+    return std::max(tmin, 0.0f);
+};
+
+float AABB::rayTest(const Vector3& origin, const Vector3& dir) const {
+    if constexpr (std::numeric_limits<float>::is_iec559) {
+        return rayTest2(origin, dir);
+    }
+    return rayTest1(origin, dir);
 }
 
 bool AABB::overlapTest(const Plane& plane) const {

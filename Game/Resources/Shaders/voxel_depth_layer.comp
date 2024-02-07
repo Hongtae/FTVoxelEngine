@@ -99,6 +99,26 @@ float rayTest(const AABB aabb, const Ray ray) {
     return length(coord - ray.origin);
 }
 
+float rayTest2(const AABB aabb, const Ray ray) {
+    float t1 = (aabb.min.x - ray.origin.x) / ray.dir.x;
+    float t2 = (aabb.max.x - ray.origin.x) / ray.dir.x;
+    float t3 = (aabb.min.y - ray.origin.y) / ray.dir.y;
+    float t4 = (aabb.max.y - ray.origin.y) / ray.dir.y;
+    float t5 = (aabb.min.z - ray.origin.z) / ray.dir.z;
+    float t6 = (aabb.max.z - ray.origin.z) / ray.dir.z;
+
+    float tmin = max(max(min(t1, t2), min(t3, t4)), min(t5, t6));
+    float tmax = min(min(max(t1, t2), max(t3, t4)), max(t5, t6));
+
+    if (tmax < 0.0) {   // box on ray but behind ray origin
+        return -1.0;
+    }
+    if (tmin > tmax) {  // ray doesn't intersect box
+        return -1.0;
+    }
+    return max(tmin, 0.0);
+}
+
 AABB normalizedAABB(EncodedAABB e) {
     float x = float(e.x) / 65535.0;
     float y = float(e.y) / 65535.0;
@@ -129,6 +149,49 @@ Sphere normalizedSphere(EncodedAABB e) {
     return Sphere(vec3(x, y, z), radius);
 }
 
+vec3 affineTransform(const vec3 v, const mat4 m) {
+    vec4 v4 = vec4(v, 1.0) * m;
+    return v4.xyz / v4.w;
+}
+
+vec3 linearTransform(const vec3 v, const mat4 m) {
+    vec4 v4 = vec4(v, 0.0) * m;
+    return v4.xyz;
+}
+
+bool isAABBSmallerThanPixel(const AABB aabb) {
+    vec3 pts[8] = {
+        {aabb.min.x, aabb.min.y, aabb.min.z},
+        {aabb.max.x, aabb.min.y, aabb.min.z},
+        {aabb.min.x, aabb.max.y, aabb.min.z},
+        {aabb.max.x, aabb.max.y, aabb.min.z},
+        {aabb.min.x, aabb.min.y, aabb.max.z},
+        {aabb.max.x, aabb.min.y, aabb.max.z},
+        {aabb.min.x, aabb.max.y, aabb.max.z},
+        {aabb.max.x, aabb.max.y, aabb.max.z},
+    };
+    for (int i = 0; i < 8; ++i)
+        pts[i] = affineTransform(pts[i], info.mvp);
+
+    float minX = pts[0].x;
+    float maxX = pts[0].x;
+    float minY = pts[0].y;
+    float maxY = pts[0].y;
+
+    for (int i = 1; i < 8; ++i) {
+        minX = min(pts[i].x, minX);
+        minY = min(pts[i].y, minY);
+        maxX = max(pts[i].x, maxX);
+        maxY = max(pts[i].y, maxY);
+    }
+
+    float pixelX = (maxX - minX) * float(info.width - 1) * 0.5;
+    float pixelY = (maxY - minY) * float(info.height - 1) * 0.5;
+    if (max(pixelX, pixelY) > 1.0)
+        return false;
+    return true;
+}
+
 float rayResultNearDepth = 1.0;
 vec4 rayResultNearColor = vec4(0);
 vec3 rayResultNormal = vec3(0);
@@ -139,9 +202,9 @@ void runTest(const Ray ray) {
     while (index < count) {
         const EncodedAABB e = data.volumes[index];
         const AABB aabb = normalizedAABB(e);
-        const float t = rayTest(aabb, ray);
+        const float t = rayTest2(aabb, ray);
         if (t >= 0.0 && t < rayResultNearDepth) {
-            if (e.flags != 0) { // leaf-node (has material)
+            if (e.flags != 0 || isAABBSmallerThanPixel(aabb)) {  // leaf-node (or small enough)
                 const uint32_t p = e.color;
                 rayResultNearColor.r = float(p & 0xff) / 255.0;
                 rayResultNearColor.g = float((p >> 8) & 0xff) / 255.0;
@@ -153,8 +216,11 @@ void runTest(const Ray ray) {
                 vec3 center = (aabb.max + aabb.min) * 0.5;
                 vec3 n = hitPoint - center;
                 rayResultNormal = normalize(n);
+
+                index += e.advance;
+            } else {
+                index += 1;
             }
-            index += 1;
         } else {
             if (e.flags == 0)
                 index += e.advance;

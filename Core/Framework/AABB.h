@@ -102,6 +102,9 @@ namespace FV {
         }
 
         float rayTest(const Vector3& rayOrigin, const Vector3& rayDir) const;
+        float rayTest1(const Vector3& rayOrigin, const Vector3& rayDir) const;
+        // faster, but introduces NaN, Inf. requires a system that supports IEC 559 (IEEE 754).
+        float rayTest2(const Vector3& rayOrigin, const Vector3& rayDir) const;
         bool overlapTest(const Plane& plane) const;
         bool overlapTest(const Triangle& tri) const;
         bool overlapTest(const AABB& aabb) const;
