@@ -66,7 +66,8 @@ bool VoxelOctree::mergeSolidBranches() {
 void VoxelOctree::makeSubarray(const Vector3& center,
                                uint32_t depth,
                                std::vector<VolumeArray::Node>& vector,
-                               const MakeArrayCallback& callback) const {
+                               const MakeArrayCallback& callback,
+                               const VolumePriorityCallback& priority) const {
     auto index = vector.size();
     vector.push_back({});
     {
@@ -80,6 +81,14 @@ void VoxelOctree::makeSubarray(const Vector3& center,
         n.color.value = this->value.color.value;
     }
     if (callback) {
+        struct PrioritizedNode {
+            const VoxelOctree* node;
+            Vector3 center;
+            float priority = 0.0f;
+        };
+        PrioritizedNode children[8] = {};
+        int numChildren = 0;
+
         uint32_t exp = (126U - depth) << 23;
         float halfExtent = std::bit_cast<float>(exp);
         for (int i = 0; i < 8; ++i) {
@@ -94,7 +103,26 @@ void VoxelOctree::makeSubarray(const Vector3& center,
                      center.y + halfExtent * (float(y) - 0.5f),
                      center.z + halfExtent * (float(z) - 0.5f),
                 };
-                callback(pt, depth + 1, p, vector);
+
+                children[numChildren++] = {
+                    p, pt, 0.0f
+                };
+            }
+        }
+        if (numChildren > 0) {
+            if (numChildren > 1 && priority) {
+                for (int i = 0; i < numChildren; ++i) {
+                    auto& child = children[i];
+                    child.priority = priority(child.center, depth + 1);
+                }
+                std::sort(&children[0], &children[numChildren],
+                          [](auto& a, auto& b) {
+                    return a.priority > b.priority;
+                });
+            }
+            for (int i = 0; i < numChildren; ++i) {
+                auto& child = children[i];
+                callback(child.center, depth + 1, child.priority, child.node, vector);
             }
         }
     }
@@ -111,7 +139,7 @@ void VoxelOctree::makeSubarray(const Vector3& center,
 VolumeArray VoxelOctree::makeArray(MakeArrayCallback callback) const {
     VolumeArray volume = {};
     volume.aabb = { Vector3::zero, {1,1,1} };
-    callback(volume.aabb.center(), 0, this, volume.data);
+    callback(volume.aabb.center(), 0, 0.0f, this, volume.data);
     //makeSubarray(volume.aabb.center(), 0, volume.data, callback);
     return volume;
 }

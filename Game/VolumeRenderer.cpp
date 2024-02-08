@@ -31,7 +31,7 @@ void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc, std::
 
     if (auto pso = makeComputePipeline(
         gc->device.get(),
-        appResourcesRoot / "Shaders/voxel_depth_layer.comp.spv",
+        appResourcesRoot / "Shaders/voxel_depth_iteration.comp.spv",
         {
             { 0, ShaderDescriptorType::StorageTexture, 1, nullptr }, // color (rgba8)
             { 1, ShaderDescriptorType::StorageTexture, 1, nullptr }, // depth (r32f)
@@ -327,9 +327,14 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
 
                 struct MaxDepthRecursion {
                     uint32_t maxDepth;
-                    void operator() (const Vector3& center, uint32_t depth, const VoxelOctree* node, std::vector<VolumeArray::Node>& vector) const {
+                    const VoxelOctree::VolumePriorityCallback& getPriority;
+                    void operator() (const Vector3& center,
+                                     uint32_t depth,
+                                     float priority,
+                                     const VoxelOctree* node,
+                                     std::vector<VolumeArray::Node>& vector) const {
                         if (depth <= maxDepth) {
-                            node->makeSubarray(center, depth, vector, MaxDepthRecursion{ maxDepth });
+                            node->makeSubarray(center, depth, vector, *this, getPriority);
                         }
                     }
                 };
@@ -337,20 +342,28 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
                 struct DepthResolveRecursion {
                     uint32_t startLevel;
                     std::function<uint32_t(const Vector3&, uint32_t)>& bestFit;
-                    std::function<void (const Vector3&, uint32_t, const VoxelOctree*, uint32_t, std::vector<VolumeArray::Node>&)>& generator;
-                    void operator() (const Vector3& center, uint32_t depth, const VoxelOctree* node, std::vector<VolumeArray::Node>& vector) const {
+                    const VoxelOctree::VolumePriorityCallback& getPriority;
+                    std::function<void (const Vector3&, uint32_t, float, const VoxelOctree*, uint32_t, std::vector<VolumeArray::Node>&)>& generator;
+                    void operator() (const Vector3& center,
+                                     uint32_t depth,
+                                     float priority,
+                                     const VoxelOctree* node,
+                                     std::vector<VolumeArray::Node>& vector) const {
                         if (depth == startLevel) {
                             uint32_t maxDepth = bestFit(center, depth);
                             if (stopCaching || maxDepth < depth) {
                                 if (stopCaching)
-                                    node->makeSubarray(center, depth, vector, MaxDepthRecursion{ maxDepth });
+                                    node->makeSubarray(
+                                        center, depth, vector,
+                                        MaxDepthRecursion{ maxDepth, getPriority },
+                                        getPriority);
                                 else
-                                    node->makeSubarray(center, depth, vector, {});
+                                    node->makeSubarray(center, depth, vector, {}, getPriority);
                             } else {
-                                generator(center, depth, node, maxDepth, vector);
+                                generator(center, depth, priority, node, maxDepth, vector);
                             }
                         } else {
-                            node->makeSubarray(center, depth, vector, DepthResolveRecursion{ startLevel, bestFit, generator });
+                            node->makeSubarray(center, depth, vector, *this, getPriority);
                         }
                     }
                 };
@@ -378,9 +391,19 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
                     return 0;
                 };
 
-                std::function generator = [&]
-                (const Vector3& center, uint32_t depth, const VoxelOctree* node,
-                 uint32_t maxDepth, std::vector<VolumeArray::Node>& vector) {
+                VoxelOctree::VolumePriorityCallback getPriority = [&]
+                (const Vector3& pos, uint32_t depth) -> float {
+                    auto c = pos.applying(trans);
+                    float distanceFromViewSq = (c - viewPosition).magnitudeSquared();
+                    return 1.0 / distanceFromViewSq;
+                };
+
+                std::function generator = [&](const Vector3& center,
+                                              uint32_t depth,
+                                              float priority,
+                                              const VoxelOctree* node,
+                                              uint32_t maxDepth,
+                                              std::vector<VolumeArray::Node>& vector) {
                     bool build = true;
                     if (auto iter = cachedData.volumeMap.find(node);
                         iter != cachedData.volumeMap.end()) {
@@ -395,12 +418,11 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
                     if (build) {
                         cache.data.clear();
                         cache.depth = maxDepth;
-                        node->makeSubarray(center, depth, cache.data, MaxDepthRecursion{ maxDepth });
+                        node->makeSubarray(
+                            center, depth, cache.data,
+                            MaxDepthRecursion{ maxDepth, getPriority },
+                            getPriority);
                     }
-                    //auto s1 = vector.size();
-                    //auto s2 = cache.data.size();
-                    //vector.resize(s1 + s2);
-                    //memcpy(&(vector.data()[s1]), cache.data.data(), s2 * sizeof(VolumeArray::Node));
                     vector.insert(vector.end(), cache.data.begin(), cache.data.end());
                 };
 
@@ -417,10 +439,11 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
 
                 volumeData = root->makeArray([&](const Vector3& center,
                                                  uint32_t depth,
+                                                 float priority,
                                                  const VoxelOctree* node,
                                                  std::vector<VolumeArray::Node>& vector) {
                     vector.reserve(cachedData.maxNodeCount);
-                    DepthResolveRecursion{ startLevel, bestFit, generator }(center, depth, node, vector);
+                    DepthResolveRecursion{ startLevel, bestFit, getPriority, generator }(center, depth, priority, node, vector);
                 });
                 cachedData.maxNodeCount = std::max(volumeData.data.size(), cachedData.maxNodeCount);
             } else {

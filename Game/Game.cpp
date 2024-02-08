@@ -440,6 +440,7 @@ struct App : public Application {
                 swapchain->present();
             } while (0);
 
+#if 0
             double interval;
             do {
                 std::this_thread::yield();
@@ -447,6 +448,7 @@ struct App : public Application {
                 std::chrono::duration<double> d = t - timestamp;
                 interval = std::max(frameInterval - d.count(), 0.0);
             } while (interval > 0.0);
+#endif
         }
         for (auto& renderer : this->renderers) {
             renderer->finalize();

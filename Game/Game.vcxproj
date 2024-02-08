@@ -235,6 +235,7 @@ xcopy /Y /D /R /Q /E "$(ProjectDir)Resources" "$(OutDir)$(ProjectName).Resources
     <None Include="Resources\Shaders\sample_notex.vert" />
     <None Include="Resources\Shaders\voxel_depth_clear.comp" />
     <None Include="Resources\Shaders\voxel_depth_layer.comp" />
+    <None Include="Resources\Shaders\voxel_depth_iteration.comp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
