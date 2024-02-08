@@ -65,9 +65,9 @@ bool VoxelOctree::mergeSolidBranches() {
 
 void VoxelOctree::makeSubarray(const Vector3& center,
                                uint32_t depth,
-                               std::vector<VolumeArray::Node>& vector,
                                const MakeArrayCallback& callback,
-                               const VolumePriorityCallback& priority) const {
+                               const VolumePriorityCallback& priority,
+                               std::vector<VolumeArray::Node>& vector) const {
     auto index = vector.size();
     vector.push_back({});
     {
@@ -124,7 +124,6 @@ void VoxelOctree::makeSubarray(const Vector3& center,
             auto& child = children[i];
             callback(child.center, depth + 1, child.priority, child.node, vector);
         }
-
     }
     auto advance = (vector.size() - index);
     auto& n = vector.at(index);
@@ -141,6 +140,10 @@ void VoxelOctree::makeSubarray(const Vector3& center,
                                uint32_t maxDepth,
                                const VolumePriorityCallback& priority,
                                std::vector<VolumeArray::Node>& vector) const {
+    if (!priority) {
+        return makeSubarray(center, depth, maxDepth, vector);
+    }
+
     auto index = vector.size();
     vector.push_back({});
     {
@@ -183,7 +186,7 @@ void VoxelOctree::makeSubarray(const Vector3& center,
             }
         }
 
-        if (numChildren > 1 && priority) {
+        if (numChildren > 1) {
             for (uint8_t i = 0; i < numChildren; ++i) {
                 auto& child = children[i];
                 child.priority = priority(child.center, depth + 1);

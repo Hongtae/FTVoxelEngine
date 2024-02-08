@@ -184,9 +184,9 @@ namespace FV {
         using VolumePriorityCallback = std::function<float(const Vector3&, uint32_t)>;
         void makeSubarray(const Vector3& center,
                           uint32_t level,
-                          std::vector<VolumeArray::Node>& vector,
                           const MakeArrayCallback&,
-                          const VolumePriorityCallback&) const;
+                          const VolumePriorityCallback&,
+                          std::vector<VolumeArray::Node>& vector) const;
 
         void makeSubarray(const Vector3& nodeCenter,
                           uint32_t currentLevel,
