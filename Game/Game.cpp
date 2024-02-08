@@ -233,6 +233,10 @@ struct App : public Application {
                 if (ImGui::Checkbox("Linear filter", &linearFilter)) {
                     volumeRenderer->config.linearFilter = linearFilter;
                 }
+                bool raycastVisualize = volumeRenderer->config.raycastVisualize;
+                if (ImGui::Checkbox("Raycast Visualize", &raycastVisualize)) {
+                    volumeRenderer->config.raycastVisualize = raycastVisualize;
+                }
             }
             float scale = volumeRenderer->scale;
             if (ImGui::InputFloat("Scale", &scale, 0.01f, 1.0f, "%.3f")) {

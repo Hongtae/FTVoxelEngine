@@ -278,7 +278,7 @@ void main() {
         vec4 fragColor = rayResultNearColor * vec4(color, 1.0);
         //imageStore(outputImage, ivec2(gl_GlobalInvocationID.xy), fragColor);
 
-        float c = float(iterationCount) / 500.0;
+        float c = float(iterationCount) / 400.0;
         imageStore(outputImage, ivec2(gl_GlobalInvocationID.xy), vec4(c,c,c,1.0));
 
         float depth3 = aabbPtToNDC(ray, rayResultNearDepth);

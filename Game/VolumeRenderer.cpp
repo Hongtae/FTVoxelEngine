@@ -31,13 +31,26 @@ void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc, std::
 
     if (auto pso = makeComputePipeline(
         gc->device.get(),
-        appResourcesRoot / "Shaders/voxel_depth_iteration.comp.spv",
+        appResourcesRoot / "Shaders/voxel_depth_layer.comp.spv",
         {
             { 0, ShaderDescriptorType::StorageTexture, 1, nullptr }, // color (rgba8)
             { 1, ShaderDescriptorType::StorageTexture, 1, nullptr }, // depth (r32f)
             { 2, ShaderDescriptorType::StorageBuffer, 1, nullptr },  // voxel data
         }); pso.has_value()) {
         raycastVoxel = pso.value();
+    } else {
+        throw std::runtime_error("failed to load shader");
+    }
+
+    if (auto pso = makeComputePipeline(
+        gc->device.get(),
+        appResourcesRoot / "Shaders/voxel_depth_iteration.comp.spv",
+        {
+            { 0, ShaderDescriptorType::StorageTexture, 1, nullptr }, // color (rgba8)
+            { 1, ShaderDescriptorType::StorageTexture, 1, nullptr }, // depth (r32f)
+            { 2, ShaderDescriptorType::StorageBuffer, 1, nullptr },  // voxel data
+        }); pso.has_value()) {
+        raycastVisualizer = pso.value();
     } else {
         throw std::runtime_error("failed to load shader");
     }
@@ -51,6 +64,7 @@ void VolumeRenderer::finalize() {
     voxelLayers.clear();
 
     raycastVoxel = {};
+    raycastVisualizer = {};
     clearBuffers = {};
     imageBlit.reset();
     imageBlitVB = nullptr;
@@ -123,6 +137,10 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
 
         raycastVoxel.bindingSet->setTexture(0, outputImage);
         raycastVoxel.bindingSet->setTexture(1, depthImage);
+
+        raycastVisualizer.bindingSet->setTexture(0, outputImage);
+        raycastVisualizer.bindingSet->setTexture(1, depthImage);
+
         Log::debug("VolumeRenderer: resetImages ({}x{})", width, height);
     }
 
@@ -325,20 +343,6 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
                 auto distMinDetailSq = config.distanceToMinDetail * config.distanceToMinDetail;
                 distMinDetailSq = std::max(distMinDetailSq, distMaxDetailSq + 0.001f);
 
-                struct MaxDepthRecursion {
-                    uint32_t maxDepth;
-                    const VoxelOctree::VolumePriorityCallback& getPriority;
-                    void operator() (const Vector3& center,
-                                     uint32_t depth,
-                                     float priority,
-                                     const VoxelOctree* node,
-                                     std::vector<VolumeArray::Node>& vector) const {
-                        if (depth <= maxDepth) {
-                            node->makeSubarray(center, depth, vector, *this, getPriority);
-                        }
-                    }
-                };
-
                 struct DepthResolveRecursion {
                     uint32_t startLevel;
                     std::function<uint32_t(const Vector3&, uint32_t)>& bestFit;
@@ -352,13 +356,7 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
                         if (depth == startLevel) {
                             uint32_t maxDepth = bestFit(center, depth);
                             if (stopCaching || maxDepth < depth) {
-                                if (stopCaching)
-                                    node->makeSubarray(
-                                        center, depth, vector,
-                                        MaxDepthRecursion{ maxDepth, getPriority },
-                                        getPriority);
-                                else
-                                    node->makeSubarray(center, depth, vector, {}, getPriority);
+                                node->makeSubarray(center, depth, maxDepth, getPriority, vector);
                             } else {
                                 generator(center, depth, priority, node, maxDepth, vector);
                             }
@@ -418,10 +416,7 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
                     if (build) {
                         cache.data.clear();
                         cache.depth = maxDepth;
-                        node->makeSubarray(
-                            center, depth, cache.data,
-                            MaxDepthRecursion{ maxDepth, getPriority },
-                            getPriority);
+                        node->makeSubarray(center, depth, maxDepth, cache.data);
                     }
                     vector.insert(vector.end(), cache.data.begin(), cache.data.end());
                 };
@@ -550,8 +545,12 @@ void VolumeRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
                 width, height
             };
 
+            ComputePipeline* pipeline = &raycastVoxel;
+            if (config.raycastVisualize)
+                pipeline = &raycastVisualizer;
+
             auto encoder = cbuffer->makeComputeCommandEncoder();
-            encoder->setComputePipelineState(raycastVoxel.state);
+            encoder->setComputePipelineState(pipeline->state);
             encoder->pushConstant(uint32_t(ShaderStage::Compute), 0, sizeof(pcdata), &pcdata);
 
             auto sortLayers = [](
@@ -602,8 +601,8 @@ void VolumeRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
                 if (mvpFrustum.isAABBInside(layer.aabb) == false)
                     continue;
 
-                raycastVoxel.bindingSet->setBuffer(2, layer.buffer, 0, layer.buffer->length());
-                encoder->setResource(0, raycastVoxel.bindingSet);
+                pipeline->bindingSet->setBuffer(2, layer.buffer, 0, layer.buffer->length());
+                encoder->setResource(0, pipeline->bindingSet);
                 if (true) {
                     // calling setResource (vkCmdBindDescriptorSets) seems to
                     // corrupt existing bound Push-Constant data, which appears
@@ -611,8 +610,8 @@ void VolumeRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
                     // For the moment, rebind the Push Constant data.
                     encoder->pushConstant(uint32_t(ShaderStage::Compute), 0, sizeof(pcdata), &pcdata);
                 }
-                encoder->dispatch(width / raycastVoxel.threadgroupSize.x,
-                                  height / raycastVoxel.threadgroupSize.y,
+                encoder->dispatch(width / pipeline->threadgroupSize.x,
+                                  height / pipeline->threadgroupSize.y,
                                   1);
                 drawLayers++;
             }

@@ -30,10 +30,12 @@ public:
         uint32_t minDetailLevel = 7U;
         uint32_t maxDetailLevel = 12U;
         bool linearFilter = false;
+        bool raycastVisualize = false;
     } config;
 
 private:
     ComputePipeline raycastVoxel;
+    ComputePipeline raycastVisualizer;
     ComputePipeline clearBuffers;
     std::optional<RenderPipeline> imageBlit;
     std::shared_ptr<GPUBuffer> imageBlitVB;
