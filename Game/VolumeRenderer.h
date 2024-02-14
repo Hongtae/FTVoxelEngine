@@ -42,8 +42,9 @@ private:
     std::shared_ptr<SamplerState> blitSamplerLinear;
     std::shared_ptr<SamplerState> blitSamplerNearest;
 
-    std::shared_ptr<Texture> outputImage;  // storage-image
-    std::shared_ptr<Texture> depthImage;
+    std::shared_ptr<Texture> colorOutput;  // storage-image
+    std::shared_ptr<Texture> depthOutput;
+    std::shared_ptr<Texture> normalOutput;
 
     std::shared_ptr<VoxelModel> voxelModel;
     struct VoxelLayer {

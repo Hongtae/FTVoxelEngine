@@ -25,10 +25,11 @@ struct EncodedAABB {
     uint32_t color;
 };
 
-layout (binding=0, rgba8) uniform image2D outputImage;
-layout (binding=1, r32f) uniform image2D depthBuffer;
+layout (binding=0, rgba8) uniform image2D colorOutput;
+layout (binding=1, r32f) uniform image2D depthOutput;
+layout (binding=2, rgb10_a2) uniform image2D normalOutput;
 
-layout (std140, binding=2) readonly buffer AABBArray {
+layout (std140, binding=3) readonly buffer AABBArray {
     EncodedAABB volumes[];
 } data;
 
@@ -265,7 +266,7 @@ vec3 worldNormal(vec3 n) {
 
 void main() {
     const Ray ray = getRay();
-    float depth = imageLoad(depthBuffer, ivec2(gl_GlobalInvocationID.xy)).r;
+    float depth = imageLoad(depthOutput, ivec2(gl_GlobalInvocationID.xy)).r;
 
     vec3 aabbDepthClip = ndcToAABB(depth);
     float depth2 = length(aabbDepthClip - ray.origin);
@@ -276,15 +277,16 @@ void main() {
     if (rayResultDepth < depth2) {
 #if WRITE_RAY_ITERATION
         float c = float(rayTestCount) / float(maxRayTestCount);
-        imageStore(outputImage, ivec2(gl_GlobalInvocationID.xy), vec4(c,c,c,1.0));
+        imageStore(colorOutput, ivec2(gl_GlobalInvocationID.xy), vec4(c,c,c,1.0));
 #else
         vec4 fragColor = rayResultColor;
-        imageStore(outputImage, ivec2(gl_GlobalInvocationID.xy), fragColor);
+        imageStore(colorOutput, ivec2(gl_GlobalInvocationID.xy), fragColor);
 #endif
 
         vec3 normal = worldNormal(rayResultNormal);
+        imageStore(normalOutput, ivec2(gl_GlobalInvocationID.xy), vec4(normal, 1.0));
 
         float depth3 = aabbPtToNDC(ray, rayResultDepth);
-        imageStore(depthBuffer, ivec2(gl_GlobalInvocationID.xy), vec4(depth3));
+        imageStore(depthOutput, ivec2(gl_GlobalInvocationID.xy), vec4(depth3));
     }
 }

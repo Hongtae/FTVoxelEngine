@@ -23,6 +23,7 @@ void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc, std::
         {
             { 0, ShaderDescriptorType::StorageTexture, 1, nullptr }, // color (rgba8)
             { 1, ShaderDescriptorType::StorageTexture, 1, nullptr }, // depth (r32f)
+            { 2, ShaderDescriptorType::StorageTexture, 1, nullptr }, // normal (rgb10_a2)
         }); pso.has_value()) {
         clearBuffers = pso.value();
     } else {
@@ -35,7 +36,8 @@ void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc, std::
         {
             { 0, ShaderDescriptorType::StorageTexture, 1, nullptr }, // color (rgba8)
             { 1, ShaderDescriptorType::StorageTexture, 1, nullptr }, // depth (r32f)
-            { 2, ShaderDescriptorType::StorageBuffer, 1, nullptr },  // voxel data
+            { 2, ShaderDescriptorType::StorageTexture, 1, nullptr }, // normal (rgb10_a2)
+            { 3, ShaderDescriptorType::StorageBuffer, 1, nullptr },  // voxel data
         }); pso.has_value()) {
         raycastVoxel = pso.value();
     } else {
@@ -48,7 +50,8 @@ void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc, std::
         {
             { 0, ShaderDescriptorType::StorageTexture, 1, nullptr }, // color (rgba8)
             { 1, ShaderDescriptorType::StorageTexture, 1, nullptr }, // depth (r32f)
-            { 2, ShaderDescriptorType::StorageBuffer, 1, nullptr },  // voxel data
+            { 2, ShaderDescriptorType::StorageTexture, 1, nullptr }, // normal (rgb10_a2)
+            { 3, ShaderDescriptorType::StorageBuffer, 1, nullptr },  // voxel data
         }); pso.has_value()) {
         raycastVisualizer = pso.value();
     } else {
@@ -57,8 +60,9 @@ void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc, std::
 }
 
 void VolumeRenderer::finalize() {
-    outputImage = nullptr;
-    depthImage = nullptr;
+    colorOutput = nullptr;
+    depthOutput = nullptr;
+    normalOutput = nullptr;
 
     voxelModel = nullptr;
     voxelLayers.clear();
@@ -93,8 +97,8 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
     height = height * config.renderScale;
 
     bool resetImages = true;
-    if (outputImage) {
-        if (outputImage->width() == width && outputImage->height() == height)
+    if (colorOutput) {
+        if (colorOutput->width() == width && colorOutput->height() == height)
             resetImages = false;
     }
 
@@ -108,8 +112,8 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
             TextureUsageShaderRead |
             TextureUsageShaderWrite;
 
-        // create render-target (rgba8)
-        outputImage = device->makeTexture(
+        // create color render-target (rgba8)
+        colorOutput = device->makeTexture(
             TextureDescriptor{
                 TextureType2D,
                 PixelFormat::RGBA8Unorm,
@@ -118,10 +122,10 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
                 1, 1, 1, 1,
                 renderTargetUsage
             });
-        FVASSERT_DEBUG(outputImage);
+        FVASSERT_DEBUG(colorOutput);
 
-        // create render-target (r32f)
-        depthImage = device->makeTexture(
+        // create depth render-target (r32f)
+        depthOutput = device->makeTexture(
             TextureDescriptor{
                 TextureType2D,
                 PixelFormat::R32Float,
@@ -130,23 +134,31 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
                 1, 1, 1, 1,
                 renderTargetUsage
             });
-        FVASSERT_DEBUG(depthImage);
+        FVASSERT_DEBUG(depthOutput);
 
-        clearBuffers.bindingSet->setTexture(0, outputImage);
-        clearBuffers.bindingSet->setTexture(1, depthImage);
+        // create normal render-target (rgb10_a2)
+        normalOutput = device->makeTexture(
+            TextureDescriptor{
+                TextureType2D,
+                PixelFormat::RGB10A2Unorm,
+                width,
+                height,
+                1, 1, 1, 1,
+                renderTargetUsage
+            });
 
-        raycastVoxel.bindingSet->setTexture(0, outputImage);
-        raycastVoxel.bindingSet->setTexture(1, depthImage);
-
-        raycastVisualizer.bindingSet->setTexture(0, outputImage);
-        raycastVisualizer.bindingSet->setTexture(1, depthImage);
+        for (auto& pipeline : { clearBuffers, raycastVoxel, raycastVisualizer }) {
+            pipeline.bindingSet->setTexture(0, colorOutput);
+            pipeline.bindingSet->setTexture(1, depthOutput);
+            pipeline.bindingSet->setTexture(2, normalOutput);
+        }
 
         Log::debug("VolumeRenderer: resetImages ({}x{})", width, height);
     }
 
-    if (outputImage) {
-        uint32_t width = outputImage->width();
-        uint32_t height = outputImage->height();
+    if (colorOutput) {
+        uint32_t width = colorOutput->width();
+        uint32_t height = colorOutput->height();
 
         auto proj = p;
         if (proj.matrix._34 != 0.0f) {
@@ -217,7 +229,7 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
         else
             imageBlit.value().bindingSet->setSamplerState(0, blitSamplerNearest);
 
-        imageBlit.value().bindingSet->setTexture(0, outputImage);
+        imageBlit.value().bindingSet->setTexture(0, colorOutput);
     }
     if (imageBlitVB == nullptr)
     {
@@ -253,7 +265,7 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
     }
 
     if (resetImages)
-        imageBlit.value().bindingSet->setTexture(0, outputImage);
+        imageBlit.value().bindingSet->setTexture(0, colorOutput);
 
     this->viewFrustum = { view, projection };
 
@@ -488,11 +500,11 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
 bool stopRendering = false;
 
 void VolumeRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
-    if (!stopRendering && outputImage && depthImage) {
-        uint32_t width = outputImage->width();
-        uint32_t height = outputImage->height();
-        FVASSERT_DEBUG(depthImage->width() == width);
-        FVASSERT_DEBUG(depthImage->height() == height);
+    if (!stopRendering && colorOutput && depthOutput) {
+        uint32_t width = colorOutput->width();
+        uint32_t height = colorOutput->height();
+        FVASSERT_DEBUG(depthOutput->width() == width);
+        FVASSERT_DEBUG(depthOutput->height() == height);
 
         // clear
         auto cbuffer = queue->makeCommandBuffer();
@@ -593,7 +605,7 @@ void VolumeRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
                 if (mvpFrustum.isAABBInside(layer.aabb) == false)
                     continue;
 
-                pipeline->bindingSet->setBuffer(2, layer.buffer, 0, layer.buffer->length());
+                pipeline->bindingSet->setBuffer(3, layer.buffer, 0, layer.buffer->length());
                 encoder->setResource(0, pipeline->bindingSet);
                 if (true) {
                     // calling setResource (vkCmdBindDescriptorSets) seems to
