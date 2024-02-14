@@ -512,16 +512,10 @@ void VolumeRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
                 Matrix4 inversedM;
                 Matrix4 inversedMVP;
                 Matrix4 mvp;
-                Color ambientColor;
-                Color lightColor;
-                Vector3 lightDir;
                 uint32_t width;
                 uint32_t height;
             };
 #pragma pack(pop)
-
-            Color lightColor = { 1, 1, 1, 0.2 };
-            Color ambientColor = { 0.7, 0.7, 0.7, 1 };
 
             auto& view = viewFrustum.view;
             auto& projection = viewFrustum.projection;
@@ -540,9 +534,6 @@ void VolumeRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
                 nodeTM.inverted(),
                 mvp.inverted(),
                 mvp,
-                ambientColor,
-                lightColor,
-                lightDir,
                 width, height
             };
 
