@@ -45,9 +45,9 @@ namespace FV {
         // packed 32 bit formats
         RGB10A2Unorm,
         RGB10A2Uint,
-
         RG11B10Float,
         RGB9E5Float,
+        BGR10A2Unorm,
 
         // 64 bit formats
         RG32Uint,
@@ -152,6 +152,7 @@ namespace FV {
         case PixelFormat::RGB10A2Uint:
         case PixelFormat::RG11B10Float:
         case PixelFormat::RGB9E5Float:
+        case PixelFormat::BGR10A2Unorm:
             return 4;
             // 64 bit formats
         case PixelFormat::RG32Uint:

@@ -775,10 +775,10 @@ std::shared_ptr<Image> Image::fromTextureBuffer(std::shared_ptr<GPUBuffer> buffe
         getPixel = [](const void* data)->RawColorValue {
             uint32_t value = *(uint32_t*)data;
             return {
-                double((value >> 22) & 1023) / 1023.0,
-                double((value >> 12) & 1023) / 1023.0,
-                double((value >> 2) & 1023) / 1023.0,
-                double(value & 3) / 3.0,
+                double(value & 1023) / 1023.0,
+                double((value >> 10) & 1023) / 1023.0,
+                double((value >> 20) & 1023) / 1023.0,
+                double((value >> 30) & 3) / 3.0,
             };
         };
         break;
@@ -804,6 +804,18 @@ std::shared_ptr<Image> Image::fromTextureBuffer(std::shared_ptr<GPUBuffer> buffe
                 ufloatToDouble<5, 9>(exp, value >> 14),
                 ufloatToDouble<5, 9>(exp, value >> 5),
                 1.0
+            };
+        };
+        break;
+    case PixelFormat::BGR10A2Unorm:
+        imageFormat = ImagePixelFormat::RGBA16;
+        getPixel = [](const void* data)->RawColorValue {
+            uint32_t value = *(uint32_t*)data;
+            return {
+                double((value >> 20) & 1023) / 1023.0,
+                double((value >> 10) & 1023) / 1023.0,
+                double(value & 1023) / 1023.0,
+                double((value >> 30) & 3) / 3.0,
             };
         };
         break;
