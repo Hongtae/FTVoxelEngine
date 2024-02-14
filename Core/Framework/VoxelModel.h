@@ -50,10 +50,11 @@ namespace FV {
         AABB aabb;
     };
 
+#pragma pack(push, 1)
     struct Voxel {
         Color::RGBA8 color;
-        uint16_t metallic;
-        uint16_t roughness;
+        uint8_t metallic;
+        uint8_t roughness;
 
         bool operator==(const Voxel& other) const {
             return color.value == other.color.value &&
@@ -61,19 +62,39 @@ namespace FV {
                 roughness == other.roughness;
         }
     };
+#pragma pack(pop)
 
+#pragma pack(push, 4)
     struct FVCORE_API VoxelOctree {
         Voxel value;
-        VoxelOctree* subdivisions[8] = {};
+        uint8_t subdivisionMasks = 0;
+        VoxelOctree* subdivisions = nullptr;
+
+        VoxelOctree();
+        VoxelOctree(const Voxel&);
+        VoxelOctree(const VoxelOctree&);
+        VoxelOctree(VoxelOctree&&);
+        ~VoxelOctree();
+
+        VoxelOctree& operator=(const VoxelOctree&);
+        VoxelOctree& operator=(VoxelOctree&&);
+
+        VoxelOctree deepCopy() const;
 
         static constexpr auto maxDepth = 124U;
 
         bool isLeafNode() const {
-            auto merge = [&]<int... N>(std::integer_sequence<int, N...>) {
-                return (uintptr_t(subdivisions[N]) | ...);
-            };
-            return merge(std::make_integer_sequence<int, 8>{}) == 0;
+            return subdivisionMasks == 0;
         }
+
+        uint8_t numSubdivisions() const {
+            return std::popcount(subdivisionMasks);
+        }
+
+        void subdivide(std::initializer_list<uint8_t> indices);
+        void subdivide(uint8_t mask);
+        void erase(std::initializer_list<uint8_t> indices);
+        void erase(uint8_t mask);
 
         static constexpr float halfExtent(uint32_t depth) {
             uint32_t exp = (126 - std::clamp(depth, 0U, 125U)) << 23;
@@ -82,57 +103,67 @@ namespace FV {
 
         size_t numDescendants() const {
             size_t n = 1;
-            for (auto p : subdivisions) {
-                if (p)
-                    n += p->numDescendants();
-            }
+            enumerate([&](uint8_t, const VoxelOctree* node) {
+                n += node->numDescendants();
+            });
             return n;
         }
 
         size_t countNodesToDepth(uint32_t depth, uint32_t cdepth = 0) const {
             size_t n = 1;
             if (depth > cdepth) {
-                for (auto p : subdivisions) {
-                    if (p)
-                        n += p->countNodesToDepth(depth, cdepth + 1);
-                }
+                enumerate([&](uint8_t, const VoxelOctree* node) {
+                    n += node->countNodesToDepth(depth, cdepth + 1);
+                });
             }
             return n;
         }
 
         size_t numLeafNodes() const {
-            bool isLeaf = true;
+            if (isLeafNode()) return 1;
             size_t n = 0;
-            for (auto p : subdivisions) {
-                if (p) {
-                    isLeaf = false;
-                    n += p->numLeafNodes();
-                }
-            }
-            if (isLeaf)
-                return 1;
+            enumerate([&](uint8_t, const VoxelOctree* node) {
+                n += node->numLeafNodes();
+            });
             return n;
         }
 
         uint32_t maxDepthLevels() const {
             uint32_t level = 0;
-            for (auto p : subdivisions) {
-                if (p) {
-                    level = std::max(level, p->maxDepthLevels() + 1);
-                }
-            }
+            enumerate([&](uint8_t, const VoxelOctree* node) {
+                level = std::max(level, node->maxDepthLevels() + 1);
+            });
             return level;
         }
 
+        template <typename T> requires std::is_invocable_v<T, uint8_t, VoxelOctree*>
+        void enumerate(T&& fn) {
+            VoxelOctree* child = subdivisions;
+            for (uint8_t i = 0; i < 8; ++i) {
+                if ((subdivisionMasks >> i) & 1) {
+                    fn(i, child);
+                    child += 1;
+                }
+            }
+        }
+
+        template <typename T> requires std::is_invocable_v<T, uint8_t, const VoxelOctree*>
+        void enumerate(T&& fn) const {
+            const VoxelOctree* child = subdivisions;
+            for (uint8_t i = 0; i < 8; ++i) {
+                if ((subdivisionMasks >> i) & 1) {
+                    fn(i, child);
+                    child += 1;
+                }
+            }
+        }
+
         template <typename T> requires std::is_invocable_v<T, const AABB&, const VoxelOctree*>
-        void enumerateSubtree(const AABB& aabb, T&& fn) const {
+        void enumerate(const AABB& aabb, T&& fn) const {
             const auto pivot = aabb.min;
             const auto halfExtents = aabb.extents() * 0.5f;
 
-            for (int i = 0; i < 8; ++i) {
-                auto node = subdivisions[i];
-                if (node == nullptr) continue;
-
+            enumerate([&](uint8_t i, const VoxelOctree* node) {
                 const int x = i & 1;
                 const int y = (i >> 1) & 1;
                 const int z = (i >> 2) & 1;
@@ -144,17 +175,14 @@ namespace FV {
                 };
                 AABB aabb2 = { pt, pt + halfExtents };
                 fn(aabb2, node);
-            }
+            });
         }
 
         template <typename T> requires std::is_invocable_v<T, const Vector3&, uint32_t, const VoxelOctree*>
-        void enumerateSubtree(const Vector3& center, uint32_t depth, T&& fn) const {
+        void enumerate(const Vector3& center, uint32_t depth, T&& fn) const {
             const auto hext = halfExtent(depth);
 
-            for (int i = 0; i < 8; ++i) {
-                auto node = subdivisions[i];
-                if (node == nullptr) continue;
-
+            enumerate([&](uint8_t i, const VoxelOctree* node) {
                 const int x = i & 1;
                 const int y = (i >> 1) & 1;
                 const int z = (i >> 2) & 1;
@@ -164,8 +192,8 @@ namespace FV {
                     center.y + hext * (float(y) - 0.5f),
                     center.z + hext * (float(z) - 0.5f),
                 };
-                fn(pt, depth+1, node);
-            }
+                fn(pt, depth + 1, node);
+            });
         }
 
         bool mergeSolidBranches();
@@ -199,6 +227,7 @@ namespace FV {
                           uint32_t maxDepth,
                           std::vector<VolumeArray::Node>& vector) const;
     };
+#pragma pack(pop)
 
     class VoxelOctreeBuilder {
     public:

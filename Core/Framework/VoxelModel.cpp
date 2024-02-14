@@ -9,6 +9,142 @@ constexpr auto epsilon = std::numeric_limits<float>::epsilon();
 
 constexpr bool mergeSolidNodes = true;
 
+VoxelOctree::VoxelOctree()
+    : value({})
+    , subdivisions(nullptr)
+    , subdivisionMasks(0) {
+
+}
+
+VoxelOctree::VoxelOctree(const Voxel& v)
+    : value(v)
+    , subdivisions(nullptr)
+    , subdivisionMasks(0) {
+}
+
+VoxelOctree::VoxelOctree(const VoxelOctree& node) {
+    auto n = node.deepCopy();
+    value = n.value;
+    subdivisionMasks = n.subdivisionMasks;
+    subdivisions = n.subdivisions;
+    n.subdivisionMasks = 0;
+    n.subdivisions = nullptr;
+}
+
+VoxelOctree::VoxelOctree(VoxelOctree&& tmp)
+    : value(tmp.value)
+    , subdivisions(tmp.subdivisions)
+    , subdivisionMasks(tmp.subdivisionMasks) {
+    tmp.subdivisionMasks = 0;
+    tmp.subdivisions = nullptr;
+}
+
+VoxelOctree::~VoxelOctree() {
+    if (subdivisionMasks) {
+        FVASSERT_DEBUG(subdivisions != nullptr);
+        delete[] subdivisions;
+    }
+    subdivisionMasks = 0;
+}
+
+VoxelOctree& VoxelOctree::operator=(const VoxelOctree& other) {
+    return operator=(static_cast<VoxelOctree&&>(other.deepCopy()));
+}
+
+VoxelOctree& VoxelOctree::operator=(VoxelOctree&& tmp) {
+    value = tmp.value;
+    if (subdivisionMasks) {
+        FVASSERT_DEBUG(subdivisions != nullptr);
+        delete[] subdivisions;
+    }
+    subdivisionMasks = tmp.subdivisionMasks;
+    subdivisions = tmp.subdivisions;
+    tmp.subdivisionMasks = 0;
+    tmp.subdivisions = nullptr;
+    return *this;
+}
+
+VoxelOctree VoxelOctree::deepCopy() const {
+    VoxelOctree node(this->value);
+    if (subdivisionMasks) {
+        auto num = numSubdivisions();
+        node.subdivisionMasks = subdivisionMasks;
+        node.subdivisions = new VoxelOctree[num];
+        for (int i = 0; i < num; ++i) {
+            node.subdivisions[i] = this->subdivisions[i];
+        }
+    }
+    return node;
+}
+
+void VoxelOctree::subdivide(std::initializer_list<uint8_t> indices) {
+    uint8_t mask = subdivisionMasks;
+    for (auto i : indices) {
+        FVASSERT_DEBUG(i < 8);
+        mask = mask | (1 << (i & 7));
+    }
+    subdivide(mask);
+}
+
+void VoxelOctree::subdivide(uint8_t m) {
+    uint8_t mask = m | subdivisionMasks;
+    auto num = std::popcount(mask);
+    auto sub = new VoxelOctree[num](value);
+    if (subdivisionMasks) {
+        FVASSERT_DEBUG(subdivisions);
+        for (int i = 0; i < 8; ++i) {
+            if (subdivisionMasks & (1 << i)) {
+                uint8_t off1 = std::popcount(subdivisionMasks & ((1U << i) - 1));
+                uint8_t off2 = std::popcount(mask & ((1U << i) - 1));
+                auto& src = subdivisions[off1];
+                auto& dst = sub[off2];
+                dst = std::move(src);
+            }
+        }
+        delete subdivisions;
+    }
+    subdivisions = sub;
+    subdivisionMasks = mask;
+}
+
+void VoxelOctree::erase(std::initializer_list<uint8_t> indices) {
+    uint8_t mask = subdivisionMasks;
+    for (auto i : indices) {
+        FVASSERT_DEBUG(i < 8);
+        mask = mask & ~(1 << (i & 7));
+    }
+    erase(mask);
+}
+
+void VoxelOctree::erase(uint8_t m) {
+    uint8_t mask = subdivisionMasks & ~m;
+    if (mask) {
+        auto num = std::popcount(mask);
+        auto sub = new VoxelOctree[num](value);
+        if (subdivisionMasks) {
+            for (int i = 0; i < 8; ++i) {
+                if (subdivisionMasks & (1 << i)) {
+                    uint8_t off1 = std::popcount(subdivisionMasks & ((1U << i) - 1));
+                    uint8_t off2 = std::popcount(mask & ((1U << i) - 1));
+                    auto& src = subdivisions[off1];
+                    auto& dst = sub[off2];
+                    dst = std::move(src);
+                }
+            }
+            FVASSERT_DEBUG(subdivisions);
+            delete subdivisions;
+        }
+        subdivisions = sub;
+    } else {
+        if (subdivisionMasks) {
+            FVASSERT_DEBUG(subdivisions);
+            delete subdivisions;
+        }
+        subdivisions = nullptr;
+    }
+    subdivisionMasks = mask;
+}
+
 bool VoxelOctree::mergeSolidBranches() {
     int n = 0;
     uint16_t r = 0;
@@ -18,17 +154,16 @@ bool VoxelOctree::mergeSolidBranches() {
     uint32_t metallic = 0;
     uint32_t roughness = 0;
 
-    for (auto p : this->subdivisions) {
-        if (p) {
-            n++;
-            r += p->value.color.r;
-            g += p->value.color.g;
-            b += p->value.color.b;
-            a += p->value.color.a;
-            metallic += p->value.metallic;
-            roughness += p->value.roughness;
-        }
-    }
+    enumerate([&](uint8_t, const VoxelOctree* p) {
+        n++;
+        r += p->value.color.r;
+        g += p->value.color.g;
+        b += p->value.color.b;
+        a += p->value.color.a;
+        metallic += p->value.metallic;
+        roughness += p->value.roughness;
+    });
+
     if (n > 0) {
         this->value.color.r = r / n;
         this->value.color.g = g / n;
@@ -40,21 +175,14 @@ bool VoxelOctree::mergeSolidBranches() {
         if constexpr (mergeSolidNodes) {
             if (n == 8) {
                 bool combinable = true;
-                for (auto p : this->subdivisions) {
-                    if (p->isLeafNode() == false ||
-                        p->value != this->value) {
+                enumerate([&](uint8_t, const VoxelOctree* p) {
+                    if (p->isLeafNode() == false || p->value != this->value) {
                         combinable = false;
-                        break;
                     }
-                }
+                });
                 if (combinable) {
-                    for (int i = 0; i < 8; ++i) {
-                        auto p = this->subdivisions[i];
-                        FVASSERT_DEBUG(p);
-                        FVASSERT_DEBUG(p->isLeafNode());
-                        delete p;
-                        this->subdivisions[i] = nullptr;
-                    }
+                    delete[] subdivisions;
+                    subdivisionMasks = 0;
                 }
             }
         }
@@ -89,26 +217,12 @@ void VoxelOctree::makeSubarray(const Vector3& center,
         PrioritizedNode children[8] = {};
         int numChildren = 0;
 
-        uint32_t exp = (126U - depth) << 23;
-        float halfExtent = std::bit_cast<float>(exp);
-        for (int i = 0; i < 8; ++i) {
-            auto p = this->subdivisions[i];
-            if (p) {
-                const int x = i & 1;
-                const int y = (i >> 1) & 1;
-                const int z = (i >> 2) & 1;
-
-                Vector3 pt = {
-                     center.x + halfExtent * (float(x) - 0.5f),
-                     center.y + halfExtent * (float(y) - 0.5f),
-                     center.z + halfExtent * (float(z) - 0.5f),
-                };
-
-                children[numChildren++] = {
-                    p, pt, 0.0f
-                };
-            }
-        }
+        enumerate(center, depth,
+                  [&](const Vector3& pt, uint32_t, const VoxelOctree* p) {
+            children[numChildren++] = {
+                p, pt, 0.0f
+            };
+        });
 
         if (numChildren > 1 && priority) {
             for (int i = 0; i < numChildren; ++i) {
@@ -165,26 +279,12 @@ void VoxelOctree::makeSubarray(const Vector3& center,
         PrioritizedNode children[8] = {};
         uint8_t numChildren = 0;
 
-        uint32_t exp = (126U - depth) << 23;
-        float halfExtent = std::bit_cast<float>(exp);
-        for (int i = 0; i < 8; ++i) {
-            auto p = this->subdivisions[i];
-            if (p) {
-                const int x = i & 1;
-                const int y = (i >> 1) & 1;
-                const int z = (i >> 2) & 1;
-
-                Vector3 pt = {
-                     center.x + halfExtent * (float(x) - 0.5f),
-                     center.y + halfExtent * (float(y) - 0.5f),
-                     center.z + halfExtent * (float(z) - 0.5f),
-                };
-
-                children[numChildren++] = {
-                    p, pt, 0.0f
-                };
-            }
-        }
+        enumerate(center, depth,
+                  [&](const Vector3& pt, uint32_t, const VoxelOctree* p) {
+            children[numChildren++] = {
+                p, pt, 0.0f
+            };
+        });
 
         if (numChildren > 1) {
             for (uint8_t i = 0; i < numChildren; ++i) {
@@ -229,23 +329,10 @@ void VoxelOctree::makeSubarray(const Vector3& center,
         n.color.value = this->value.color.value;
     }
     if (depth < maxDepth) {
-        uint32_t exp = (126U - depth) << 23;
-        float halfExtent = std::bit_cast<float>(exp);
-        for (int i = 0; i < 8; ++i) {
-            auto p = this->subdivisions[i];
-            if (p) {
-                const int x = i & 1;
-                const int y = (i >> 1) & 1;
-                const int z = (i >> 2) & 1;
-
-                Vector3 pt = {
-                     center.x + halfExtent * (float(x) - 0.5f),
-                     center.y + halfExtent * (float(y) - 0.5f),
-                     center.z + halfExtent * (float(z) - 0.5f),
-                };
-                p->makeSubarray(pt, depth + 1, maxDepth, vector);
-            }
-        }
+        enumerate(center, depth,
+                  [&](const Vector3& pt, uint32_t depth, const VoxelOctree* p) {
+            p->makeSubarray(pt, depth, maxDepth, vector);
+        });
     }
     auto advance = (vector.size() - index);
     auto& n = vector.at(index);
@@ -299,21 +386,10 @@ VolumeArray VoxelOctree::makeArray(uint32_t maxDepth,
             }
 
             if (depth < maxDepth) {
-                for (int i = 0; i < 8; ++i) {
-                    auto p = node->subdivisions[i];
-                    if (p) {
-                        const int x = i & 1;
-                        const int y = (i >> 1) & 1;
-                        const int z = (i >> 2) & 1;
-
-                        Vector3 pt = {
-                             center.x + halfExtent * (float(x) - 0.5f),
-                             center.y + halfExtent * (float(y) - 0.5f),
-                             center.z + halfExtent * (float(z) - 0.5f),
-                        };
-                        MakeArray{ p, pt, depth + 1, filter }(vector, maxDepth);
-                    }
-                }
+                node->enumerate(center, depth, [&]
+                (const Vector3& pt, uint32_t depth, const VoxelOctree* p) {
+                    MakeArray{ p, pt, depth, filter }(vector, maxDepth);
+                });
             }
             auto advance = (vector.size() - index);
             auto& n = vector.at(index);
@@ -364,21 +440,10 @@ VolumeArray VoxelOctree::makeSubarray(const Vector3& center,
             }
 
             if (depth < maxDepth) {
-                for (int i = 0; i < 8; ++i) {
-                    auto p = node->subdivisions[i];
-                    if (p) {
-                        const int x = i & 1;
-                        const int y = (i >> 1) & 1;
-                        const int z = (i >> 2) & 1;
-
-                        Vector3 pt = {
-                             center.x + halfExtent * (float(x) - 0.5f),
-                             center.y + halfExtent * (float(y) - 0.5f),
-                             center.z + halfExtent * (float(z) - 0.5f),
-                        };
-                        MakeArray{ p, pt, depth + 1 }(vector, maxDepth);
-                    }
-                }
+                node->enumerate(center, depth, [&]
+                (const Vector3& pt, uint32_t depth, const VoxelOctree* p) {
+                    MakeArray{ p, pt, depth }(vector, maxDepth);
+                });
             }
             auto advance = (vector.size() - index);
             auto& n = vector.at(index);
@@ -427,6 +492,9 @@ VoxelModel::VoxelModel(VoxelOctreeBuilder* builder, int depth)
                     void operator() (uint32_t maxDepth) const {
                         if (depth < maxDepth) {
 
+                            VoxelOctree* subdivisions[8] = {};
+                            int numSubdividions = 0;
+
                             float halfExtent = VoxelOctree::halfExtent(depth);
                             Vector3 HalfHalfExt = Vector3(halfExtent, halfExtent, halfExtent) * 0.5f;
 
@@ -442,8 +510,10 @@ VoxelModel::VoxelModel(VoxelOctreeBuilder* builder, int depth)
                                 };
                                 AABB aabb = { pt - HalfHalfExt, pt + HalfHalfExt };
                                 VoxelOctree* sub = new VoxelOctree();
+
                                 if (builder->volumeTest(aabb.applying(transform), sub, node)) {
-                                    node->subdivisions[i] = sub;
+                                    subdivisions[i] = sub;
+                                    numSubdividions++;
 
                                     Subdivide{
                                         builder, transform,
@@ -452,6 +522,20 @@ VoxelModel::VoxelModel(VoxelOctreeBuilder* builder, int depth)
                                 } else {
                                     delete sub;
                                 }
+                            }
+
+                            if (numSubdividions) {
+                                node->subdivisions = new VoxelOctree[numSubdividions];
+                                node->subdivisionMasks = 0;
+                                int n = 0;
+                                for (int i = 0; i < 8; ++i) {
+                                    if (auto* p = subdivisions[i]; p) {
+                                        node->subdivisionMasks = node->subdivisionMasks | (1 << i);
+                                        node->subdivisions[n++] = std::move(*p);
+                                        delete p;
+                                    }
+                                }
+                                FVASSERT_DEBUG(node->subdivisionMasks != 0);
                             }
                             node->mergeSolidBranches();
 
@@ -480,7 +564,7 @@ VoxelModel::VoxelModel(VoxelOctreeBuilder* builder, int depth)
                         builder, transform.matrix4(),
                         Vector3(0.5f, 0.5f, 0.5f), 0, p}(_maxDepth);
                 } else {
-                    deleteNode(p);
+                    delete p;
                     p = nullptr;
                 }
                 _root = p;
@@ -514,6 +598,9 @@ VoxelModel::VoxelModel(VoxelOctreeBuilder* builder, int depth, DispatchQueue& qu
                     void operator() (uint32_t maxDepth) const {
                         if (depth < maxDepth) {
 
+                            VoxelOctree* subdivisions[8] = {};
+                            int numSubdividions = 0;
+
                             float halfExtent = VoxelOctree::halfExtent(depth);
                             Vector3 HalfHalfExt = Vector3(halfExtent, halfExtent, halfExtent) * 0.5f;
                             std::vector<std::shared_ptr<AsyncTask>> tasks;
@@ -531,7 +618,8 @@ VoxelModel::VoxelModel(VoxelOctreeBuilder* builder, int depth, DispatchQueue& qu
                                 AABB aabb = { pt - HalfHalfExt, pt + HalfHalfExt };
                                 VoxelOctree* sub = new VoxelOctree();
                                 if (builder->volumeTest(aabb.applying(transform), sub, node)) {
-                                    node->subdivisions[i] = sub;
+                                    subdivisions[i] = sub;
+                                    numSubdividions++;
 
                                     SubdivideAsync div{
                                         queue,
@@ -552,6 +640,20 @@ VoxelModel::VoxelModel(VoxelOctreeBuilder* builder, int depth, DispatchQueue& qu
                                 }
                             }
                             AsyncTask::waitAll(std::move(tasks));
+
+                            if (numSubdividions) {
+                                node->subdivisions = new VoxelOctree[numSubdividions];
+                                node->subdivisionMasks = 0;
+                                int n = 0;
+                                for (int i = 0; i < 8; ++i) {
+                                    if (auto* p = subdivisions[i]; p) {
+                                        node->subdivisionMasks = node->subdivisionMasks | (1 << i);
+                                        node->subdivisions[n++] = std::move(*p);
+                                        delete p;
+                                    }
+                                }
+                                FVASSERT_DEBUG(node->subdivisionMasks != 0);
+                            }
                             node->mergeSolidBranches();
 
                         } else { // leaf-node
@@ -580,7 +682,7 @@ VoxelModel::VoxelModel(VoxelOctreeBuilder* builder, int depth, DispatchQueue& qu
                         builder, transform.matrix4(),
                         Vector3(0.5f, 0.5f, 0.5f), 0, p }(_maxDepth);
                 } else {
-                    deleteNode(p);
+                    delete p;
                     p = nullptr;
                 }
                 _root = p;
@@ -591,7 +693,7 @@ VoxelModel::VoxelModel(VoxelOctreeBuilder* builder, int depth, DispatchQueue& qu
 
 VoxelModel::~VoxelModel() {
     if (_root)
-        deleteNode(_root);
+        delete _root;
 }
 
 void VoxelModel::update(uint32_t x, uint32_t y, uint32_t z, const Voxel& value) {
@@ -610,13 +712,40 @@ void VoxelModel::update(uint32_t x, uint32_t y, uint32_t z, const Voxel& value) 
             auto ny = y / dim;
             auto nz = z / dim;
             uint32_t index = ((nz & 1) << 2) | ((ny & 1) << 1) | (nx & 1);
-            auto p = node->subdivisions[index];
+
             bool updated = false;
-            if (p == nullptr) {
-                p = new VoxelOctree(value);
-                node->subdivisions[index] = p;
-                updated = true;
+            if ((node->subdivisionMasks & (1 << index)) == 0) {
+                if (node->subdivisionMasks == 0) {
+                    node->subdivisions = new VoxelOctree[1];
+                    node->subdivisionMasks = (1 << index);
+                } else {
+                    uint8_t numSubs = std::popcount(node->subdivisionMasks);
+                    VoxelOctree* subdivisions = new VoxelOctree[numSubs + 1];
+                    uint8_t masks = node->subdivisionMasks | (1 << index);
+                    FVASSERT_DEBUG(masks != node->subdivisionMasks);
+                    for (int i = 0; i < 8; ++i) {
+                        if (node->subdivisionMasks & (1 << i)) {
+                            uint32_t m1 = node->subdivisionMasks & ((1 << i) - 1);
+                            uint32_t m2 = masks & ((1 << i) - 1);
+                            auto& src = node->subdivisions[std::popcount(m1)];
+                            auto& dst = subdivisions[std::popcount(m2)];
+                            dst = std::move(src);
+                        }
+                    }
+                    delete[] node->subdivisions;
+                    node->subdivisions = subdivisions;
+                    node->subdivisionMasks = masks;
+                }
+                updated = true; // A new item has been added.
             }
+            VoxelOctree* p = nullptr;
+            if (1) {
+                uint32_t mask = node->subdivisionMasks & ((1 << index) - 1);
+                uint32_t offset = std::popcount(mask);
+                p = node->subdivisions + offset;
+            }
+            FVASSERT_DEBUG(p);
+
             if (dim > 1) {
                 if (Update{ dim >> 1, p, value }(x % dim, y % dim, z % dim)) {
                     updated = true;
@@ -660,39 +789,40 @@ void VoxelModel::erase(uint32_t x, uint32_t y, uint32_t z) {
                 auto nx = x / dim;
                 auto ny = y / dim;
                 auto nz = z / dim;
-                uint32_t index = ((nz & 1) << 2) | ((ny & 1) << 1) | (nx & 1);
+                uint8_t index = ((nz & 1) << 2) | ((ny & 1) << 1) | (nx & 1);
 
                 if (dim > 1) {
                     if (node->isLeafNode()) {
-                        for (int i = 0; i < 8; ++i) {
-                            node->subdivisions[i] = new VoxelOctree({ node->value });
-                        }
+                        node->subdivide(0xff);
                     }
-                    auto p = node->subdivisions[index];
-                    if (p) {
+                    if (node->subdivisionMasks & (1 << index)) {
+                        uint32_t offset = std::popcount(node->subdivisionMasks & ((1U << index) - 1));
+                        auto p = node->subdivisions + offset;
+
                         if (EraseNode{ dim >> 1, p }(x % dim, y % dim, z % dim)) {
                             if (p->isLeafNode()) {
-                                deleteNode(p);
-                                node->subdivisions[index] = nullptr;
+                                node->erase({ index });
                             }
                             node->mergeSolidBranches();
                             return true;
                         }
                     }
                 } else {
-                    auto p = node->subdivisions[index];
-                    if (p) {
-                        FVASSERT_DEBUG(p->isLeafNode());
-                        deleteNode(p);
-                        node->subdivisions[index] = nullptr;
+                    if (node->subdivisionMasks & (1 << index)) {
+                        uint32_t offset = std::popcount(node->subdivisionMasks & ((1U << index) - 1));
+                        auto& n = node->subdivisions[offset];
+                        FVASSERT_DEBUG(n.isLeafNode());
+                        node->erase({ index });
                         node->mergeSolidBranches();
                         return true;
                     } else {
                         if (node->isLeafNode()) {
+                            uint8_t mask = 0;
                             for (int i = 0; i < 8; ++i) {
                                 if (i != index)
-                                    node->subdivisions[i] = new VoxelOctree({ node->value });
+                                    mask = mask | (1 << i);
                             }
+                            node->subdivide(mask);
                             return true;
                         }
                     }
@@ -704,7 +834,7 @@ void VoxelModel::erase(uint32_t x, uint32_t y, uint32_t z) {
         if (res > 1) {
             if (EraseNode{ res >> 1, _root, }(x, y, z)) {
                 if (_root->isLeafNode()) {
-                    deleteNode(_root);
+                    delete _root;
                     _root = nullptr;
                 } else {
                     _root->mergeSolidBranches();
@@ -712,7 +842,7 @@ void VoxelModel::erase(uint32_t x, uint32_t y, uint32_t z) {
             }
         } else {
             FVASSERT_DEBUG(_root->isLeafNode());
-            deleteNode(_root);
+            delete _root;
             _root = nullptr;
         }
     }
@@ -733,9 +863,11 @@ std::optional<Voxel> VoxelModel::lookup(uint32_t x, uint32_t y, uint32_t z) cons
             auto ny = y / dim;
             auto nz = z / dim;
             uint32_t index = ((nz & 1) << 2) | ((ny & 1) << 1) | (nx & 1);
-            auto p = node->subdivisions[index];
-            if (p)
+            if (node->subdivisionMasks & (1U << index)) {
+                uint32_t offset = std::popcount(node->subdivisionMasks & ((1U << index) - 1));
+                auto p = node->subdivisions + offset;
                 return Lookup{ dim >> 1, p }(x % dim, y % dim, z % dim);
+            }
             return node;
         }
     };
@@ -760,17 +892,12 @@ void VoxelModel::setDepth(uint32_t depth) {
             uint32_t depth;
             void operator() (uint32_t maxDepth) {
                 if (depth < maxDepth) {
-                    for (auto p : node->subdivisions) {
-                        if (p)
-                            PruneDepthLevel{ p, depth + 1 }(maxDepth);
-                    }
+                    node->enumerate([&](uint32_t, VoxelOctree* p) {
+                        PruneDepthLevel{ p, depth + 1 }(maxDepth);
+                    });
                 } else {
-                    for (int i = 0; i < 8; ++i) {
-                        auto p = node->subdivisions[i];
-                        if (p)
-                            deleteNode(p);
-                        node->subdivisions[i] = nullptr;
-                    }
+                    node->erase(0xff);
+                    FVASSERT_DEBUG(node->isLeafNode());
                 }
             }
         };
@@ -785,10 +912,9 @@ void VoxelModel::optimize() {
     struct ForEachNode {
         VoxelOctree* node;
         void operator() (std::function<void(VoxelOctree*)>& callback) {
-            for (auto p : node->subdivisions) {
-                if (p)
-                    ForEachNode{ p }(callback);
-            }
+            node->enumerate([&](uint8_t, VoxelOctree* p) {
+                ForEachNode{ p }(callback);
+            });
             callback(node);
         }
     };
@@ -808,7 +934,7 @@ int VoxelModel::enumerateLevel(int depth, std::function<void(const AABB&, uint32
         uint32_t operator() (uint32_t depth, Callback& cb) {
             if (level < depth) {
                 int result = 0;
-                node->enumerateSubtree(
+                node->enumerate(
                     aabb, [&](const AABB& aabb2, const VoxelOctree* tree) {
                         result += IterateDepth{ tree, aabb2, level + 1 }(depth, cb);
                     });
@@ -837,7 +963,7 @@ int VoxelModel::enumerateLevel(int depth, std::function<void(const Vector3&, uin
         uint32_t operator() (uint32_t depth, Callback& cb) {
             if (level < depth) {
                 int result = 0;
-                node->enumerateSubtree(
+                node->enumerate(
                     center, level, [&](const Vector3& center, uint32_t level, const VoxelOctree* tree) {
                     result += IterateDepth{ tree, center, level }(depth, cb);
                 });
@@ -911,28 +1037,15 @@ uint64_t VoxelModel::rayTest(const Vector3& rayOrigin, const Vector3& dir,
             auto r = aabb.rayTest(start, dir);
             if (r >= 0.0f) {
                 uint64_t numHits = 0;
-                bool leafNode = true;
-                for (int i = 0; i < 8; ++i) {
-                    if (continueRayTest == false)
-                        break;
-                    auto p = node->subdivisions[i];
-                    if (p) {
-                        leafNode = false;
-
-                        const int x = i & 1;
-                        const int y = (i >> 1) & 1;
-                        const int z = (i >> 2) & 1;
-
-                        Vector3 pt = {
-                             center.x + halfExtent * (float(x) - 0.5f),
-                             center.y + halfExtent * (float(y) - 0.5f),
-                             center.z + halfExtent * (float(z) - 0.5f),
-                        };
-                        numHits += RayTestNode{ p, pt, depth + 1, resolution, continueRayTest, callback }
+                
+                node->enumerate(center, depth, [&]
+                (const Vector3& pt, uint32_t depth, const VoxelOctree* p) {
+                    if (continueRayTest) {
+                        numHits += RayTestNode{ p, pt, depth, resolution, continueRayTest, callback }
                         .rayTest(start, dir);
                     }
-                }
-                if (leafNode) {
+                });
+                if (node->isLeafNode()) {
                     uint32_t x = (uint32_t)std::floor(center.x * resolution);
                     uint32_t y = (uint32_t)std::floor(center.y * resolution);
                     uint32_t z = (uint32_t)std::floor(center.z * resolution);
@@ -962,14 +1075,9 @@ uint64_t VoxelModel::rayTest(const Vector3& rayOrigin, const Vector3& dir,
     }.rayTest(rayOrigin, dir);
 }
 
-void VoxelModel::deleteNode(VoxelOctree* node) {
-    ForEachNode{ node }.backward(
-        [](VoxelOctree* node) {
-            delete node;
-        });
-}
-
 constexpr char fileTag[] = "FV.VoxelModel";
+constexpr size_t voxelSize = 8;
+static_assert(sizeof(Voxel) <= voxelSize);
 
 bool VoxelModel::deserialize(std::istream& stream) {
     struct {
@@ -989,16 +1097,25 @@ bool VoxelModel::deserialize(std::istream& stream) {
         struct Deserializer {
             VoxelOctree* node;
             void operator() (std::istream& stream) {
-                stream.read((char*) & (node->value), sizeof(node->value));
+                char buff[voxelSize] = {};
+                stream.read(buff, voxelSize);
+                memcpy(&(node->value), buff, sizeof(node->value));
                 uint8_t subdiv = 0;
                 stream.read((char*)&subdiv, sizeof(subdiv));
-                for (int i = 0; i < 8; ++i) {
-                    if ((subdiv >> i) & 1) {
-                        auto p = new VoxelOctree{};
-                        node->subdivisions[i] = p;
-                        Deserializer{ p }(stream);
+
+                if (subdiv) {
+                    VoxelOctree* sub = new VoxelOctree[std::popcount(subdiv)];
+
+                    for (int i = 0; i < 8; ++i) {
+                        if ((subdiv >> i) & 1) {
+                            uint32_t offset = std::popcount(subdiv & ((1U << i) - 1));
+                            auto p = sub + offset;
+                            Deserializer{ p }(stream);
+                        }
                     }
+                    node->subdivisions = sub;
                 }
+                node->subdivisionMasks = subdiv;
             }
         };
 
@@ -1010,7 +1127,7 @@ bool VoxelModel::deserialize(std::istream& stream) {
                 Deserializer{ node }(stream);
             } catch (const std::ios::failure& fail) {
                 Log::error("IO ERROR! deserialization failed: {}", fail.what());
-                deleteNode(node);
+                delete node;
                 node = nullptr;
 #if FVCORE_DEBUG_ENABLED
                 throw;
@@ -1020,7 +1137,7 @@ bool VoxelModel::deserialize(std::istream& stream) {
         }
 
         if (_root)
-            deleteNode(_root);
+            delete _root;
         _root = node;
         if (_root)
             _maxDepth = _root->maxDepthLevels();
@@ -1034,19 +1151,18 @@ bool VoxelModel::deserialize(std::istream& stream) {
 
 uint64_t VoxelModel::serialize(std::ostream& stream) const {
     struct Serializer {
-        VoxelOctree* node;
+        const VoxelOctree* node;
         void operator() (std::ostream& stream) const {
-            auto subdivMasks = [this]<int... N>(std::integer_sequence<int, N...>) -> uint8_t {
-                return ((node->subdivisions[N] ? (1U << N) : 0U) | ...);
-            };
-            uint8_t subdiv = subdivMasks(std::make_integer_sequence<int, 8>{});
+            uint8_t subdiv = node->subdivisionMasks;
 
-            stream.write((const char*)&node->value, sizeof(node->value));
+            char buff[voxelSize] = {};
+            memcpy(buff, (const char*)&node->value, sizeof(node->value));
+            stream.write(buff, voxelSize);
             stream.write((const char*)&subdiv, sizeof(subdiv));
-            for (auto sub : node->subdivisions) {
-                if (sub)
-                    Serializer{ sub }(stream);
-            }
+
+            node->enumerate([&](uint8_t, const VoxelOctree* p) {
+                Serializer{ p }(stream);
+            });
         }
     };
 
