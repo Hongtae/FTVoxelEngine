@@ -136,6 +136,9 @@ struct App : public Application {
             }
             if (ImGui::BeginMenu("Window")) {
                 if (ImGui::BeginMenu("Resolution")) {
+                    if (ImGui::MenuItem("1600x1024")) {
+                        window->setResolution({ 1600, 1024 });
+                    }
                     if (ImGui::MenuItem("1280x720")) {
                         window->setResolution({ 1280, 720 });
                     }

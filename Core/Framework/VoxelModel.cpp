@@ -7,8 +7,6 @@ using namespace FV;
 
 constexpr auto epsilon = std::numeric_limits<float>::epsilon();
 
-constexpr bool mergeSolidNodes = true;
-
 VoxelOctree::VoxelOctree()
     : value({})
     , subdivisions(nullptr)
@@ -146,13 +144,13 @@ void VoxelOctree::erase(uint8_t m) {
 }
 
 bool VoxelOctree::mergeSolidBranches() {
-    int n = 0;
     uint16_t r = 0;
     uint16_t g = 0;
     uint16_t b = 0;
     uint16_t a = 0;
-    uint32_t metallic = 0;
-    uint32_t roughness = 0;
+    uint16_t metallic = 0;
+    uint16_t roughness = 0;
+    uint8_t n = 0;
 
     enumerate([&](uint8_t, const VoxelOctree* p) {
         n++;
@@ -172,18 +170,18 @@ bool VoxelOctree::mergeSolidBranches() {
         this->value.metallic = metallic / n;
         this->value.roughness = roughness / n;
 
-        if constexpr (mergeSolidNodes) {
-            if (n == 8) {
-                bool combinable = true;
-                enumerate([&](uint8_t, const VoxelOctree* p) {
+        if (n == 8) {
+            bool combinable = true;
+            enumerate([&](uint8_t, const VoxelOctree* p) {
+                if (combinable) {
                     if (p->isLeafNode() == false || p->value != this->value) {
                         combinable = false;
                     }
-                });
-                if (combinable) {
-                    delete[] subdivisions;
-                    subdivisionMasks = 0;
                 }
+            });
+            if (combinable) {
+                delete[] subdivisions;
+                subdivisionMasks = 0;
             }
         }
         return true;
