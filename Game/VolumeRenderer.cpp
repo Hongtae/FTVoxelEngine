@@ -1,7 +1,10 @@
+#include <random>
 #include "ShaderReflection.h"
 #include "VolumeRenderer.h"
 
 extern std::filesystem::path appResourcesRoot;
+
+constexpr int SSAOKernelSize = 64;
 
 VolumeRenderer::VolumeRenderer()
     : viewFrustum{ {}, {} }
@@ -12,18 +15,22 @@ VolumeRenderer::VolumeRenderer()
 VolumeRenderer::~VolumeRenderer() {
 }
 
-void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc, std::shared_ptr<SwapChain> swapchain) {
+void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc,
+                                std::shared_ptr<SwapChain> swapchain,
+                                PixelFormat depthFormat) {
     this->queue = swapchain->queue();
     FVASSERT_DEBUG(this->queue->flags() & CommandQueue::Compute);
 
+    auto device = gc->device.get();
+
     // load shader
     if (auto pso = makeComputePipeline(
-        gc->device.get(),
+        device,
         appResourcesRoot / "Shaders/voxel_depth_clear.comp.spv",
         {
-            { 0, ShaderDescriptorType::StorageTexture, 1, nullptr }, // color (rgba8)
-            { 1, ShaderDescriptorType::StorageTexture, 1, nullptr }, // depth (r32f)
-            { 2, ShaderDescriptorType::StorageTexture, 1, nullptr }, // normal (rgb10_a2)
+        { 0, ShaderDescriptorType::StorageTexture, 1, nullptr }, // color (rgba8)
+        { 1, ShaderDescriptorType::StorageTexture, 1, nullptr }, // depth (r32f)
+        { 2, ShaderDescriptorType::StorageTexture, 1, nullptr }, // normal (rgb10_a2)
         }); pso.has_value()) {
         clearBuffers = pso.value();
     } else {
@@ -31,13 +38,13 @@ void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc, std::
     }
 
     if (auto pso = makeComputePipeline(
-        gc->device.get(),
+        device,
         appResourcesRoot / "Shaders/voxel_depth_layer.comp.spv",
         {
-            { 0, ShaderDescriptorType::StorageTexture, 1, nullptr }, // color (rgba8)
-            { 1, ShaderDescriptorType::StorageTexture, 1, nullptr }, // depth (r32f)
-            { 2, ShaderDescriptorType::StorageTexture, 1, nullptr }, // normal (rgb10_a2)
-            { 3, ShaderDescriptorType::StorageBuffer, 1, nullptr },  // voxel data
+        { 0, ShaderDescriptorType::StorageTexture, 1, nullptr }, // color (rgba8)
+        { 1, ShaderDescriptorType::StorageTexture, 1, nullptr }, // depth (r32f)
+        { 2, ShaderDescriptorType::StorageTexture, 1, nullptr }, // normal (rgb10_a2)
+        { 3, ShaderDescriptorType::StorageBuffer, 1, nullptr },  // voxel data
         }); pso.has_value()) {
         raycastVoxel = pso.value();
     } else {
@@ -45,23 +52,170 @@ void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc, std::
     }
 
     if (auto pso = makeComputePipeline(
-        gc->device.get(),
+        device,
         appResourcesRoot / "Shaders/voxel_depth_iteration.comp.spv",
         {
-            { 0, ShaderDescriptorType::StorageTexture, 1, nullptr }, // color (rgba8)
-            { 1, ShaderDescriptorType::StorageTexture, 1, nullptr }, // depth (r32f)
-            { 2, ShaderDescriptorType::StorageTexture, 1, nullptr }, // normal (rgb10_a2)
-            { 3, ShaderDescriptorType::StorageBuffer, 1, nullptr },  // voxel data
+        { 0, ShaderDescriptorType::StorageTexture, 1, nullptr }, // color (rgba8)
+        { 1, ShaderDescriptorType::StorageTexture, 1, nullptr }, // depth (r32f)
+        { 2, ShaderDescriptorType::StorageTexture, 1, nullptr }, // normal (rgb10_a2)
+        { 3, ShaderDescriptorType::StorageBuffer, 1, nullptr },  // voxel data
         }); pso.has_value()) {
         raycastVisualizer = pso.value();
+    } else {
+        throw std::runtime_error("failed to load shader");
+    }
+
+    blitSamplerLinear = device->makeSamplerState(
+        {
+    .minFilter = SamplerMinMagFilter::Linear,
+    .magFilter = SamplerMinMagFilter::Linear,
+        });
+    blitSamplerNearest = device->makeSamplerState(
+        {
+    .minFilter = SamplerMinMagFilter::Nearest,
+    .magFilter = SamplerMinMagFilter::Nearest,
+        });
+    FVASSERT_DEBUG(blitSamplerLinear);
+    FVASSERT_DEBUG(blitSamplerNearest);
+
+    // ssao sample kernel
+    std::random_device rd;
+    std::default_random_engine re1(rd());
+    std::uniform_real_distribution<float> rdist(0.0f, 1.0f);
+    std::vector<Vector4> ssaoKernel(SSAOKernelSize);
+    for (uint32_t i = 0; i < SSAOKernelSize; ++i) {
+        auto sample = Vector3(rdist(re1) * 2.0 - 1.0,
+                              rdist(re1) * 2.0 - 1.0,
+                              rdist(re1));
+        sample.normalize();
+        sample *= rdist(re1);
+        float scale = float(i) / float(SSAOKernelSize);
+        scale = std::lerp(0.1f, 1.0f, scale * scale);
+        ssaoKernel[i] = Vector4(sample * scale, 0.0f);
+    }
+    auto makeBuffer = [&](const void* data, size_t length) -> std::shared_ptr<GPUBuffer> {
+        auto stgBuffer = device->makeBuffer(length,
+                                            GPUBuffer::StorageModeShared,
+                                            CPUCacheModeWriteCombined);
+        FVASSERT(stgBuffer);
+        if (auto p = stgBuffer->contents(); p) {
+            memcpy(p, data, length);
+            stgBuffer->flush();
+        } else {
+            Log::error("GPUBuffer map failed.");
+            FVERROR_ABORT("GPUBuffer map failed.");
+            return nullptr;
+        }
+        auto cbuffer = queue->makeCommandBuffer();
+        auto buffer = device->makeBuffer(length,
+                                         GPUBuffer::StorageModePrivate,
+                                         CPUCacheModeDefault);
+        FVASSERT(buffer);
+        auto encoder = cbuffer->makeCopyCommandEncoder();
+        FVASSERT(encoder);
+        encoder->copy(stgBuffer, 0, buffer, 0, length);
+        encoder->endEncoding();
+        cbuffer->commit();
+        return buffer;
+    };
+    FVASSERT_DEBUG(ssaoKernel.size() == SSAOKernelSize);
+    this->ssaoKernel = makeBuffer(ssaoKernel.data(),
+                                  sizeof(Vector4) * SSAOKernelSize);
+    FVASSERT_DEBUG(this->ssaoKernel);
+    // random noise
+    constexpr auto ssaoNoiseDimension = 4;
+    std::vector<Vector4> noiseValues(ssaoNoiseDimension * ssaoNoiseDimension);
+    for (uint32_t i = 0; i < static_cast<uint32_t>(noiseValues.size()); i++) {
+        noiseValues[i] = Vector4(rdist(re1) * 2.0f - 1.0f,
+                                 rdist(re1) * 2.0f - 1.0f,
+                                 0.0f, 0.0f);
+    }
+    this->ssaoRandomNoise = Image(ssaoNoiseDimension, ssaoNoiseDimension,
+                                  ImagePixelFormat::RGBA32F,
+                                  noiseValues.data()).makeTexture(queue.get());
+
+    const int ssaoKernelSize = SSAOKernelSize;
+    PixelFormat ssaoFormat = PixelFormat::R8Unorm;
+
+    if (auto pso = makeRenderPipeline(
+        device,
+        appResourcesRoot / "Shaders/screen.vert.spv",
+        appResourcesRoot / "Shaders/ssao.frag.spv",
+        {}, {
+            // shader specialized constants
+            {ShaderDataType::Int, &ssaoKernelSize, 0, sizeof(int)},
+        }, 
+        {},             // VertexDescriptor        
+        {
+            { 0, ssaoFormat, BlendState::opaque },
+        },              // RenderPipelineColorAttachmentDescriptor
+        depthFormat,    // depthStencilAttachmentPixelFormat
+        {
+            // ShaderBinding
+            { 0, ShaderDescriptorType::TextureSampler, 1, nullptr },
+            { 1, ShaderDescriptorType::TextureSampler, 1, nullptr },
+            { 2, ShaderDescriptorType::TextureSampler, 1, nullptr },
+            { 3, ShaderDescriptorType::UniformBuffer, 1, nullptr },
+        }); pso.has_value()) {
+        ssao = pso.value();
+        for (int i = 0; i < 3; ++i)
+            ssao.bindingSet->setSamplerState(i, blitSamplerLinear);
+        ssao.bindingSet->setTexture(2, ssaoRandomNoise);
+        ssao.bindingSet->setBuffer(3, this->ssaoKernel, 0, this->ssaoKernel->length());
+    } else {
+        throw std::runtime_error("failed to load shader");
+    }
+
+    if (auto pso = makeRenderPipeline(
+        device,
+        appResourcesRoot / "Shaders/screen.vert.spv",
+        appResourcesRoot / "Shaders/blur.frag.spv",
+        {}, {},
+        {},             // VertexDescriptor        
+        {
+            { 0, ssaoFormat, BlendState::opaque },
+        },              // RenderPipelineColorAttachmentDescriptor
+        depthFormat,    // depthStencilAttachmentPixelFormat
+        {
+            // ShaderBinding
+            { 0, ShaderDescriptorType::TextureSampler, 1, nullptr },
+        }); pso.has_value()) {
+        ssaoBlur = pso.value();
+        ssaoBlur.bindingSet->setSamplerState(0, blitSamplerLinear);
+    } else {
+        throw std::runtime_error("failed to load shader");
+    }
+
+    auto colorFormat = swapchain->pixelFormat();
+    if (auto pso = makeRenderPipeline(
+        device,
+        appResourcesRoot / "Shaders/screen.vert.spv",
+        appResourcesRoot / "Shaders/composition.frag.spv",
+        {}, {},
+        {}, // VertexDescriptor
+            {
+                // RenderPipelineColorAttachmentDescriptor
+                { 0, colorFormat, BlendState::alphaBlend },
+            },
+            depthFormat,    // depthStencilAttachmentPixelFormat
+        {
+            // ShaderBinding
+            { 0, ShaderDescriptorType::TextureSampler, 1, nullptr }, // position;
+            { 1, ShaderDescriptorType::TextureSampler, 1, nullptr }, // normal;
+            { 2, ShaderDescriptorType::TextureSampler, 1, nullptr }, // albedo;
+            { 3, ShaderDescriptorType::TextureSampler, 1, nullptr }, // ssao;
+        }); pso.has_value()) {
+        composition = pso.value();
+        for (int i = 0; i < 4; ++i)
+            composition.bindingSet->setSamplerState(i, blitSamplerLinear);
     } else {
         throw std::runtime_error("failed to load shader");
     }
 }
 
 void VolumeRenderer::finalize() {
-    colorOutput = nullptr;
-    depthOutput = nullptr;
+    positionOutput = nullptr;
+    albedoOutput = nullptr;
     normalOutput = nullptr;
 
     voxelModel = nullptr;
@@ -70,8 +224,9 @@ void VolumeRenderer::finalize() {
     raycastVoxel = {};
     raycastVisualizer = {};
     clearBuffers = {};
-    imageBlit.reset();
-    imageBlitVB = nullptr;
+    ssao = {};
+    ssaoBlur = {};
+    composition = {};
 
     queue = nullptr;
 }
@@ -84,7 +239,9 @@ void VolumeRenderer::setModel(std::shared_ptr<VoxelModel> model) {
 bool stopUpdating = false;
 bool stopCaching = false;
 
-void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTransform& v, const ProjectionTransform& p) {
+void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp,
+                                  const ViewTransform& v,
+                                  const ProjectionTransform& p) {
     ViewTransform view = v;
     ProjectionTransform projection = p;
 
@@ -96,69 +253,116 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
     width = width * config.renderScale;
     height = height * config.renderScale;
 
-    bool resetImages = true;
-    if (colorOutput) {
-        if (colorOutput->width() == width && colorOutput->height() == height)
-            resetImages = false;
+    bool resetRaycastAttachments = true;
+    if (positionOutput) {
+        if (positionOutput->width() == width && positionOutput->height() == height)
+            resetRaycastAttachments = false;
     }
 
     auto device = queue->device();
 
-    if (resetImages) {
-        uint32_t renderTargetUsage = TextureUsageCopyDestination |
+    if (resetRaycastAttachments) {
+        uint32_t textureUsage = TextureUsageCopyDestination |
             TextureUsageCopySource |
             TextureUsageSampled |
             TextureUsageStorage |
             TextureUsageShaderRead |
             TextureUsageShaderWrite;
 
-        // create color render-target (rgba8)
-        colorOutput = device->makeTexture(
+        // create position-depth render-target (rgba32f)
+        positionOutput = device->makeTexture(
+            TextureDescriptor{
+                TextureType2D,
+                PixelFormat::RGBA32Float,
+                width,
+                height,
+                1, 1, 1, 1,
+                textureUsage
+            });
+        FVASSERT_DEBUG(positionOutput);
+
+        // create albedo render-target (rgba8)
+        albedoOutput = device->makeTexture(
             TextureDescriptor{
                 TextureType2D,
                 PixelFormat::RGBA8Unorm,
                 width,
                 height,
                 1, 1, 1, 1,
-                renderTargetUsage
+                textureUsage
             });
-        FVASSERT_DEBUG(colorOutput);
+        FVASSERT_DEBUG(albedoOutput);
 
-        // create depth render-target (r32f)
-        depthOutput = device->makeTexture(
-            TextureDescriptor{
-                TextureType2D,
-                PixelFormat::R32Float,
-                width,
-                height,
-                1, 1, 1, 1,
-                renderTargetUsage
-            });
-        FVASSERT_DEBUG(depthOutput);
-
-        // create normal render-target (rgb10_a2)
+        // create normal render-target (rgba8)
         normalOutput = device->makeTexture(
             TextureDescriptor{
                 TextureType2D,
-                PixelFormat::RGB10A2Unorm,
+                PixelFormat::RGBA8Unorm,
                 width,
                 height,
                 1, 1, 1, 1,
-                renderTargetUsage
+                textureUsage
             });
+        FVASSERT_DEBUG(normalOutput);
 
         for (auto& pipeline : { clearBuffers, raycastVoxel, raycastVisualizer }) {
-            pipeline.bindingSet->setTexture(0, colorOutput);
-            pipeline.bindingSet->setTexture(1, depthOutput);
+            pipeline.bindingSet->setTexture(0, positionOutput);
+            pipeline.bindingSet->setTexture(1, albedoOutput);
             pipeline.bindingSet->setTexture(2, normalOutput);
         }
 
         Log::debug("VolumeRenderer: resetImages ({}x{})", width, height);
+
+        ssao.bindingSet->setTexture(0, positionOutput);
+        ssao.bindingSet->setTexture(1, normalOutput);
+
+        composition.bindingSet->setTexture(0, positionOutput);
+        composition.bindingSet->setTexture(1, normalOutput);
+        composition.bindingSet->setTexture(2, albedoOutput);
     }
 
-    if (colorOutput) {
-        uint32_t width = colorOutput->width();
-        uint32_t height = colorOutput->height();
+    width = renderTarget->width();
+    height = renderTarget->height();
+
+    bool resetSSAOAttachments = true;
+    if (ssaoOutput) {
+        if (ssaoOutput->width() == width && ssaoOutput->height() == height)
+            resetSSAOAttachments = false;
+    }
+    if (resetSSAOAttachments) {
+        uint32_t textureUsage = TextureUsageRenderTarget |
+            TextureUsageSampled |
+            TextureUsageShaderRead;
+
+        ssaoOutput = device->makeTexture(
+            TextureDescriptor{
+                TextureType2D,
+                PixelFormat::R8Unorm,
+                width,
+                height,
+                1, 1, 1, 1,
+                textureUsage
+            });
+        FVASSERT_DEBUG(ssaoOutput);
+
+        ssaoBlurOutput = device->makeTexture(
+            TextureDescriptor{
+                TextureType2D,
+                PixelFormat::R8Unorm,
+                width,
+                height,
+                1, 1, 1, 1,
+                textureUsage
+            });
+        FVASSERT_DEBUG(ssaoBlurOutput);
+
+        ssaoBlur.bindingSet->setTexture(0, ssaoOutput);
+        composition.bindingSet->setTexture(3, ssaoOutput);
+    }
+
+    if (albedoOutput) {
+        uint32_t width = albedoOutput->width();
+        uint32_t height = albedoOutput->height();
 
         auto proj = p;
         if (proj.matrix._34 != 0.0f) {
@@ -168,105 +372,6 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
         }
         projection = proj;
     }
-
-#pragma pack(push, 4)
-    struct ImageBlitVertex {
-        Vector2 pos;
-        Vector2 tex;
-        Vector4 color;
-    };
-#pragma pack(pop)
-
-    if (imageBlit.has_value() == false) {
-        auto colorFormat = renderTarget->pixelFormat();
-        auto depthFormat = rp.depthStencilAttachment.renderTarget ?
-            rp.depthStencilAttachment.renderTarget->pixelFormat() :
-            PixelFormat::Invalid;
-
-        imageBlit = makeRenderPipeline(
-            device.get(),
-            appResourcesRoot / "Shaders/blit.vert.spv",
-            appResourcesRoot / "Shaders/blit.frag.spv",
-            // VertexDescriptor
-            {
-                .attributes = {
-                    { VertexFormat::Float2, 0, 0, 0 },
-                    { VertexFormat::Float2, offsetof(ImageBlitVertex, tex), 0, 1},
-                    { VertexFormat::Float4, offsetof(ImageBlitVertex, color), 0, 2 },
-                },
-                .layouts = {
-                    { VertexStepRate::Vertex, sizeof(ImageBlitVertex), 0 }
-                },
-            },
-            // RenderPipelineColorAttachmentDescriptor
-            {
-                { 0, colorFormat, BlendState::alphaBlend },
-            },
-            // depthStencilAttachmentPixelFormat
-            depthFormat,
-            // ShaderBinding
-            {
-                { 0, ShaderDescriptorType::TextureSampler, 1, nullptr },
-            });
-
-        FVASSERT_DEBUG(imageBlit);
-
-        blitSamplerLinear = device->makeSamplerState(
-            {
-                .minFilter = SamplerMinMagFilter::Linear,
-                .magFilter = SamplerMinMagFilter::Linear,
-            });
-        blitSamplerNearest = device->makeSamplerState(
-            {
-                .minFilter = SamplerMinMagFilter::Nearest,
-                .magFilter = SamplerMinMagFilter::Nearest,
-            });
-        FVASSERT_DEBUG(blitSamplerLinear);
-        FVASSERT_DEBUG(blitSamplerNearest);
-
-        if (config.linearFilter)
-            imageBlit.value().bindingSet->setSamplerState(0, blitSamplerLinear);
-        else
-            imageBlit.value().bindingSet->setSamplerState(0, blitSamplerNearest);
-
-        imageBlit.value().bindingSet->setTexture(0, colorOutput);
-    }
-    if (imageBlitVB == nullptr)
-    {
-        const ImageBlitVertex vertices[6] = {
-            { Vector2(-1, -1), Vector2(0, 1), Vector4(1, 1, 1, 1) },
-            { Vector2(-1,  1), Vector2(0, 0), Vector4(1, 1, 1, 1) },
-            { Vector2(1, -1), Vector2(1, 1), Vector4(1, 1, 1, 1) },
-
-            { Vector2(1, -1), Vector2(1, 1), Vector4(1, 1, 1, 1) },
-            { Vector2(-1,  1), Vector2(0, 0), Vector4(1, 1, 1, 1) },
-            { Vector2(1,  1), Vector2(1, 0), Vector4(1, 1, 1, 1) },
-        };
-        auto stgBuffer = device->makeBuffer(sizeof(vertices),
-                                            GPUBuffer::StorageModeShared,
-                                            CPUCacheModeWriteCombined);
-        FVASSERT_DEBUG(stgBuffer);
-        if (stgBuffer) {
-            auto p = stgBuffer->contents();
-            memcpy(p, vertices, sizeof(vertices));
-            stgBuffer->flush();
-        }
-        auto buffer = device->makeBuffer(stgBuffer->length(),
-                                         GPUBuffer::StorageModePrivate,
-                                         CPUCacheModeDefault);
-
-        auto cbuffer = queue->makeCommandBuffer();
-        auto encoder = cbuffer->makeCopyCommandEncoder();
-        encoder->copy(stgBuffer, 0, buffer, 0, stgBuffer->length());
-        encoder->endEncoding();
-        cbuffer->commit();
-
-        imageBlitVB = buffer;
-    }
-
-    if (resetImages)
-        imageBlit.value().bindingSet->setTexture(0, colorOutput);
-
     this->viewFrustum = { view, projection };
 
     if (stopUpdating)
@@ -500,14 +605,17 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp, const ViewTran
 bool stopRendering = false;
 
 void VolumeRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
-    if (!stopRendering && colorOutput && depthOutput) {
-        uint32_t width = colorOutput->width();
-        uint32_t height = colorOutput->height();
-        FVASSERT_DEBUG(depthOutput->width() == width);
-        FVASSERT_DEBUG(depthOutput->height() == height);
+    if (!stopRendering && positionOutput && albedoOutput && normalOutput) {
+        uint32_t width = albedoOutput->width();
+        uint32_t height = albedoOutput->height();
+        FVASSERT_DEBUG(positionOutput->width() == width);
+        FVASSERT_DEBUG(positionOutput->height() == height);
+        FVASSERT_DEBUG(normalOutput->width() == width);
+        FVASSERT_DEBUG(normalOutput->height() == height);
 
-        // clear
         auto cbuffer = queue->makeCommandBuffer();
+#if 0
+        // clear
         if (auto encoder = cbuffer->makeComputeCommandEncoder(); encoder) {
             encoder->setComputePipelineState(clearBuffers.state);
             encoder->setResource(0, clearBuffers.bindingSet);
@@ -516,21 +624,27 @@ void VolumeRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
                               1);
             encoder->endEncoding();
         }
-
+#endif
         if (voxelLayers.empty() == false) {
 
 #pragma pack(push, 1)
             struct PushConstantData {
-                Matrix4 inversedM;
                 Matrix4 inversedMVP;
                 Matrix4 mvp;
-                uint32_t width;
-                uint32_t height;
+                Matrix4 mv;
+                float znear;
+                float zfar;
+                uint16_t width;
+                uint16_t height;
             };
 #pragma pack(pop)
 
             auto& view = viewFrustum.view;
             auto& projection = viewFrustum.projection;
+
+            auto invProj = projection.matrix.inverted();
+            auto zfar = Vector3(0, 0, 1).applying(invProj, 1.0).magnitude();
+            auto znear = Vector3(0, 0, 0).applying(invProj, 1.0).magnitude();
 
             auto modelTransform = AffineTransform3{ transform.orientation.matrix3(), transform.position };
             modelTransform.scale({ scale, scale, scale });
@@ -541,16 +655,18 @@ void VolumeRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
 
             auto nodeTM = modelTransform.matrix4();
             auto mvp = mvpFrustum.matrix();
+            auto mv = modelView.matrix4();
 
             PushConstantData pcdata = {
-                nodeTM.inverted(),
                 mvp.inverted(),
                 mvp,
+                mv,
+                znear, zfar,
                 width, height
             };
 
             ComputePipeline* pipeline = &raycastVoxel;
-            if (config.raycastVisualize)
+            if (config.mode == VisualMode::Raycast)
                 pipeline = &raycastVisualizer;
 
             auto encoder = cbuffer->makeComputeCommandEncoder();
@@ -561,42 +677,42 @@ void VolumeRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
                 const std::vector<VoxelLayer>& layers,
                 const Matrix4& mat,
                 bool ascending = true) -> std::vector<VoxelLayer> {
-                    if (layers.size() > 1) {
-                        struct ZOrderVoxelLayer {
-                            const VoxelLayer* layer;
-                            float z;
+                if (layers.size() > 1) {
+                    struct ZOrderVoxelLayer {
+                        const VoxelLayer* layer;
+                        float z;
+                    };
+                    std::vector<ZOrderVoxelLayer> zlayers;
+                    zlayers.reserve(layers.size());
+                    for (auto& layer : layers) {
+                        auto center = Vector4(layer.aabb.center(), 1.0f);
+                        auto z = Vector4::dot(center, mat.column3());
+                        auto w = Vector4::dot(center, mat.column4());
+                        ZOrderVoxelLayer zl = {
+                            &layer,
+                            z / w
                         };
-                        std::vector<ZOrderVoxelLayer> zlayers;
-                        zlayers.reserve(layers.size());
-                        for (auto& layer : layers) {
-                            auto center = Vector4(layer.aabb.center(), 1.0f);
-                            auto z = Vector4::dot(center, mat.column3());
-                            auto w = Vector4::dot(center, mat.column4());
-                            ZOrderVoxelLayer zl = {
-                                &layer,
-                                z / w
-                            };
-                            zlayers.push_back(zl);
-                        }
-                        if (ascending) {
-                            std::sort(zlayers.begin(), zlayers.end(),
-                                      [](auto& a, auto& b) {
-                                          return a.z < b.z;
-                                      });
-                        } else {
-                            std::sort(zlayers.begin(), zlayers.end(),
-                                      [](auto& a, auto& b) {
-                                          return a.z > b.z;
-                                      });
-                        }
-                        std::vector<VoxelLayer> layersCopy;
-                        layersCopy.reserve(zlayers.size());
-                        for (auto& zlayer : zlayers)
-                            layersCopy.push_back(*zlayer.layer);
-                        return layersCopy;
+                        zlayers.push_back(zl);
                     }
-                    return layers;
-                };
+                    if (ascending) {
+                        std::sort(zlayers.begin(), zlayers.end(),
+                                  [](auto& a, auto& b) {
+                            return a.z < b.z;
+                        });
+                    } else {
+                        std::sort(zlayers.begin(), zlayers.end(),
+                                  [](auto& a, auto& b) {
+                            return a.z > b.z;
+                        });
+                    }
+                    std::vector<VoxelLayer> layersCopy;
+                    layersCopy.reserve(zlayers.size());
+                    for (auto& zlayer : zlayers)
+                        layersCopy.push_back(*zlayer.layer);
+                    return layersCopy;
+                }
+                return layers;
+            };
 
             std::vector<VoxelLayer> layersCopy = sortLayers(voxelLayers, mvp);
 
@@ -622,20 +738,72 @@ void VolumeRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
             encoder->endEncoding();
 
             if (drawLayers > 0) {
-                // blit outputImage to back-buffer.
+                struct {
+                    int drawMode;
+                } compositionPC;
+                compositionPC.drawMode = (int)config.mode;
 
-                if (config.linearFilter)
-                    imageBlit.value().bindingSet->setSamplerState(0, blitSamplerLinear);
-                else
-                    imageBlit.value().bindingSet->setSamplerState(0, blitSamplerNearest);
+                // blit outputImage to back-buffer.
+                if (config.mode == VisualMode::SSAO || config.mode == VisualMode::Composition) {
+                    RenderPassDescriptor desc = {
+                        .colorAttachments = {
+                            RenderPassColorAttachmentDescriptor {
+                                {
+                                .renderTarget = this->ssaoOutput,
+                                .loadAction = RenderPassLoadAction::LoadActionClear,
+                                .storeAction = RenderPassStoreAction::StoreActionStore
+                                },
+                                Color(0,0,0,1),
+                            },
+                        },
+                        .depthStencilAttachment = {}
+                    };
+                    struct {
+                        Matrix4 projection;
+                        float ssaoRadius;
+                        float ssaoBias;
+                    } ssaoPCData = {
+                        projection.matrix,
+                        config.ssaoRadius,
+                        config.ssaoBias
+                    };
+
+                    auto encoder = cbuffer->makeRenderCommandEncoder(desc);
+                    encoder->setRenderPipelineState(ssao.state);
+                    encoder->setResource(0, ssao.bindingSet);
+                    encoder->pushConstant(uint32_t(ShaderStage::Fragment), 0, sizeof(ssaoPCData), &ssaoPCData);
+                    encoder->setCullMode(CullMode::None);
+                    encoder->setFrontFacing(Winding::Clockwise);
+                    encoder->draw(0, 3, 1, 0);
+                    if (config.ssaoBlur) {
+                        desc.colorAttachments.front().renderTarget = this->ssaoBlurOutput;
+                        encoder->setRenderPipelineState(ssaoBlur.state);
+                        encoder->setResource(0, ssaoBlur.bindingSet);
+                        encoder->draw(0, 3, 1, 0);
+                    }
+                    encoder->endEncoding();
+                }
+
+                if (config.linearFilter) {
+                    composition.bindingSet->setSamplerState(2, blitSamplerLinear);
+                }
+                else {
+                    composition.bindingSet->setSamplerState(2, blitSamplerNearest);
+                }
+
+                if (config.ssaoBlur) {
+                    composition.bindingSet->setTexture(3, ssaoBlurOutput);
+                } else {
+                    composition.bindingSet->setTexture(3, ssaoOutput);
+                }
 
                 auto encoder = cbuffer->makeRenderCommandEncoder(rp);
-                encoder->setRenderPipelineState(imageBlit.value().state);
-                encoder->setResource(0, imageBlit.value().bindingSet);
-                encoder->setVertexBuffer(imageBlitVB, 0, 0);
+                encoder->setRenderPipelineState(composition.state);
+                encoder->setResource(0, composition.bindingSet);
+                encoder->pushConstant(uint32_t(ShaderStage::Fragment), 0, sizeof(compositionPC), &compositionPC);
                 encoder->setCullMode(CullMode::None);
                 encoder->setFrontFacing(Winding::Clockwise);
-                encoder->draw(0, 6, 1, 0);
+                encoder->draw(0, 3, 1, 0);
                 encoder->endEncoding();
             }
         }

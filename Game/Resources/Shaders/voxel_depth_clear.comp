@@ -9,12 +9,12 @@
 #extension GL_EXT_shader_explicit_arithmetic_types_float64 : require
 #extension GL_EXT_debug_printf : enable
 
-layout (binding=0, rgba8) uniform image2D colorOutput;
-layout (binding=1, r32f) uniform image2D depthOutput;
-layout (binding=2, rgb10_a2) uniform image2D normalOutput;
+layout (binding=0, rgba32f) uniform image2D positionOutput;
+layout (binding=1, rgba8) uniform image2D albedoOutput;
+layout (binding=2, rgba8) uniform image2D normalOutput;
 
 void main() {
-    imageStore(colorOutput, ivec2(gl_GlobalInvocationID.xy), vec4(0.0));
-    imageStore(depthOutput, ivec2(gl_GlobalInvocationID.xy), vec4(1.0));
+    imageStore(positionOutput, ivec2(gl_GlobalInvocationID.xy), vec4(0.0));
+    imageStore(albedoOutput, ivec2(gl_GlobalInvocationID.xy), vec4(0.0));
     imageStore(normalOutput, ivec2(gl_GlobalInvocationID.xy), vec4(0.0));
 }

@@ -1,12 +1,21 @@
 #pragma once
 #include "Renderer.h"
 
+enum class VisualMode: int {
+    Raycast = 0,
+    SSAO,
+    Albedo,
+    Composition,
+};
+
 class VolumeRenderer : public Renderer {
 public:
     VolumeRenderer();
     ~VolumeRenderer();
 
-    void initialize(std::shared_ptr<GraphicsDeviceContext>, std::shared_ptr<SwapChain>) override;
+    void initialize(std::shared_ptr<GraphicsDeviceContext>,
+                    std::shared_ptr<SwapChain>,
+                    PixelFormat) override;
     void finalize() override;
 
     void prepareScene(const RenderPassDescriptor&, const ViewTransform& v, const ProjectionTransform& p) override;
@@ -30,21 +39,31 @@ public:
         uint32_t minDetailLevel = 7U;
         uint32_t maxDetailLevel = 12U;
         bool linearFilter = false;
-        bool raycastVisualize = false;
+        bool ssaoBlur = true;
+        float ssaoRadius = 0.3f;
+        float ssaoBias = 0.025f;
+        VisualMode mode = VisualMode::Composition;
     } config;
 
 private:
     ComputePipeline raycastVoxel;
     ComputePipeline raycastVisualizer;
     ComputePipeline clearBuffers;
-    std::optional<RenderPipeline> imageBlit;
-    std::shared_ptr<GPUBuffer> imageBlitVB;
+    RenderPipeline ssao;
+    RenderPipeline ssaoBlur;
+    RenderPipeline composition;
+
+    std::shared_ptr<GPUBuffer> ssaoKernel;
+    std::shared_ptr<Texture> ssaoRandomNoise;
+
     std::shared_ptr<SamplerState> blitSamplerLinear;
     std::shared_ptr<SamplerState> blitSamplerNearest;
 
-    std::shared_ptr<Texture> colorOutput;  // storage-image
-    std::shared_ptr<Texture> depthOutput;
+    std::shared_ptr<Texture> positionOutput;
+    std::shared_ptr<Texture> albedoOutput;
     std::shared_ptr<Texture> normalOutput;
+    std::shared_ptr<Texture> ssaoOutput;
+    std::shared_ptr<Texture> ssaoBlurOutput;
 
     std::shared_ptr<VoxelModel> voxelModel;
     struct VoxelLayer {

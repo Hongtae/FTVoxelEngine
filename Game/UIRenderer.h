@@ -22,7 +22,7 @@ public:
     void setWindow(Window*);
     void setSwapChain(SwapChain*);
 
-    void initialize(std::shared_ptr<GraphicsDeviceContext>, std::shared_ptr<SwapChain>) override;
+    void initialize(std::shared_ptr<GraphicsDeviceContext>, std::shared_ptr<SwapChain>, PixelFormat) override;
     void finalize() override;
 
     void update(float delta) override;
@@ -34,7 +34,6 @@ public:
     ImTextureID textureID(Texture*) const;
 
 private:
-    SwapChain* swapchain;
 #if FVCORE_ENABLE_VULKAN
     VkFence fence;
     VkCommandBuffer commandBuffer;

@@ -6,25 +6,31 @@ std::optional<RenderPipeline> makeRenderPipeline(
     GraphicsDevice* device,
     std::filesystem::path vsPath,
     std::filesystem::path fsPath,
+    std::vector<ShaderSpecialization> vsSp,
+    std::vector<ShaderSpecialization> fsSp,
     const VertexDescriptor& vertexDescriptor,
     std::vector<RenderPipelineColorAttachmentDescriptor> colorAttachments,
     PixelFormat depthStencilAttachmentPixelFormat,
     std::vector<ShaderBinding> bindings) {
 
-    auto loadShader = [device](std::filesystem::path path) -> std::shared_ptr<ShaderFunction> {
+    auto loadShader = [device](std::filesystem::path path,
+                               std::vector<ShaderSpecialization>& sp) -> std::shared_ptr<ShaderFunction> {
         if (Shader shader(path); shader.validate()) {
             Log::info("Shader description: \"{}\"", path.generic_u8string());
             printShaderReflection(shader);
             if (auto module = device->makeShaderModule(shader); module) {
                 auto names = module->functionNames();
-                return module->makeFunction(names.front());
+                if (sp.empty())
+                    return module->makeFunction(names.front());
+                else
+                    return module->makeSpecializedFunction(names.front(), sp);
             }
         }
         return nullptr;
-        };
+    };
     auto pipelineDescriptor = RenderPipelineDescriptor{
-        .vertexFunction = loadShader(vsPath),
-        .fragmentFunction = loadShader(fsPath),
+        .vertexFunction = loadShader(vsPath, vsSp),
+        .fragmentFunction = loadShader(fsPath, fsSp),
         .vertexDescriptor = vertexDescriptor,
         .colorAttachments = colorAttachments,
         .depthStencilAttachmentPixelFormat = depthStencilAttachmentPixelFormat,

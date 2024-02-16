@@ -225,14 +225,15 @@ xcopy /Y /D /R /Q /E "$(ProjectDir)Resources" "$(OutDir)$(ProjectName).Resources
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\Shaders\blit.frag" />
-    <None Include="Resources\Shaders\blit.vert" />
-    <None Include="Resources\Shaders\bvh_aabb_raycast.comp" />
     <None Include="Resources\Shaders\compileshaders.py" />
+    <None Include="Resources\Shaders\composition.frag" />
     <None Include="Resources\Shaders\sample.frag" />
     <None Include="Resources\Shaders\sample.vert" />
     <None Include="Resources\Shaders\sample_notex.frag" />
     <None Include="Resources\Shaders\sample_notex.vert" />
+    <None Include="Resources\Shaders\screen.vert" />
+    <None Include="Resources\Shaders\blur.frag" />
+    <None Include="Resources\Shaders\ssao.frag" />
     <None Include="Resources\Shaders\voxel_depth_clear.comp" />
     <None Include="Resources\Shaders\voxel_depth_layer.comp" />
     <None Include="Resources\Shaders\voxel_depth_iteration.comp" />

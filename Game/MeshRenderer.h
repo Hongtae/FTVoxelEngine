@@ -7,7 +7,7 @@ public:
     MeshRenderer();
     ~MeshRenderer();
 
-    void initialize(std::shared_ptr<GraphicsDeviceContext>, std::shared_ptr<SwapChain>) override;
+    void initialize(std::shared_ptr<GraphicsDeviceContext>, std::shared_ptr<SwapChain>, PixelFormat) override;
     void finalize() override;
 
     void update(float delta) override;

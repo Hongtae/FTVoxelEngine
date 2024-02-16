@@ -161,9 +161,6 @@
     <None Include="Resources\Shaders\voxel_depth_layer.comp">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="Resources\Shaders\bvh_aabb_raycast.comp">
-      <Filter>Shaders</Filter>
-    </None>
     <None Include="Resources\Shaders\compileshaders.py">
       <Filter>Shaders</Filter>
     </None>
@@ -182,13 +179,19 @@
     <None Include="Resources\Shaders\voxel_depth_clear.comp">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="Resources\Shaders\blit.vert">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="Resources\Shaders\blit.frag">
-      <Filter>Shaders</Filter>
-    </None>
     <None Include="Resources\Shaders\voxel_depth_iteration.comp">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Resources\Shaders\ssao.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Resources\Shaders\blur.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Resources\Shaders\composition.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Resources\Shaders\screen.vert">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>

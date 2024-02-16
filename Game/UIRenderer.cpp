@@ -43,8 +43,7 @@ LRESULT forwardImGuiWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 #endif
 
 UIRenderer::UIRenderer()
-    : swapchain(nullptr)
-    , fence(VK_NULL_HANDLE)
+    : fence(VK_NULL_HANDLE)
     , commandBuffer(VK_NULL_HANDLE)
     , commandPool(VK_NULL_HANDLE)
     , descriptorPool(VK_NULL_HANDLE) {
@@ -75,11 +74,7 @@ void UIRenderer::setWindow(Window* window) {
 #endif
 }
 
-void UIRenderer::setSwapChain(SwapChain* swapchain) {
-    this->swapchain = swapchain;
-}
-
-void UIRenderer::initialize(std::shared_ptr<GraphicsDeviceContext>, std::shared_ptr<SwapChain> swapchain) {
+void UIRenderer::initialize(std::shared_ptr<GraphicsDeviceContext>, std::shared_ptr<SwapChain> swapchain, PixelFormat) {
     this->cqueue = std::dynamic_pointer_cast<VulkanCommandQueue>(swapchain->queue());
     if (this->cqueue.get() == nullptr)
         throw std::runtime_error("Unable to get vulkan command queue!");
@@ -195,7 +190,6 @@ void UIRenderer::finalize() {
     this->commandBuffer = VK_NULL_HANDLE;
     this->commandPool = VK_NULL_HANDLE;
     this->descriptorPool = VK_NULL_HANDLE;
-    this->swapchain = nullptr;
     this->defaultSampler = nullptr;
 
     cqueue.reset();

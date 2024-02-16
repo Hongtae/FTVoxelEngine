@@ -13,7 +13,9 @@ MeshRenderer::MeshRenderer()
 MeshRenderer::~MeshRenderer() {
 }
 
-void MeshRenderer::initialize(std::shared_ptr<GraphicsDeviceContext>, std::shared_ptr<SwapChain> swapchain) {
+void MeshRenderer::initialize(std::shared_ptr<GraphicsDeviceContext>,
+                              std::shared_ptr<SwapChain> swapchain,
+                              PixelFormat depthFormat) {
 
     this->queue = swapchain->queue();
     auto device = queue->device();

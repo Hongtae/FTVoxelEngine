@@ -236,9 +236,31 @@ struct App : public Application {
                 if (ImGui::Checkbox("Linear filter", &linearFilter)) {
                     volumeRenderer->config.linearFilter = linearFilter;
                 }
-                bool raycastVisualize = volumeRenderer->config.raycastVisualize;
-                if (ImGui::Checkbox("Raycast Visualize", &raycastVisualize)) {
-                    volumeRenderer->config.raycastVisualize = raycastVisualize;
+                bool ssaoBlur = volumeRenderer->config.ssaoBlur;
+                if (ImGui::Checkbox("SSAO Blur", &ssaoBlur)) {
+                    volumeRenderer->config.ssaoBlur = ssaoBlur;
+                }
+                float ssaoRadius = volumeRenderer->config.ssaoRadius;
+                if (ImGui::SliderFloat("SSAO Radius", &ssaoRadius,
+                                       0.01f, 10.0f, "%.3f")) {
+                    volumeRenderer->config.ssaoRadius = ssaoRadius;
+                }
+                float ssaoBias = volumeRenderer->config.ssaoBias;
+                if (ImGui::SliderFloat("SSAO Bias", &ssaoBias,
+                                       0.01f, 10.0f, "%.3f")) {
+                    volumeRenderer->config.ssaoBias = ssaoBias;
+                }
+
+                ImGui::SeparatorText("Draw Mode");
+                int mode = (int)volumeRenderer->config.mode;
+                int value = mode;
+                ImGui::RadioButton("raycast", &mode, 0);
+                ImGui::RadioButton("ssao", &mode, 1);
+                ImGui::RadioButton("albedo", &mode, 2);
+                ImGui::RadioButton("composition", &mode, 3);
+                if (value != mode) {
+                    Log::debug("rendering mode changed: {}", mode);
+                    volumeRenderer->config.mode = static_cast<VisualMode>(mode);
                 }
             }
             float scale = volumeRenderer->scale;
@@ -323,17 +345,16 @@ struct App : public Application {
         if (swapchain == nullptr)
             throw std::runtime_error("swapchain creation failed");
 
-        uiRenderer->setSwapChain(swapchain.get());
+        this->colorFormat = swapchain->pixelFormat();
+        this->depthFormat = PixelFormat::Depth32Float;
 
         for (auto& renderer : this->renderers) {
-            renderer->initialize(graphicsContext, swapchain);
+            renderer->initialize(graphicsContext, swapchain, depthFormat);
         }
         
         auto queue = commandQueue.get();
         auto device = queue->device().get();
 
-        this->colorFormat = swapchain->pixelFormat();
-        this->depthFormat = PixelFormat::Depth32Float;
         std::shared_ptr<Texture> depthTexture = nullptr;
 
         auto depthStencilState = device->makeDepthStencilState(

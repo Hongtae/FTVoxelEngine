@@ -10,11 +10,13 @@
 #extension GL_EXT_debug_printf : enable
 
 layout (push_constant) uniform SceneInfo {
-    layout(row_major) mat4 inverseM;   // inverse of model transform
     layout(row_major) mat4 inverseMVP; // inverse of model-view-projection
-    layout(row_major) mat4 mvp;
-    uint32_t width;  // framebuffer(render-target) dimensions
-    uint32_t height;
+    layout(row_major) mat4 mvp; // model * view * projection
+    layout(row_major) mat4 mv;  // model * view
+    float near;
+    float far;
+    uint16_t width; // framebuffer(render-target) dimensions
+    uint16_t height;
 } info;
 
 struct EncodedAABB {
@@ -25,9 +27,9 @@ struct EncodedAABB {
     uint32_t color;
 };
 
-layout (binding=0, rgba8) uniform image2D colorOutput;
-layout (binding=1, r32f) uniform image2D depthOutput;
-layout (binding=2, rgb10_a2) uniform image2D normalOutput;
+layout (binding=0, rgba32f) uniform image2D positionOutput;
+layout (binding=1, rgba8) uniform image2D albedoOutput;
+layout (binding=2, rgba8) uniform image2D normalOutput;
 
 layout (std140, binding=3) readonly buffer AABBArray {
     EncodedAABB volumes[];
@@ -43,17 +45,19 @@ struct Ray {
     vec3 dir;
 };
 
+vec3 affineTransform(const vec3 v, const mat4 m) {
+    vec4 v4 = vec4(v, 1.0) * m;
+    return v4.xyz / v4.w;
+}
+
 Ray getRay() {
     float x = (float(gl_GlobalInvocationID.x) + 0.5) / float(info.width);
     float y = (float(gl_GlobalInvocationID.y) + 0.5) / float(info.height);
     x = x * 2.0 - 1.0;
     y = 1.0 - y * 2.0;
 
-    vec4 start4 = vec4(x, y, 0.0, 1.0) * info.inverseMVP;
-    vec4 end4 = vec4(x, y, 1.0, 1.0) * info.inverseMVP;
-    vec3 start = start4.xyz / start4.w;
-    vec3 end = end4.xyz / end4.w;
-
+    vec3 start = affineTransform(vec3(x, y, 0.0), info.inverseMVP);
+    vec3 end = affineTransform(vec3(x, y, 1.0), info.inverseMVP);
     return Ray(start, normalize(end - start));
 }
 
@@ -147,16 +151,6 @@ Sphere normalizedSphere(EncodedAABB e) {
     return Sphere(vec3(x, y, z), radius);
 }
 
-vec3 affineTransform(const vec3 v, const mat4 m) {
-    vec4 v4 = vec4(v, 1.0) * m;
-    return v4.xyz / v4.w;
-}
-
-vec3 linearTransform(const vec3 v, const mat4 m) {
-    vec4 v4 = vec4(v, 0.0) * m;
-    return v4.xyz;
-}
-
 bool isAABBSmallerThanPixel(const AABB aabb) {
     vec3 pts[8] = {
         {aabb.min.x, aabb.min.y, aabb.min.z},
@@ -185,7 +179,7 @@ bool isAABBSmallerThanPixel(const AABB aabb) {
 
     float pixelX = (maxX - minX) * float(info.width - 1) * 0.5;
     float pixelY = (maxY - minY) * float(info.height - 1) * 0.5;
-    if (max(pixelX, pixelY) > 1.0)
+    if (min(pixelX, pixelY) > 1.0)
         return false;
     return true;
 }
@@ -195,8 +189,6 @@ vec4 rayResultColor = vec4(0);
 vec3 rayResultNormal = vec3(0);
 uint32_t rayTestCount = 0;
 uint32_t maxRayTestCount = 400;
-
-#define WRITE_RAY_ITERATION 0
 
 void runTest(const Ray ray) {
     uint32_t index = 0;
@@ -242,51 +234,55 @@ vec3 boxNormal(vec3 n) {
     return normalize(n);
 }
 
+float linearDepth(float depth)
+{
+	float z = depth * 2.0f - 1.0f; 
+	return (2.0f * info.near * info.far) / (info.far + info.near - z * (info.far - info.near));	
+}
+
 vec3 ndcToAABB(float d) {
     float x = (float(gl_GlobalInvocationID.x) + 0.5) / float(info.width);
     float y = (float(gl_GlobalInvocationID.y) + 0.5) / float(info.height);
     x = x * 2.0 - 1.0;
     y = 1.0 - y * 2.0;
-    vec4 pt = vec4(x, y, d, 1.0) * info.inverseMVP;
-    vec3 p = pt.xyz / pt.w;
-    return p;
+    return affineTransform(vec3(x, y, d), info.inverseMVP);
 }
 
-float aabbPtToNDC(const Ray ray, float depth) {
-    vec3 pt = ray.origin + ray.dir * depth;
-    vec4 v = vec4(pt.xyz, 1.0) * info.mvp;
-    return v.z / v.w;
-}
-
-vec3 worldNormal(vec3 n) {
-    vec3 normal = boxNormal(n);
-    normal = normalize((vec4(normal, 0.0) * info.inverseM).xyz);
-    return normal;
-}
+#define WRITE_RAY_ITERATION 0
 
 void main() {
     const Ray ray = getRay();
-    float depth = imageLoad(depthOutput, ivec2(gl_GlobalInvocationID.xy)).r;
 
-    vec3 aabbDepthClip = ndcToAABB(depth);
-    float depth2 = length(aabbDepthClip - ray.origin);
-    rayResultDepth = depth2;
+    vec3 aabbDepthClip = ndcToAABB(1.0);
+    float depth = length(aabbDepthClip - ray.origin);
+    rayResultDepth = depth;
 
     runTest(ray);
 
-    if (rayResultDepth < depth2) {
 #if WRITE_RAY_ITERATION
+    if (rayTestCount > 0) {
         float c = float(rayTestCount) / float(maxRayTestCount);
-        imageStore(colorOutput, ivec2(gl_GlobalInvocationID.xy), vec4(c,c,c,1.0));
+        vec4 fragColor = vec4(c,c,c,1.0);
 #else
+    if (rayResultDepth < depth) {
         vec4 fragColor = rayResultColor;
-        imageStore(colorOutput, ivec2(gl_GlobalInvocationID.xy), fragColor);
 #endif
+        imageStore(albedoOutput, ivec2(gl_GlobalInvocationID.xy), fragColor);
 
-        vec3 normal = worldNormal(rayResultNormal);
+        vec3 normal = boxNormal(rayResultNormal);
+        //normal = normal * transpose(inverse(mat3(info.mv)));
+        normal = normalize((vec4(normal, 0.0) * info.mv).xyz) * 0.5 + 0.5;
         imageStore(normalOutput, ivec2(gl_GlobalInvocationID.xy), vec4(normal, 1.0));
 
-        float depth3 = aabbPtToNDC(ray, rayResultDepth);
-        imageStore(depthOutput, ivec2(gl_GlobalInvocationID.xy), vec4(depth3));
+        vec3 pos = ray.origin + ray.dir * rayResultDepth;
+        //float d = linearDepth((vec4(pos, 1.0) * info.mvp).z);
+        float d = linearDepth(affineTransform(pos, info.mvp).z);
+        pos = vec3(vec4(pos,1.0) * info.mv);
+
+        imageStore(positionOutput, ivec2(gl_GlobalInvocationID.xy), vec4(pos, d));
+    } else {
+        imageStore(albedoOutput, ivec2(gl_GlobalInvocationID.xy), vec4(0));
+        imageStore(normalOutput, ivec2(gl_GlobalInvocationID.xy), vec4(0, 0, 0, 1));
+        imageStore(positionOutput, ivec2(gl_GlobalInvocationID.xy), vec4(0, 0, 0, 1));
     }
 }
