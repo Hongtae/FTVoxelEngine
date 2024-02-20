@@ -50,20 +50,21 @@ std::shared_ptr<ShaderFunction> VulkanShaderModule::makeFunction(const std::stri
                                [&](const std::string& fn) {
                                    return fn.compare(name) == 0;
                                }); it != fnNames.end()) {
-        return std::make_shared<VulkanShaderFunction>(shared_from_this(), name, nullptr, 0);
+        return std::make_shared<VulkanShaderFunction>(shared_from_this(), name);
     }
     return nullptr;
 }
 
-std::shared_ptr<ShaderFunction> VulkanShaderModule::makeSpecializedFunction(const std::string& name, const ShaderSpecialization* values, size_t numValues) {
-    if (values && numValues > 0) {
+std::shared_ptr<ShaderFunction> VulkanShaderModule::makeSpecializedFunction(const std::string& name,
+                                                                            const std::vector<ShaderSpecialization>& values) {
+    if (values.empty() == false) {
         // TODO: verify values with SPIR-V Cross reflection
 
         if (auto it = std::find_if(fnNames.begin(), fnNames.end(),
                                    [&](const std::string& fn) {
                                        return fn.compare(name) == 0;
                                    }); it != fnNames.end()) {
-            return std::make_shared<VulkanShaderFunction>(shared_from_this(), name, values, numValues);
+            return std::make_shared<VulkanShaderFunction>(shared_from_this(), name, values);
         }
     }
     return nullptr;

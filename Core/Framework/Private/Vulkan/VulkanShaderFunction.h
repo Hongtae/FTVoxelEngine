@@ -13,7 +13,7 @@ namespace FV {
     class VulkanShaderModule;
     class VulkanShaderFunction : public ShaderFunction {
     public:
-        VulkanShaderFunction(std::shared_ptr<VulkanShaderModule> module, const std::string& name, const ShaderSpecialization* values, size_t numValues);
+        VulkanShaderFunction(std::shared_ptr<VulkanShaderModule> module, const std::string& name, const std::vector<ShaderSpecialization>& values = {});
         ~VulkanShaderFunction();
 
         const std::vector<ShaderAttribute>& stageInputAttributes() const override;

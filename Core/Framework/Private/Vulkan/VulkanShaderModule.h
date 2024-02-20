@@ -14,7 +14,7 @@ namespace FV {
         ~VulkanShaderModule();
 
         std::shared_ptr<ShaderFunction> makeFunction(const std::string& name) override;
-        std::shared_ptr<ShaderFunction> makeSpecializedFunction(const std::string& name, const ShaderSpecialization* values, size_t numValues) override;
+        std::shared_ptr<ShaderFunction> makeSpecializedFunction(const std::string& name, const std::vector<ShaderSpecialization>& values) override;
 
         const std::vector<std::string>& functionNames() const override { return fnNames; }
         std::shared_ptr<GraphicsDevice> device() const override;

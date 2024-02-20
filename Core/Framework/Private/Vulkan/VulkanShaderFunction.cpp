@@ -6,19 +6,21 @@
 #if FVCORE_ENABLE_VULKAN
 using namespace FV;
 
-VulkanShaderFunction::VulkanShaderFunction(std::shared_ptr<VulkanShaderModule> m, const std::string& name, const ShaderSpecialization* values, size_t numValues)
+VulkanShaderFunction::VulkanShaderFunction(std::shared_ptr<VulkanShaderModule> m,
+                                           const std::string& name,
+                                           const std::vector<ShaderSpecialization>& values)
     : module(m)
     , functionName(name)
     , specializationData(NULL)
     , specializationInfo({ 0 }) {
-    if (values && numValues) {
+    if (values.empty() == false) {
         size_t size = 0;
-        for (size_t i = 0; i < numValues; ++i) {
-            const ShaderSpecialization& sp = values[i];
+        for (auto& sp : values) {
             size += sp.size;
         }
 
         if (size > 0) {
+            size_t numValues = values.size();
             specializationData = malloc(size + sizeof(VkSpecializationMapEntry) * numValues);
             VkSpecializationMapEntry* mapEntries = reinterpret_cast<VkSpecializationMapEntry*>(specializationData);
             uint8_t* data = reinterpret_cast<uint8_t*>(&mapEntries[numValues]);
@@ -26,6 +28,7 @@ VulkanShaderFunction::VulkanShaderFunction(std::shared_ptr<VulkanShaderModule> m
             specializationInfo.mapEntryCount = (uint32_t)numValues;
             specializationInfo.pMapEntries = mapEntries;
             specializationInfo.pData = data;
+            specializationInfo.dataSize = size;
 
             size_t offset = 0;
             for (size_t i = 0; i < numValues; ++i) {
