@@ -40,43 +40,38 @@ void VulkanDepthStencilState::bind(VkCommandBuffer commandBuffer) {
     vkCmdSetStencilTestEnable(commandBuffer, this->stencilTestEnable);
     vkCmdSetDepthBoundsTestEnable(commandBuffer, this->depthBoundsTestEnable);
 
-    if (this->depthTestEnable != VK_FALSE) {
-        vkCmdSetDepthCompareOp(commandBuffer, this->depthCompareOp);
-        vkCmdSetDepthWriteEnable(commandBuffer, this->depthWriteEnable);
-    }
+    vkCmdSetDepthCompareOp(commandBuffer, this->depthCompareOp);
+    vkCmdSetDepthWriteEnable(commandBuffer, this->depthWriteEnable);
 
-    if (this->depthBoundsTestEnable != VK_FALSE) {
-        vkCmdSetDepthBounds(commandBuffer, this->minDepthBounds, this->maxDepthBounds);
-    }
+    vkCmdSetDepthBounds(commandBuffer, this->minDepthBounds, this->maxDepthBounds);
 
-    if (this->stencilTestEnable != VK_FALSE) {
-        // front face stencil
-        vkCmdSetStencilCompareMask(commandBuffer,
-                                   VK_STENCIL_FACE_FRONT_BIT,
-                                   this->front.compareMask);
-        vkCmdSetStencilWriteMask(commandBuffer,
-                                 VK_STENCIL_FACE_FRONT_BIT,
-                                 this->front.writeMask);
-        vkCmdSetStencilOp(commandBuffer,
-                          VK_STENCIL_FACE_FRONT_BIT,
-                          this->front.failOp,
-                          this->front.passOp,
-                          this->front.depthFailOp,
-                          this->front.compareOp);
-        // back face stencil
-        vkCmdSetStencilCompareMask(commandBuffer,
-                                   VK_STENCIL_FACE_BACK_BIT,
-                                   this->back.compareMask);
-        vkCmdSetStencilWriteMask(commandBuffer,
-                                 VK_STENCIL_FACE_BACK_BIT,
-                                 this->back.writeMask);
-        vkCmdSetStencilOp(commandBuffer,
-                          VK_STENCIL_FACE_BACK_BIT,
-                          this->back.failOp,
-                          this->back.passOp,
-                          this->back.depthFailOp,
-                          this->back.compareOp);
-    }
+    // front face stencil
+    vkCmdSetStencilCompareMask(commandBuffer,
+                               VK_STENCIL_FACE_FRONT_BIT,
+                               this->front.compareMask);
+    vkCmdSetStencilWriteMask(commandBuffer,
+                             VK_STENCIL_FACE_FRONT_BIT,
+                             this->front.writeMask);
+    vkCmdSetStencilOp(commandBuffer,
+                      VK_STENCIL_FACE_FRONT_BIT,
+                      this->front.failOp,
+                      this->front.passOp,
+                      this->front.depthFailOp,
+                      this->front.compareOp);
+
+    // back face stencil
+    vkCmdSetStencilCompareMask(commandBuffer,
+                               VK_STENCIL_FACE_BACK_BIT,
+                               this->back.compareMask);
+    vkCmdSetStencilWriteMask(commandBuffer,
+                             VK_STENCIL_FACE_BACK_BIT,
+                             this->back.writeMask);
+    vkCmdSetStencilOp(commandBuffer,
+                      VK_STENCIL_FACE_BACK_BIT,
+                      this->back.failOp,
+                      this->back.passOp,
+                      this->back.depthFailOp,
+                      this->back.compareOp);
 }
 
 std::shared_ptr<GraphicsDevice> VulkanDepthStencilState::device() const {

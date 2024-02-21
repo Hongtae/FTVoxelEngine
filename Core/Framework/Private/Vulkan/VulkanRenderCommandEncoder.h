@@ -45,6 +45,9 @@ namespace FV {
             std::vector<EncoderCommand> commands;
             std::vector<EncoderCommand> setupCommands;    // before renderPass
             std::vector<EncoderCommand> cleanupCommands;  // after renderPass
+
+            uint32_t drawCount = 0;
+            std::unordered_set<VkDynamicState> setDynamicStates;
         };
         std::shared_ptr<Encoder> encoder;
 

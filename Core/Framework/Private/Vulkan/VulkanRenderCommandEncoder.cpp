@@ -220,40 +220,51 @@ bool VulkanRenderCommandEncoder::Encoder::encode(VkCommandBuffer commandBuffer) 
         viewport.height = -(viewport.height); // negative height.
     }
 
-    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-    // setup scissor
-    VkRect2D scissorRect = { {0, 0}, {frameWidth, frameHeight} };
-    vkCmdSetScissor(commandBuffer, 0, 1, &scissorRect);
-
-    // VK_DYNAMIC_STATE_LINE_WIDTH 
-    vkCmdSetLineWidth(commandBuffer, 1.0f);
-
-    // VK_DYNAMIC_STATE_DEPTH_TEST_ENABLE
-    vkCmdSetDepthTestEnable(commandBuffer, VK_FALSE);
-
-    // VK_DYNAMIC_STATE_DEPTH_WRITE_ENABLE
-    vkCmdSetDepthWriteEnable(commandBuffer, VK_FALSE);
-
-    // VK_DYNAMIC_STATE_DEPTH_COMPARE_OP
-    vkCmdSetDepthCompareOp(commandBuffer, VK_COMPARE_OP_ALWAYS);
-
-    // VK_DYNAMIC_STATE_STENCIL_TEST_ENABLE
-    vkCmdSetStencilTestEnable(commandBuffer, VK_FALSE);
-
-    // VK_DYNAMIC_STATE_STENCIL_OP
-    vkCmdSetStencilOp(commandBuffer, VK_STENCIL_FACE_FRONT_BIT,
-                      VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP,
-                      VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS);
-    vkCmdSetStencilOp(commandBuffer, VK_STENCIL_FACE_BACK_BIT,
-                      VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP,
-                      VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS);
-
-    // VK_DYNAMIC_STATE_DEPTH_BOUNDS_TEST_ENABLE
-    vkCmdSetDepthBoundsTestEnable(commandBuffer, VK_FALSE);
+    if (!setDynamicStates.contains(VK_DYNAMIC_STATE_VIEWPORT)) {
+        vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+    }
+    if (!setDynamicStates.contains(VK_DYNAMIC_STATE_SCISSOR)) {
+        VkRect2D scissorRect = { {0, 0}, {frameWidth, frameHeight} };
+        vkCmdSetScissor(commandBuffer, 0, 1, &scissorRect);
+    }
+    if (!setDynamicStates.contains(VK_DYNAMIC_STATE_LINE_WIDTH)) {
+        vkCmdSetLineWidth(commandBuffer, 1.0f);
+    }
+    if (!setDynamicStates.contains(VK_DYNAMIC_STATE_DEPTH_BIAS)) {
+        // note: VkPipelineRasterizationStateCreateInfo.depthBiasEnable must be enabled.
+        // vkCmdSetDepthBias(commandBuffer, 0, 0, 0)
+    }
+    if (!setDynamicStates.contains(VK_DYNAMIC_STATE_DEPTH_TEST_ENABLE)) {
+        vkCmdSetDepthTestEnable(commandBuffer, VK_FALSE);
+    }
+    if (!setDynamicStates.contains(VK_DYNAMIC_STATE_DEPTH_WRITE_ENABLE)) {
+        vkCmdSetDepthWriteEnable(commandBuffer, VK_FALSE);
+    }
+    if (!setDynamicStates.contains(VK_DYNAMIC_STATE_DEPTH_COMPARE_OP)) {
+        vkCmdSetDepthCompareOp(commandBuffer, VK_COMPARE_OP_ALWAYS);
+    }
+    if (!setDynamicStates.contains(VK_DYNAMIC_STATE_STENCIL_TEST_ENABLE)) {
+        vkCmdSetStencilTestEnable(commandBuffer, VK_FALSE);
+    }
+    if (!setDynamicStates.contains(VK_DYNAMIC_STATE_STENCIL_OP)) {
+        vkCmdSetStencilOp(commandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK,
+                          VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP,
+                          VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS);
+    }
+    if (!setDynamicStates.contains(VK_DYNAMIC_STATE_DEPTH_BOUNDS_TEST_ENABLE)) {
+        vkCmdSetDepthBoundsTestEnable(commandBuffer, VK_FALSE);
+    }
+    if (!setDynamicStates.contains(VK_DYNAMIC_STATE_CULL_MODE)) {
+        vkCmdSetCullMode(commandBuffer, VK_CULL_MODE_NONE);
+    }
+    if (!setDynamicStates.contains(VK_DYNAMIC_STATE_FRONT_FACE)) {
+        vkCmdSetFrontFace(commandBuffer, VK_FRONT_FACE_CLOCKWISE);
+    }
 
     // recording commands
     for (EncoderCommand& cmd : commands)
         cmd(commandBuffer, state);
+
     // end render pass
     vkCmdEndRendering(commandBuffer);
 
@@ -326,6 +337,9 @@ void VulkanRenderCommandEncoder::setViewport(const Viewport& v) {
         vkCmdSetViewport(cbuffer, 0, 1, &viewport);
     };
     encoder->commands.push_back(command);
+    if (encoder->drawCount == 0) {
+        encoder->setDynamicStates.insert(VK_DYNAMIC_STATE_VIEWPORT);
+    }
 }
 
 void VulkanRenderCommandEncoder::setScissorRect(const ScissorRect& r) {
@@ -334,6 +348,9 @@ void VulkanRenderCommandEncoder::setScissorRect(const ScissorRect& r) {
         vkCmdSetScissor(cbuffer, 0, 1, &scissorRect);
     };
     encoder->commands.push_back(command);
+    if (encoder->drawCount == 0) {
+        encoder->setDynamicStates.insert(VK_DYNAMIC_STATE_SCISSOR);
+    }
 }
 
 void VulkanRenderCommandEncoder::setRenderPipelineState(std::shared_ptr<RenderPipelineState> ps) {
@@ -409,16 +426,38 @@ void VulkanRenderCommandEncoder::setDepthStencilState(std::shared_ptr<DepthStenc
         if (depthStencil) {
             depthStencil->bind(commandBuffer);
         } else {
-            if (state.depthStencilState) {
-                // reset to default
-                vkCmdSetDepthTestEnable(commandBuffer, VK_FALSE);
-                vkCmdSetStencilTestEnable(commandBuffer, VK_FALSE);
-                vkCmdSetDepthBoundsTestEnable(commandBuffer, VK_FALSE);
+            // reset to default
+            vkCmdSetDepthTestEnable(commandBuffer, VK_FALSE);
+            vkCmdSetStencilTestEnable(commandBuffer, VK_FALSE);
+            vkCmdSetDepthBoundsTestEnable(commandBuffer, VK_FALSE);
+
+            if (state.depthStencilState == nullptr) {
+                vkCmdSetDepthCompareOp(commandBuffer, VK_COMPARE_OP_ALWAYS);
+                vkCmdSetDepthWriteEnable(commandBuffer, VK_FALSE);
+                vkCmdSetDepthBounds(commandBuffer, 0.0f, 1.0f);
+                vkCmdSetStencilCompareMask(commandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, 0xffffffff);
+                vkCmdSetStencilWriteMask(commandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, 0xffffffff);
+                vkCmdSetStencilOp(commandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK,
+                                  VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP,
+                                  VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS);
             }
         }
         state.depthStencilState = depthStencil.get();
     };
     encoder->commands.push_back(command);
+    if (encoder->drawCount == 0) {
+        encoder->setDynamicStates.insert(VK_DYNAMIC_STATE_DEPTH_TEST_ENABLE);
+        encoder->setDynamicStates.insert(VK_DYNAMIC_STATE_STENCIL_TEST_ENABLE);
+        encoder->setDynamicStates.insert(VK_DYNAMIC_STATE_DEPTH_BOUNDS_TEST_ENABLE);
+
+        encoder->setDynamicStates.insert(VK_DYNAMIC_STATE_DEPTH_COMPARE_OP);
+        encoder->setDynamicStates.insert(VK_DYNAMIC_STATE_DEPTH_WRITE_ENABLE);
+        encoder->setDynamicStates.insert(VK_DYNAMIC_STATE_DEPTH_BOUNDS);
+
+        encoder->setDynamicStates.insert(VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK);
+        encoder->setDynamicStates.insert(VK_DYNAMIC_STATE_STENCIL_WRITE_MASK);
+        encoder->setDynamicStates.insert(VK_DYNAMIC_STATE_STENCIL_OP);
+    }
 }
 
 void VulkanRenderCommandEncoder::setDepthClipMode(DepthClipMode mode) {
@@ -442,6 +481,10 @@ void VulkanRenderCommandEncoder::setDepthClipMode(DepthClipMode mode) {
         }
     };
     encoder->commands.push_back(command);
+    if (encoder->numDrawCalls == 0) {
+        encoder->setDynamicStates.insert(VK_DYNAMIC_STATE_DEPTH_CLIP_ENABLE_EXT);
+        encoder->setDynamicStates.insert(VK_DYNAMIC_STATE_DEPTH_CLAMP_ENABLE_EXT);
+    }
 #else
     if (mode == DepthClipMode::Clamp) {
         Log::error("setDepthClipMode failed: VK_EXT_extended_dynamic_state3 is not supported.");
@@ -460,6 +503,9 @@ void VulkanRenderCommandEncoder::setCullMode(CullMode mode) {
         vkCmdSetCullMode(commandBuffer, flags);
     };
     encoder->commands.push_back(command);
+    if (encoder->drawCount == 0) {
+        encoder->setDynamicStates.insert(VK_DYNAMIC_STATE_CULL_MODE);
+    }
 }
 
 void VulkanRenderCommandEncoder::setFrontFacing(Winding winding) {
@@ -476,6 +522,9 @@ void VulkanRenderCommandEncoder::setFrontFacing(Winding winding) {
         vkCmdSetFrontFace(commandBuffer, frontFace);
     };
     encoder->commands.push_back(command);
+    if (encoder->drawCount == 0) {
+        encoder->setDynamicStates.insert(VK_DYNAMIC_STATE_FRONT_FACE);
+    }
 }
 
 void VulkanRenderCommandEncoder::setBlendColor(float r, float g, float b, float a) {
@@ -484,6 +533,9 @@ void VulkanRenderCommandEncoder::setBlendColor(float r, float g, float b, float 
         vkCmdSetBlendConstants(commandBuffer, blendConstants);
     };
     encoder->commands.push_back(command);
+    if (encoder->drawCount == 0) {
+        encoder->setDynamicStates.insert(VK_DYNAMIC_STATE_BLEND_CONSTANTS);
+    }
 }
 
 void VulkanRenderCommandEncoder::setStencilReferenceValue(uint32_t value) {
@@ -491,6 +543,9 @@ void VulkanRenderCommandEncoder::setStencilReferenceValue(uint32_t value) {
         vkCmdSetStencilReference(commandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, value);
     };
     encoder->commands.push_back(command);
+    if (encoder->drawCount == 0) {
+        encoder->setDynamicStates.insert(VK_DYNAMIC_STATE_STENCIL_REFERENCE);
+    }
 }
 
 void VulkanRenderCommandEncoder::setStencilReferenceValues(uint32_t front, uint32_t back) {
@@ -499,6 +554,9 @@ void VulkanRenderCommandEncoder::setStencilReferenceValues(uint32_t front, uint3
         vkCmdSetStencilReference(commandBuffer, VK_STENCIL_FACE_BACK_BIT, back);
     };
     encoder->commands.push_back(command);
+    if (encoder->drawCount == 0) {
+        encoder->setDynamicStates.insert(VK_DYNAMIC_STATE_STENCIL_REFERENCE);
+    }
 }
 
 void VulkanRenderCommandEncoder::setDepthBias(float depthBias, float slopeScale, float clamp) {
@@ -506,6 +564,9 @@ void VulkanRenderCommandEncoder::setDepthBias(float depthBias, float slopeScale,
         vkCmdSetDepthBias(commandBuffer, depthBias, clamp, slopeScale);
     };
     encoder->commands.push_back(command);
+    if (encoder->drawCount == 0) {
+        encoder->setDynamicStates.insert(VK_DYNAMIC_STATE_DEPTH_BIAS);
+    }
 }
 
 void VulkanRenderCommandEncoder::pushConstant(uint32_t stages, uint32_t offset, uint32_t size, const void* data) {
@@ -549,6 +610,7 @@ void VulkanRenderCommandEncoder::draw(uint32_t vertexStart, uint32_t vertexCount
                       baseInstance);
         };
         encoder->commands.push_back(command);
+        encoder->drawCount++;
     }
 }
 
@@ -582,6 +644,7 @@ void VulkanRenderCommandEncoder::drawIndexed(uint32_t indexCount, IndexType inde
         };
         encoder->buffers.push_back(bufferView);
         encoder->commands.push_back(command);
+        encoder->drawCount++;
     }
 }
 
