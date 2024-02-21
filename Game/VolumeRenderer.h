@@ -4,6 +4,7 @@
 enum class VisualMode: int {
     Raycast = 0,
     SSAO,
+    Normal,
     Albedo,
     Composition,
 };

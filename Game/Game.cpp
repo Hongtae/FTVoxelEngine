@@ -268,10 +268,11 @@ struct App : public Application {
                 }
                 int mode = (int)volumeRenderer->config.mode;
                 int value = mode;
-                ImGui::RadioButton("raycast", &mode, 0);
-                ImGui::RadioButton("ssao", &mode, 1);
-                ImGui::RadioButton("albedo", &mode, 2);
-                ImGui::RadioButton("composition", &mode, 3);
+                ImGui::RadioButton("raycast", &mode, (int)VisualMode::Raycast);
+                ImGui::RadioButton("ssao", &mode, (int)VisualMode::SSAO);
+                ImGui::RadioButton("normal", &mode, (int)VisualMode::Normal);
+                ImGui::RadioButton("albedo", &mode, (int)VisualMode::Albedo);
+                ImGui::RadioButton("composition", &mode, (int)VisualMode::Composition);
                 if (value != mode) {
                     Log::debug("rendering mode changed: {}", mode);
                     volumeRenderer->config.mode = static_cast<VisualMode>(mode);

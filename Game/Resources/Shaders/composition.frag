@@ -2,8 +2,9 @@
 
 #define VISUAL_MODE_RAYCAST			0
 #define VISUAL_MODE_SSAO			1
-#define VISUAL_MODE_ALBEDO			2
-#define VISUAL_MODE_COMPOSITION		3
+#define VISUAL_MODE_NORMAL			2
+#define VISUAL_MODE_ALBEDO			3
+#define VISUAL_MODE_COMPOSITION		4
 
 layout (binding = 0) uniform sampler2D samplerPosition;
 layout (binding = 1) uniform sampler2D samplerNormal;
@@ -38,6 +39,9 @@ void main() {
 	case VISUAL_MODE_SSAO:
 		float ssao = texture(samplerSSAO, inUV).r;
 		outFragColor = vec4(ssao.rrr, 1.0);
+		break;
+	case VISUAL_MODE_NORMAL:
+		outFragColor = texture(samplerNormal, inUV);
 		break;
 	case VISUAL_MODE_ALBEDO:
 	case VISUAL_MODE_RAYCAST:
