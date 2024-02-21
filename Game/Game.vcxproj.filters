@@ -194,5 +194,8 @@
     <None Include="Resources\Shaders\screen.vert">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="Resources\Shaders\blur2.frag">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

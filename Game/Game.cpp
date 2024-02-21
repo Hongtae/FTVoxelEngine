@@ -232,14 +232,7 @@ struct App : public Application {
                 if (ImGui::InputFloat("Distance To Minimum Detail", &distanceToMinDetail, 0.01f, 1.0f, "%.2f")) {
                     volumeRenderer->config.distanceToMinDetail = distanceToMinDetail;
                 }
-                bool linearFilter = volumeRenderer->config.linearFilter;
-                if (ImGui::Checkbox("Linear filter", &linearFilter)) {
-                    volumeRenderer->config.linearFilter = linearFilter;
-                }
-                bool ssaoBlur = volumeRenderer->config.ssaoBlur;
-                if (ImGui::Checkbox("SSAO Blur", &ssaoBlur)) {
-                    volumeRenderer->config.ssaoBlur = ssaoBlur;
-                }
+                ImGui::SeparatorText("SSAO");
                 float ssaoRadius = volumeRenderer->config.ssaoRadius;
                 if (ImGui::SliderFloat("SSAO Radius", &ssaoRadius,
                                        0.01f, 10.0f, "%.3f")) {
@@ -250,8 +243,29 @@ struct App : public Application {
                                        0.01f, 10.0f, "%.3f")) {
                     volumeRenderer->config.ssaoBias = ssaoBias;
                 }
+                bool ssaoBlur = volumeRenderer->config.ssaoBlur;
+                if (ImGui::Checkbox("SSAO Blur", &ssaoBlur)) {
+                    volumeRenderer->config.ssaoBlur = ssaoBlur;
+                }
+                ImGui::BeginDisabled(!ssaoBlur);
+                bool ssaoBlur2p = volumeRenderer->config.ssaoBlur2p;
+                if (ImGui::Checkbox("SSAO Blur (2-pass)", &ssaoBlur2p)) {
+                    volumeRenderer->config.ssaoBlur2p = ssaoBlur2p;
+                }
+                ImGui::BeginDisabled(!ssaoBlur2p);
+                float ssaoBlur2pRadius = volumeRenderer->config.ssaoBlur2pRadius;
+                if (ImGui::SliderFloat("SSAO Blur 2p Radius", &ssaoBlur2pRadius,
+                                       0.01f, 10.0f, "%.3f")) {
+                    volumeRenderer->config.ssaoBlur2pRadius = ssaoBlur2pRadius;
+                }
+                ImGui::EndDisabled();
+                ImGui::EndDisabled();
 
                 ImGui::SeparatorText("Draw Mode");
+                bool linearFilter = volumeRenderer->config.linearFilter;
+                if (ImGui::Checkbox("Linear filter", &linearFilter)) {
+                    volumeRenderer->config.linearFilter = linearFilter;
+                }
                 int mode = (int)volumeRenderer->config.mode;
                 int value = mode;
                 ImGui::RadioButton("raycast", &mode, 0);

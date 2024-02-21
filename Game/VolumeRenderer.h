@@ -38,10 +38,12 @@ public:
         float distanceToMinDetail = 40.0f;
         uint32_t minDetailLevel = 7U;
         uint32_t maxDetailLevel = 12U;
-        bool linearFilter = false;
-        bool ssaoBlur = true;
         float ssaoRadius = 0.3f;
         float ssaoBias = 0.025f;
+        bool ssaoBlur = true;
+        bool ssaoBlur2p = false;
+        float ssaoBlur2pRadius = 0.5f;
+        bool linearFilter = false;
         VisualMode mode = VisualMode::Composition;
     } config;
 
@@ -50,7 +52,8 @@ private:
     ComputePipeline raycastVisualizer;
     ComputePipeline clearBuffers;
     RenderPipeline ssao;
-    RenderPipeline ssaoBlur;
+    RenderPipeline blur;
+    RenderPipeline blur2;
     RenderPipeline composition;
 
     std::shared_ptr<GPUBuffer> ssaoKernel;
@@ -63,7 +66,7 @@ private:
     std::shared_ptr<Texture> albedoOutput;
     std::shared_ptr<Texture> normalOutput;
     std::shared_ptr<Texture> ssaoOutput;
-    std::shared_ptr<Texture> ssaoBlurOutput;
+    std::shared_ptr<Texture> blurOutput;
 
     std::shared_ptr<VoxelModel> voxelModel;
     struct VoxelLayer {

@@ -180,12 +180,30 @@ void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc,
             // ShaderBinding
             { 0, ShaderDescriptorType::TextureSampler, 1, nullptr },
         }); pso.has_value()) {
-        ssaoBlur = pso.value();
-        ssaoBlur.bindingSet->setSamplerState(0, blitSamplerLinear);
+        blur = pso.value();
+        blur.bindingSet->setSamplerState(0, blitSamplerLinear);
     } else {
         throw std::runtime_error("failed to load shader");
     }
-
+    if (auto pso = makeRenderPipeline(
+        device,
+        appResourcesRoot / "Shaders/screen.vert.spv",
+        appResourcesRoot / "Shaders/blur2.frag.spv",
+        {}, {},
+        {},             // VertexDescriptor        
+        {
+            { 0, ssaoFormat, BlendState::opaque },
+        },              // RenderPipelineColorAttachmentDescriptor
+        depthFormat,    // depthStencilAttachmentPixelFormat
+        {
+            // ShaderBinding
+            { 0, ShaderDescriptorType::TextureSampler, 1, nullptr },
+        }); pso.has_value()) {
+        blur2 = pso.value();
+        blur2.bindingSet->setSamplerState(0, blitSamplerLinear);
+    } else {
+        throw std::runtime_error("failed to load shader");
+    }
     auto colorFormat = swapchain->pixelFormat();
     if (auto pso = makeRenderPipeline(
         device,
@@ -225,7 +243,7 @@ void VolumeRenderer::finalize() {
     raycastVisualizer = {};
     clearBuffers = {};
     ssao = {};
-    ssaoBlur = {};
+    blur = {};
     composition = {};
 
     queue = nullptr;
@@ -321,8 +339,8 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp,
         composition.bindingSet->setTexture(2, albedoOutput);
     }
 
-    width = renderTarget->width();
-    height = renderTarget->height();
+    //width = renderTarget->width();
+    //height = renderTarget->height();
 
     bool resetSSAOAttachments = true;
     if (ssaoOutput) {
@@ -345,7 +363,7 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp,
             });
         FVASSERT_DEBUG(ssaoOutput);
 
-        ssaoBlurOutput = device->makeTexture(
+        blurOutput = device->makeTexture(
             TextureDescriptor{
                 TextureType2D,
                 PixelFormat::R8Unorm,
@@ -354,9 +372,9 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp,
                 1, 1, 1, 1,
                 textureUsage
             });
-        FVASSERT_DEBUG(ssaoBlurOutput);
+        FVASSERT_DEBUG(blurOutput);
 
-        ssaoBlur.bindingSet->setTexture(0, ssaoOutput);
+        blur.bindingSet->setTexture(0, ssaoOutput);
         composition.bindingSet->setTexture(3, ssaoOutput);
     }
 
@@ -772,16 +790,45 @@ void VolumeRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
                     encoder->setRenderPipelineState(ssao.state);
                     encoder->setResource(0, ssao.bindingSet);
                     encoder->pushConstant(uint32_t(ShaderStage::Fragment), 0, sizeof(ssaoPCData), &ssaoPCData);
-                    encoder->setCullMode(CullMode::None);
-                    encoder->setFrontFacing(Winding::Clockwise);
                     encoder->draw(0, 3, 1, 0);
-                    if (config.ssaoBlur) {
-                        desc.colorAttachments.front().renderTarget = this->ssaoBlurOutput;
-                        encoder->setRenderPipelineState(ssaoBlur.state);
-                        encoder->setResource(0, ssaoBlur.bindingSet);
-                        encoder->draw(0, 3, 1, 0);
-                    }
                     encoder->endEncoding();
+                    if (config.ssaoBlur) {
+                        if (config.ssaoBlur2p) {
+                            struct {
+                                Vector2 dir;
+                            } blur2Param;
+                            auto radius = config.ssaoBlur2pRadius;
+                            // pass-1
+                            blur2Param.dir = { radius, 0 };
+                            blur2.bindingSet->setTexture(0, this->ssaoOutput);
+                            desc.colorAttachments.front().renderTarget = this->blurOutput;
+                            auto encoder = cbuffer->makeRenderCommandEncoder(desc);
+                            encoder->setRenderPipelineState(blur2.state);
+                            encoder->setResource(0, blur2.bindingSet);
+                            encoder->pushConstant(uint32_t(ShaderStage::Fragment), 0, sizeof(blur2Param), &blur2Param);
+                            encoder->draw(0, 3, 1, 0);
+                            encoder->endEncoding();
+
+                            // pass-2
+                            blur2Param.dir = { 0, radius };
+                            blur2.bindingSet->setTexture(0, this->blurOutput);
+                            desc.colorAttachments.front().renderTarget = this->ssaoOutput;
+                            encoder = cbuffer->makeRenderCommandEncoder(desc);
+                            encoder->setRenderPipelineState(blur2.state);
+                            encoder->setResource(0, blur2.bindingSet);
+                            encoder->pushConstant(uint32_t(ShaderStage::Fragment), 0, sizeof(blur2Param), &blur2Param);
+                            encoder->draw(0, 3, 1, 0);
+                            encoder->endEncoding();
+
+                        } else {
+                            desc.colorAttachments.front().renderTarget = this->blurOutput;
+                            auto encoder = cbuffer->makeRenderCommandEncoder(desc);
+                            encoder->setRenderPipelineState(blur.state);
+                            encoder->setResource(0, blur.bindingSet);
+                            encoder->draw(0, 3, 1, 0);
+                            encoder->endEncoding();
+                        }
+                    }
                 }
 
                 if (config.linearFilter) {
@@ -791,8 +838,8 @@ void VolumeRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
                     composition.bindingSet->setSamplerState(2, blitSamplerNearest);
                 }
 
-                if (config.ssaoBlur) {
-                    composition.bindingSet->setTexture(3, ssaoBlurOutput);
+                if (config.ssaoBlur && !config.ssaoBlur2p) {
+                    composition.bindingSet->setTexture(3, blurOutput);
                 } else {
                     composition.bindingSet->setTexture(3, ssaoOutput);
                 }
@@ -801,8 +848,6 @@ void VolumeRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
                 encoder->setRenderPipelineState(composition.state);
                 encoder->setResource(0, composition.bindingSet);
                 encoder->pushConstant(uint32_t(ShaderStage::Fragment), 0, sizeof(compositionPC), &compositionPC);
-                encoder->setCullMode(CullMode::None);
-                encoder->setFrontFacing(Winding::Clockwise);
                 encoder->draw(0, 3, 1, 0);
                 encoder->endEncoding();
             }
