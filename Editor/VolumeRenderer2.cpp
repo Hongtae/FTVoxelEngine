@@ -272,7 +272,12 @@ void VolumeRenderer2::render(const RenderPassDescriptor&, const Rect& frame) {
             Color lightColor = { 1, 1, 1, 0.2 };
             Color ambientColor = { 0.7, 0.7, 0.7, 1 };
 
-            auto nodeTM = transform.matrix4();
+            auto metadata = voxelModel->metadata;
+            auto baseTM = AffineTransform3{ Vector3(-0.5,-0.5,-0.5) };  // glTF base transform
+            baseTM.scale({ metadata.scale, metadata.scale, metadata.scale });
+            baseTM.translate(metadata.center);
+
+            auto nodeTM = baseTM.matrix4() * transform.matrix4();
             auto mvp = nodeTM
                 .concatenating(view.matrix4())
                 .concatenating(projection.matrix);

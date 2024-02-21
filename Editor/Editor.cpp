@@ -74,7 +74,7 @@ public:
                                      this->onWindowEvent(event);
                                  });
 
-        window->setContentSize(Size(1024, 768));
+        window->setContentSize(Size(1280, 960));
         window->activate();
         isVisible = true;
 
@@ -873,7 +873,7 @@ public:
                 auto rp = swapchain->currentRenderPassDescriptor();
 
                 auto& frontAttachment = rp.colorAttachments.front();
-                frontAttachment.clearColor = Color::nonLinearBlue;
+                frontAttachment.clearColor = Color::nonLinearGray;
 
                 uint32_t width = frontAttachment.renderTarget->width();
                 uint32_t height = frontAttachment.renderTarget->height();
