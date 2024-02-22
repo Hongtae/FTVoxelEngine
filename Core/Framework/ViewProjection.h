@@ -4,6 +4,7 @@
 #include "Matrix4.h"
 #include "Vector3.h"
 #include "Vector4.h"
+#include "AffineTransform3.h"
 #include "Plane.h"
 #include "Sphere.h"
 #include "AABB.h"
@@ -26,6 +27,9 @@ namespace FV {
             };
         }
 
+        ViewTransform(const AffineTransform3& t)
+            : matrix(t.matrix3), t(t.translation) {
+        }
         ViewTransform(const Matrix3& mat = Matrix3::identity,
                       const Vector3& trans = Vector3::zero)
             : matrix(mat), t(trans) {
@@ -46,6 +50,10 @@ namespace FV {
                                    axisX.y, axisY.y, axisZ.y,
                                    axisX.z, axisY.z, axisZ.z);
             this->t = Vector3(tX, tY, tZ);
+        }
+
+        AffineTransform3 transform() const {
+            return AffineTransform3(matrix, t);
         }
 
         Vector3 direction() const {
