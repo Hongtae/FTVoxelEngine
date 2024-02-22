@@ -37,13 +37,18 @@ void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc,
         throw std::runtime_error("failed to load shader");
     }
 
-    int writeRayIteration = 0;
+    int shaderWriteRayIterations = 0;
+    int shaderMaxRayTestCount = 300;
+    int shaderMaxRayDepth = 16;
 
     if (auto pso = makeComputePipeline(
         device,
-        { appResourcesRoot / "Shaders/voxel_depth_layer.comp.spv", {
+        {
+            appResourcesRoot / "Shaders/voxel_depth_layer.comp.spv",{
             // shader specialized constants
-            { ShaderDataType::Int, &writeRayIteration, 0, sizeof(int)} }
+            { ShaderDataType::Int, &shaderWriteRayIterations, 0, sizeof(int)},
+            { ShaderDataType::Int, &shaderMaxRayTestCount, 1, sizeof(int)},
+            { ShaderDataType::Int, &shaderMaxRayDepth, 2, sizeof(int)}}
         },
         {
             { 0, ShaderDescriptorType::StorageTexture, 1, nullptr }, // color (rgba8)
@@ -56,12 +61,16 @@ void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc,
         throw std::runtime_error("failed to load shader");
     }
 
-    writeRayIteration = 1;
+    shaderWriteRayIterations = 1;
+
     if (auto pso = makeComputePipeline(
         device,
-        { appResourcesRoot / "Shaders/voxel_depth_layer.comp.spv", {
+        {
+            appResourcesRoot / "Shaders/voxel_depth_layer.comp.spv",{
             // shader specialized constants
-            {ShaderDataType::Int, &writeRayIteration, 0, sizeof(int)}}
+            { ShaderDataType::Int, &shaderWriteRayIterations, 0, sizeof(int)},
+            { ShaderDataType::Int, &shaderMaxRayTestCount, 1, sizeof(int)},
+            { ShaderDataType::Int, &shaderMaxRayDepth, 2, sizeof(int)}}
         },
         {
             { 0, ShaderDescriptorType::StorageTexture, 1, nullptr }, // color (rgba8)
@@ -260,9 +269,6 @@ void VolumeRenderer::setModel(std::shared_ptr<VoxelModel> model) {
     voxelLayers.clear();
 }
 
-bool stopUpdating = false;
-bool stopCaching = false;
-
 void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp,
                                   const ViewTransform& v,
                                   const ProjectionTransform& p) {
@@ -398,7 +404,7 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp,
     }
     this->viewFrustum = { view, projection };
 
-    if (stopUpdating)
+    if (streaming.paused)
         return;
 
     // calculate volume depth
@@ -495,6 +501,7 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp,
                     std::function<uint32_t(const Vector3&, uint32_t)>& bestFit;
                     const VoxelOctree::VolumePriorityCallback& getPriority;
                     std::function<void (const Vector3&, uint32_t, const VoxelOctree*, uint32_t, std::vector<VolumeArray::Node>&)>& generator;
+                    bool enableCache;
                     void operator() (const Vector3& center,
                                      uint32_t depth,
                                      float priority,
@@ -502,8 +509,9 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp,
                                      std::vector<VolumeArray::Node>& vector) const {
                         if (depth == startLevel) {
                             uint32_t maxDepth = bestFit(center, depth);
-                            if (stopCaching || maxDepth < depth) {
-                                node->makeSubarray(center, depth, maxDepth, vector);
+                            if (!enableCache || maxDepth < depth) {
+                                //node->makeSubarray(center, depth, maxDepth, vector);
+                                node->makeSubarray(center, depth, maxDepth, getPriority, vector);
                             } else {
                                 generator(center, depth, node, maxDepth, vector);
                             }
@@ -513,6 +521,7 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp,
                     }
                 };
 
+                bool sortByLinearZ = streaming.sortByLinearZ;
                 std::function bestFit = [&](const Vector3& pos,
                                             uint32_t depth) -> uint32_t {
                     _debug_numIterations++;
@@ -523,7 +532,11 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp,
                     };
                     if (mvpFrustum.isAABBInside(aabb)) {
                         auto p = pos.applying(modelView.transform());
-                        float distanceFromView = fabs(p.z);
+                        float distanceFromView;
+                        if (sortByLinearZ)
+                            distanceFromView = fabs(p.z);
+                        else
+                            distanceFromView = p.magnitude();
                         float bestFit = calculateDepthLevel(aabb, width, height);
                         if (auto k = distanceFromView - distMaxDetail; k > 0.0f) {
                             k = k / (distMinDetail - distMaxDetail);
@@ -539,7 +552,8 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp,
                 VoxelOctree::VolumePriorityCallback getPriority = [&]
                 (const Vector3& pos, uint32_t depth) -> float {
                     auto p = pos.applying(modelView.transform());
-                    return p.z;
+                    //return p.z;
+                    return 1.0 / p.magnitudeSquared();
                 };
 
                 std::function generator = [&](const Vector3& center,
@@ -586,7 +600,7 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp,
                                                  std::vector<VolumeArray::Node>& vector) {
                     vector.reserve(cachedData.maxNodeCount);
                     DepthResolveRecursion{
-                        startLevel, bestFit, getPriority, generator
+                        startLevel, bestFit, getPriority, generator, streaming.enableCache
                     }(center, depth, priority, node, vector);
                 });
                 cachedData.maxNodeCount = std::max(volumeData.data.size(), cachedData.maxNodeCount);
@@ -615,6 +629,8 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp,
             std::chrono::duration<double> d = t - timestamp;
 
             if (printDebugInfo) {
+                auto cacheRate = (_debug_cacheHit > 0) ?
+                    float(_debug_cacheHit) / float(_debug_cacheHit + _debug_cacheMiss) : 0.0f;
                 Log::debug(enUS_UTF8,
                            "VoxelModel nodes:{:Ld} (start:{}, depth:{}, bestfit:{}). iteration:{} cull:{} cache:{}%, elapsed: {:.4f}",
                            volumeData.data.size(),
@@ -623,7 +639,7 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp,
                            bestFitDepth,
                            _debug_numIterations,
                            _debug_numCulling,
-                           int(float(_debug_cacheHit * 100) / float(_debug_cacheHit + _debug_cacheMiss)),
+                           int(cacheRate * 100),
                            d.count());
             }
         } else {
@@ -634,10 +650,8 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp,
     }
 }
 
-bool stopRendering = false;
-
 void VolumeRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
-    if (!stopRendering && positionOutput && albedoOutput && normalOutput) {
+    if (!config.paused && positionOutput && albedoOutput && normalOutput) {
         uint32_t width = albedoOutput->width();
         uint32_t height = albedoOutput->height();
         FVASSERT_DEBUG(positionOutput->width() == width);

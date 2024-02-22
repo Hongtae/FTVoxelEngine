@@ -198,18 +198,25 @@ struct App : public Application {
                     resetCamera();
                 }
             }
-            if (ImGui::CollapsingHeader("Lighting")) {
-                static int rotate[2] = {};
-                if (ImGui::SliderInt2("Rotate-Roll/Yaw", rotate, 0, 359, nullptr, ImGuiSliderFlags_AlwaysClamp)) {
-                    auto qz = Quaternion(Vector3(0, 0, 1), degreeToRadian((float)rotate[0]));
-                    auto qy = Quaternion(Vector3(0, 1, 0), degreeToRadian((float)rotate[1]));
-                    Vector3 v = { 0, 1, 0 };
-                    v = v.applying(qz);
-                    v = v.applying(qy);
-                    volumeRenderer->lightDir = v;
+            if (ImGui::CollapsingHeader("Voxel Streaming")) {
+                bool paused = volumeRenderer->streaming.paused;
+                if (ImGui::Checkbox("Pause##Streaming", &paused)) {
+                    volumeRenderer->streaming.paused = paused;
+                }
+                bool sortByLinearZ = volumeRenderer->streaming.sortByLinearZ;
+                if (ImGui::Checkbox("Sort by Linear Depth", &sortByLinearZ)) {
+                    volumeRenderer->streaming.sortByLinearZ = sortByLinearZ;
+                }
+                bool enableCache = volumeRenderer->streaming.enableCache;
+                if (ImGui::Checkbox("Enable Cache", &enableCache)) {
+                    volumeRenderer->streaming.enableCache = enableCache;
                 }
             }
             if (ImGui::CollapsingHeader("Rendering")) {
+                bool paused = volumeRenderer->config.paused;
+                if (ImGui::Checkbox("Pause##Rendering", &paused)) {
+                    volumeRenderer->config.paused = paused;
+                }
                 int minDetailLevel = volumeRenderer->config.minDetailLevel;
                 int maxDetailLevel = volumeRenderer->config.maxDetailLevel;
                 if (ImGui::SliderInt("Min Detail Level", &minDetailLevel, 0, 10)) {
@@ -268,11 +275,11 @@ struct App : public Application {
                 }
                 int mode = (int)volumeRenderer->config.mode;
                 int value = mode;
-                ImGui::RadioButton("raycast", &mode, (int)VisualMode::Raycast);
+                ImGui::RadioButton("Raycast", &mode, (int)VisualMode::Raycast);
                 ImGui::RadioButton("LOD", &mode, (int)VisualMode::LOD);
-                ImGui::RadioButton("ssao", &mode, (int)VisualMode::SSAO);
-                ImGui::RadioButton("normal", &mode, (int)VisualMode::Normal);
-                ImGui::RadioButton("albedo", &mode, (int)VisualMode::Albedo);
+                ImGui::RadioButton("SSAO", &mode, (int)VisualMode::SSAO);
+                ImGui::RadioButton("Normal", &mode, (int)VisualMode::Normal);
+                ImGui::RadioButton("Albedo", &mode, (int)VisualMode::Albedo);
                 ImGui::RadioButton("composition", &mode, (int)VisualMode::Composition);
                 if (value != mode) {
                     Log::debug("rendering mode changed: {}", mode);
@@ -570,21 +577,21 @@ struct App : public Application {
                         return;
                     }
                     if (event.key == VirtualKey::P) {
-                        extern bool stopRendering;
-                        stopRendering = !stopRendering;
-                        Log::info("StopRendering: {}", stopRendering);
+                        auto paused = !volumeRenderer->config.paused;
+                        volumeRenderer->config.paused = paused;
+                        Log::info("StopRendering: {}", paused);
                         return;
                     }
                     if (event.key == VirtualKey::O) {
-                        extern bool stopUpdating;
-                        stopUpdating = !stopUpdating;
-                        Log::info("StopUpdating: {}", stopUpdating);
+                        auto paused = !volumeRenderer->streaming.paused;
+                        volumeRenderer->streaming.paused = paused;
+                        Log::info("StopUpdating: {}", paused);
                         return;
                     }
                     if (event.key == VirtualKey::C) {
-                        extern bool stopCaching;
-                        stopCaching = !stopCaching;
-                        Log::info("StopCaching: {}", stopCaching);
+                        auto e = !volumeRenderer->streaming.enableCache;
+                        volumeRenderer->streaming.enableCache = e;
+                        Log::info("UseCaching: {}", e);
                         return;
                     }
                 }

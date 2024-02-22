@@ -46,8 +46,15 @@ public:
         bool ssaoBlur2p = false;
         float ssaoBlur2pRadius = 0.5f;
         bool linearFilter = false;
+        bool paused = false;
         VisualMode mode = VisualMode::Composition;
     } config;
+
+    struct {
+        bool sortByLinearZ = false;
+        bool enableCache = true;
+        bool paused = false;
+    } streaming;
 
 private:
     ComputePipeline raycastVoxel;

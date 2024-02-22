@@ -189,7 +189,6 @@ vec4 rayResultColor = vec4(0);
 vec3 rayResultNormal = vec3(0);
 uint8_t rayResultLevel = uint8_t(0);
 uint32_t rayTestCount = 0;
-uint32_t maxRayTestCount = 400;
 
 void runTest(const Ray ray) {
     uint32_t index = 0;
@@ -250,7 +249,9 @@ vec3 ndcToAABB(float d) {
     return affineTransform(vec3(x, y, d), info.inverseMVP);
 }
 
-layout (constant_id = 0) const int WRITE_RAY_ITERATION = 0;
+layout (constant_id = 0) const int WRITE_RAY_ITERATIONS = 0;
+layout (constant_id = 1) const int MAX_RAY_TEST_COUNT = 400;
+layout (constant_id = 2) const int MAX_RAY_DEPTH = 20;
 
 void main() {
     const Ray ray = getRay();
@@ -265,7 +266,7 @@ void main() {
     vec3 normal = vec3(0);
     vec4 pos = vec4(0);
 
-    if (WRITE_RAY_ITERATION == 0) {
+    if (WRITE_RAY_ITERATIONS == 0) {
         if (rayResultDepth < depth) {
             albedo = rayResultColor;
 
@@ -279,8 +280,8 @@ void main() {
         }
     } else {
         if (rayTestCount > 0) {
-            float c = float(rayTestCount) / float(maxRayTestCount);
-            float d = float(rayResultLevel) / 20.0;
+            float c = float(rayTestCount) / float(MAX_RAY_TEST_COUNT);
+            float d = float(rayResultLevel) / float(MAX_RAY_DEPTH);
             albedo = vec4(c,c,c,d);
         } 
     }
