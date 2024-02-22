@@ -9,15 +9,6 @@ namespace FV {
     class CommandQueue;
     class CommandBuffer {
     public:
-        enum class Status {
-            NotEnqueued = 0,
-            Enqueued,
-            Committed,
-            Scheduled,
-            Completed,
-            Error,
-        };
-
         virtual ~CommandBuffer() {}
 
         virtual std::shared_ptr<RenderCommandEncoder> makeRenderCommandEncoder(const RenderPassDescriptor&) = 0;
