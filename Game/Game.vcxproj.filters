@@ -179,9 +179,6 @@
     <None Include="Resources\Shaders\voxel_depth_clear.comp">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="Resources\Shaders\voxel_depth_iteration.comp">
-      <Filter>Shaders</Filter>
-    </None>
     <None Include="Resources\Shaders\ssao.frag">
       <Filter>Shaders</Filter>
     </None>

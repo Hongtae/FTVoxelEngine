@@ -269,6 +269,7 @@ struct App : public Application {
                 int mode = (int)volumeRenderer->config.mode;
                 int value = mode;
                 ImGui::RadioButton("raycast", &mode, (int)VisualMode::Raycast);
+                ImGui::RadioButton("LOD", &mode, (int)VisualMode::LOD);
                 ImGui::RadioButton("ssao", &mode, (int)VisualMode::SSAO);
                 ImGui::RadioButton("normal", &mode, (int)VisualMode::Normal);
                 ImGui::RadioButton("albedo", &mode, (int)VisualMode::Albedo);

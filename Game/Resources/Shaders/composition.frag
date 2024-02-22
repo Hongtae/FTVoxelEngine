@@ -1,10 +1,11 @@
 #version 450
 
 #define VISUAL_MODE_RAYCAST			0
-#define VISUAL_MODE_SSAO			1
-#define VISUAL_MODE_NORMAL			2
-#define VISUAL_MODE_ALBEDO			3
-#define VISUAL_MODE_COMPOSITION		4
+#define VISUAL_MODE_LOD				1
+#define VISUAL_MODE_SSAO			2
+#define VISUAL_MODE_NORMAL			3
+#define VISUAL_MODE_ALBEDO			4
+#define VISUAL_MODE_COMPOSITION		5
 
 layout (binding = 0) uniform sampler2D samplerPosition;
 layout (binding = 1) uniform sampler2D samplerNormal;
@@ -18,7 +19,9 @@ layout (push_constant) uniform Constants {
 	int drawMode;
 } pc;
 
-vec4 composite() {
+
+void main() {
+
 	vec3 fragPos = texture(samplerPosition, inUV).rgb;
 	vec3 normal = normalize(texture(samplerNormal, inUV).rgb * 2.0 - 1.0);
 	vec4 albedo = texture(samplerAlbedo, inUV);
@@ -28,27 +31,25 @@ vec4 composite() {
 	vec3 L = normalize(lightPos - fragPos);
 	float NdotL = max(0.5, dot(normal, L));
 
-	vec3 baseColor = albedo.rgb * NdotL;
-
-	vec4 result = vec4(baseColor * ssao, albedo.a);
-	return result;
-}
-
-void main() {
 	switch (pc.drawMode) {
 	case VISUAL_MODE_SSAO:
-		float ssao = texture(samplerSSAO, inUV).r;
 		outFragColor = vec4(ssao.rrr, 1.0);
 		break;
 	case VISUAL_MODE_NORMAL:
-		outFragColor = texture(samplerNormal, inUV);
+		outFragColor = vec4(normal, 1.0);
 		break;
 	case VISUAL_MODE_ALBEDO:
+		outFragColor = albedo;
+		break;
 	case VISUAL_MODE_RAYCAST:
-		outFragColor = texture(samplerAlbedo, inUV);
+		outFragColor = vec4(albedo.rgb, 1.0);
+		break;
+	case VISUAL_MODE_LOD:
+		outFragColor = vec4(albedo.aaa, 1.0);
 		break;
 	case VISUAL_MODE_COMPOSITION:
-		outFragColor = composite();
+		vec3 baseColor = albedo.rgb * NdotL;
+		outFragColor = vec4(baseColor * ssao, albedo.a);
 		break;
 	default:
 	    outFragColor = vec4(0);

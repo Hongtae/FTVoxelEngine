@@ -3,6 +3,7 @@
 
 enum class VisualMode: int {
     Raycast = 0,
+    LOD,
     SSAO,
     Normal,
     Albedo,

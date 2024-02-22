@@ -187,6 +187,7 @@ bool isAABBSmallerThanPixel(const AABB aabb) {
 float rayResultDepth = 1.0;
 vec4 rayResultColor = vec4(0);
 vec3 rayResultNormal = vec3(0);
+uint8_t rayResultLevel = uint8_t(0);
 uint32_t rayTestCount = 0;
 uint32_t maxRayTestCount = 400;
 
@@ -206,6 +207,7 @@ void runTest(const Ray ray) {
                 rayResultColor.b = float((p >> 16) & 0xff) / 255.0;
                 rayResultColor.a = float((p >> 24) & 0xff) / 255.0;
                 rayResultDepth = t;
+                rayResultLevel = e.depth;
 
                 vec3 hitPoint = ray.origin + ray.dir * t;
                 vec3 center = (aabb.max + aabb.min) * 0.5;
@@ -248,7 +250,7 @@ vec3 ndcToAABB(float d) {
     return affineTransform(vec3(x, y, d), info.inverseMVP);
 }
 
-#define WRITE_RAY_ITERATION 0
+layout (constant_id = 0) const int WRITE_RAY_ITERATION = 0;
 
 void main() {
     const Ray ray = getRay();
@@ -259,30 +261,30 @@ void main() {
 
     runTest(ray);
 
-#if WRITE_RAY_ITERATION
-    if (rayTestCount > 0) {
-        float c = float(rayTestCount) / float(maxRayTestCount);
-        vec4 fragColor = vec4(c,c,c,1.0);
-#else
-    if (rayResultDepth < depth) {
-        vec4 fragColor = rayResultColor;
-#endif
-        imageStore(albedoOutput, ivec2(gl_GlobalInvocationID.xy), fragColor);
+    vec4 albedo = vec4(0);
+    vec3 normal = vec3(0);
+    vec4 pos = vec4(0);
 
-        vec3 normal = boxNormal(rayResultNormal);
-        //normal = normal * transpose(inverse(mat3(info.mv)));
-        normal = normalize((vec4(normal, 0.0) * info.mv).xyz) * 0.5 + 0.5;
-        imageStore(normalOutput, ivec2(gl_GlobalInvocationID.xy), vec4(normal, 1.0));
+    if (WRITE_RAY_ITERATION == 0) {
+        if (rayResultDepth < depth) {
+            albedo = rayResultColor;
 
-        vec3 pos = ray.origin + ray.dir * rayResultDepth;
-        //float d = linearDepth((vec4(pos, 1.0) * info.mvp).z);
-        float d = linearDepth(affineTransform(pos, info.mvp).z);
-        pos = vec3(vec4(pos,1.0) * info.mv);
+            normal = boxNormal(rayResultNormal);
+            //normal = normal * transpose(inverse(mat3(info.mv)));
+            normal = normalize((vec4(normal, 0.0) * info.mv).xyz) * 0.5 + 0.5;
 
-        imageStore(positionOutput, ivec2(gl_GlobalInvocationID.xy), vec4(pos, d));
+            vec3 p = ray.origin + ray.dir * rayResultDepth;
+            pos = (vec4(p, 1.0) * info.mv);
+            pos.w = -pos.z;
+        }
     } else {
-        imageStore(albedoOutput, ivec2(gl_GlobalInvocationID.xy), vec4(0));
-        imageStore(normalOutput, ivec2(gl_GlobalInvocationID.xy), vec4(0, 0, 0, 1));
-        imageStore(positionOutput, ivec2(gl_GlobalInvocationID.xy), vec4(0, 0, 0, 1));
+        if (rayTestCount > 0) {
+            float c = float(rayTestCount) / float(maxRayTestCount);
+            float d = float(rayResultLevel) / 20.0;
+            albedo = vec4(c,c,c,d);
+        } 
     }
+    imageStore(albedoOutput, ivec2(gl_GlobalInvocationID.xy), albedo);
+    imageStore(normalOutput, ivec2(gl_GlobalInvocationID.xy), vec4(normal, 1));
+    imageStore(positionOutput, ivec2(gl_GlobalInvocationID.xy), pos);
 }

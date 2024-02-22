@@ -27,12 +27,15 @@ struct ComputePipeline {
     struct { uint32_t x, y, z; } threadgroupSize;
 };
 
+struct ShaderPath {
+    std::filesystem::path path;
+    std::vector<ShaderSpecialization> specializedConstants = {};
+};
+
 std::optional<RenderPipeline> makeRenderPipeline(
     GraphicsDevice* device,
-    std::filesystem::path vsPath,
-    std::filesystem::path fsPath,
-    std::vector<ShaderSpecialization> vsSp,
-    std::vector<ShaderSpecialization> fsSp,
+    ShaderPath vsPath,
+    ShaderPath fsPath,
     const VertexDescriptor& vertexDescriptor,
     std::vector<RenderPipelineColorAttachmentDescriptor> colorAttachments,
     PixelFormat depthStencilAttachmentPixelFormat,
@@ -40,5 +43,5 @@ std::optional<RenderPipeline> makeRenderPipeline(
 
 std::optional<ComputePipeline> makeComputePipeline(
     GraphicsDevice* device,
-    std::filesystem::path path,
+    ShaderPath shader,
     std::vector<ShaderBinding> bindings);

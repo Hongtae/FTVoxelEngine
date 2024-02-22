@@ -2,35 +2,44 @@
 #include "ShaderReflection.h"
 
 
+std::shared_ptr<ShaderFunction> loadShader(GraphicsDevice* device,
+                                           const ShaderPath& sp,
+                                           decltype(ComputePipeline::threadgroupSize)* group = nullptr) {
+    if (Shader shader(sp.path); shader.validate()) {
+        Log::info("Shader description: \"{}\"", sp.path.generic_u8string());
+        printShaderReflection(shader);
+        if (auto module = device->makeShaderModule(shader); module) {
+            auto names = module->functionNames();
+            std::shared_ptr<ShaderFunction> fn = {};
+            if (sp.specializedConstants.empty())
+                fn = module->makeFunction(names.front());
+            else
+                fn = module->makeSpecializedFunction(names.front(),
+                                                     sp.specializedConstants);
+            if (fn && group) {
+                auto groupSize = shader.threadgroupSize();
+                group->x = groupSize.x;
+                group->y = groupSize.y;
+                group->z = groupSize.z;
+            }
+            return fn;
+        }
+    }
+    return nullptr;
+};
+
 std::optional<RenderPipeline> makeRenderPipeline(
     GraphicsDevice* device,
-    std::filesystem::path vsPath,
-    std::filesystem::path fsPath,
-    std::vector<ShaderSpecialization> vsSp,
-    std::vector<ShaderSpecialization> fsSp,
+    ShaderPath vs,
+    ShaderPath fs,
     const VertexDescriptor& vertexDescriptor,
     std::vector<RenderPipelineColorAttachmentDescriptor> colorAttachments,
     PixelFormat depthStencilAttachmentPixelFormat,
     std::vector<ShaderBinding> bindings) {
 
-    auto loadShader = [device](std::filesystem::path path,
-                               std::vector<ShaderSpecialization>& sp) -> std::shared_ptr<ShaderFunction> {
-        if (Shader shader(path); shader.validate()) {
-            Log::info("Shader description: \"{}\"", path.generic_u8string());
-            printShaderReflection(shader);
-            if (auto module = device->makeShaderModule(shader); module) {
-                auto names = module->functionNames();
-                if (sp.empty())
-                    return module->makeFunction(names.front());
-                else
-                    return module->makeSpecializedFunction(names.front(), sp);
-            }
-        }
-        return nullptr;
-    };
     auto pipelineDescriptor = RenderPipelineDescriptor{
-        .vertexFunction = loadShader(vsPath, vsSp),
-        .fragmentFunction = loadShader(fsPath, fsSp),
+        .vertexFunction = loadShader(device, vs),
+        .fragmentFunction = loadShader(device, fs),
         .vertexDescriptor = vertexDescriptor,
         .colorAttachments = colorAttachments,
         .depthStencilAttachmentPixelFormat = depthStencilAttachmentPixelFormat,
@@ -58,24 +67,12 @@ std::optional<RenderPipeline> makeRenderPipeline(
 
 std::optional<ComputePipeline> makeComputePipeline(
     GraphicsDevice* device,
-    std::filesystem::path path,
+    ShaderPath shader,
     std::vector<ShaderBinding> bindings) {
 
     ComputePipeline pipeline = {};
 
-    std::shared_ptr<ShaderFunction> fn;
-    if (Shader shader(path); shader.validate()) {
-        Log::info("Shader description: \"{}\"", path.generic_u8string());
-        printShaderReflection(shader);
-        if (auto module = device->makeShaderModule(shader); module) {
-            auto names = module->functionNames();
-            fn = module->makeFunction(names.front());
-            auto groupSize = shader.threadgroupSize();
-            pipeline.threadgroupSize = {
-                groupSize.x, groupSize.y, groupSize.y
-            };
-        }
-    }
+    std::shared_ptr<ShaderFunction> fn = loadShader(device, shader, &pipeline.threadgroupSize);
     if (fn == nullptr)
         return {};
 

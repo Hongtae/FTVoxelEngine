@@ -26,39 +26,48 @@ void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc,
     // load shader
     if (auto pso = makeComputePipeline(
         device,
-        appResourcesRoot / "Shaders/voxel_depth_clear.comp.spv",
+        { appResourcesRoot / "Shaders/voxel_depth_clear.comp.spv" },
         {
-        { 0, ShaderDescriptorType::StorageTexture, 1, nullptr }, // color (rgba8)
-        { 1, ShaderDescriptorType::StorageTexture, 1, nullptr }, // depth (r32f)
-        { 2, ShaderDescriptorType::StorageTexture, 1, nullptr }, // normal (rgb10_a2)
+            { 0, ShaderDescriptorType::StorageTexture, 1, nullptr }, // color (rgba8)
+            { 1, ShaderDescriptorType::StorageTexture, 1, nullptr }, // depth (r32f)
+            { 2, ShaderDescriptorType::StorageTexture, 1, nullptr }, // normal (rgb10_a2)
         }); pso.has_value()) {
         clearBuffers = pso.value();
     } else {
         throw std::runtime_error("failed to load shader");
     }
 
+    int writeRayIteration = 0;
+
     if (auto pso = makeComputePipeline(
         device,
-        appResourcesRoot / "Shaders/voxel_depth_layer.comp.spv",
+        { appResourcesRoot / "Shaders/voxel_depth_layer.comp.spv", {
+            // shader specialized constants
+            { ShaderDataType::Int, &writeRayIteration, 0, sizeof(int)} }
+        },
         {
-        { 0, ShaderDescriptorType::StorageTexture, 1, nullptr }, // color (rgba8)
-        { 1, ShaderDescriptorType::StorageTexture, 1, nullptr }, // depth (r32f)
-        { 2, ShaderDescriptorType::StorageTexture, 1, nullptr }, // normal (rgb10_a2)
-        { 3, ShaderDescriptorType::StorageBuffer, 1, nullptr },  // voxel data
+            { 0, ShaderDescriptorType::StorageTexture, 1, nullptr }, // color (rgba8)
+            { 1, ShaderDescriptorType::StorageTexture, 1, nullptr }, // depth (r32f)
+            { 2, ShaderDescriptorType::StorageTexture, 1, nullptr }, // normal (rgb10_a2)
+            { 3, ShaderDescriptorType::StorageBuffer, 1, nullptr },  // voxel data
         }); pso.has_value()) {
         raycastVoxel = pso.value();
     } else {
         throw std::runtime_error("failed to load shader");
     }
 
+    writeRayIteration = 1;
     if (auto pso = makeComputePipeline(
         device,
-        appResourcesRoot / "Shaders/voxel_depth_iteration.comp.spv",
+        { appResourcesRoot / "Shaders/voxel_depth_layer.comp.spv", {
+            // shader specialized constants
+            {ShaderDataType::Int, &writeRayIteration, 0, sizeof(int)}}
+        },
         {
-        { 0, ShaderDescriptorType::StorageTexture, 1, nullptr }, // color (rgba8)
-        { 1, ShaderDescriptorType::StorageTexture, 1, nullptr }, // depth (r32f)
-        { 2, ShaderDescriptorType::StorageTexture, 1, nullptr }, // normal (rgb10_a2)
-        { 3, ShaderDescriptorType::StorageBuffer, 1, nullptr },  // voxel data
+            { 0, ShaderDescriptorType::StorageTexture, 1, nullptr }, // color (rgba8)
+            { 1, ShaderDescriptorType::StorageTexture, 1, nullptr }, // depth (r32f)
+            { 2, ShaderDescriptorType::StorageTexture, 1, nullptr }, // normal (rgb10_a2)
+            { 3, ShaderDescriptorType::StorageBuffer, 1, nullptr },  // voxel data
         }); pso.has_value()) {
         raycastVisualizer = pso.value();
     } else {
@@ -139,12 +148,12 @@ void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc,
 
     if (auto pso = makeRenderPipeline(
         device,
-        appResourcesRoot / "Shaders/screen.vert.spv",
-        appResourcesRoot / "Shaders/ssao.frag.spv",
-        {}, {
-            // shader specialized constants
-            {ShaderDataType::Int, &ssaoKernelSize, 0, sizeof(int)},
-        }, 
+        {appResourcesRoot / "Shaders/screen.vert.spv"},
+        { appResourcesRoot / "Shaders/ssao.frag.spv", {
+                // shader specialized constants
+                {ShaderDataType::Int, &ssaoKernelSize, 0, sizeof(int)},
+            } 
+        },
         {},             // VertexDescriptor        
         {
             { 0, ssaoFormat, BlendState::opaque },
@@ -168,9 +177,8 @@ void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc,
 
     if (auto pso = makeRenderPipeline(
         device,
-        appResourcesRoot / "Shaders/screen.vert.spv",
-        appResourcesRoot / "Shaders/blur.frag.spv",
-        {}, {},
+        { appResourcesRoot / "Shaders/screen.vert.spv"},
+        { appResourcesRoot / "Shaders/blur.frag.spv"},
         {},             // VertexDescriptor        
         {
             { 0, ssaoFormat, BlendState::opaque },
@@ -187,9 +195,8 @@ void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc,
     }
     if (auto pso = makeRenderPipeline(
         device,
-        appResourcesRoot / "Shaders/screen.vert.spv",
-        appResourcesRoot / "Shaders/blur2.frag.spv",
-        {}, {},
+        { appResourcesRoot / "Shaders/screen.vert.spv"},
+        { appResourcesRoot / "Shaders/blur2.frag.spv"},
         {},             // VertexDescriptor        
         {
             { 0, ssaoFormat, BlendState::opaque },
@@ -207,9 +214,8 @@ void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc,
     auto colorFormat = swapchain->pixelFormat();
     if (auto pso = makeRenderPipeline(
         device,
-        appResourcesRoot / "Shaders/screen.vert.spv",
-        appResourcesRoot / "Shaders/composition.frag.spv",
-        {}, {},
+        { appResourcesRoot / "Shaders/screen.vert.spv"},
+        { appResourcesRoot / "Shaders/composition.frag.spv"},
         {}, // VertexDescriptor
             {
                 // RenderPipelineColorAttachmentDescriptor
@@ -399,12 +405,16 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp,
     voxelLayers.clear();
     if (voxelModel) {
 
-        auto trans = AffineTransform3{ transform.orientation.matrix3(), transform.position };
-        trans.scale({ scale, scale, scale });
-        auto mat = ViewTransform{ trans.matrix3, trans.translation }.concatenate(view);
-        ViewFrustum mvpFrustum = { mat, projection };
+        auto modelTransform = AffineTransform3();
+        modelTransform.scale({ scale, scale, scale });
+        modelTransform.concatenate(AffineTransform3{ transform.orientation.matrix3(), transform.position });
 
-        auto nodeTM = trans.matrix4();
+        auto modelView = ViewTransform{
+            modelTransform.matrix3,
+            modelTransform.translation }.concatenate(view);
+        ViewFrustum mvpFrustum = { modelView, projection };
+
+        auto mv = modelView.matrix4();
         auto mvp = mvpFrustum.matrix();
 
         auto viewPosition = view.position();
@@ -474,9 +484,9 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp,
 
             VolumeArray volumeData = {};
             if (startLevel > 0) {
-                auto distMaxDetailSq = config.distanceToMaxDetail * config.distanceToMaxDetail;
-                auto distMinDetailSq = config.distanceToMinDetail * config.distanceToMinDetail;
-                distMinDetailSq = std::max(distMinDetailSq, distMaxDetailSq + 0.001f);
+                auto distMaxDetail = config.distanceToMaxDetail;
+                auto distMinDetail = config.distanceToMinDetail;
+                distMinDetail = std::max(distMinDetail, distMaxDetail + 0.001f);
 
                 struct DepthResolveRecursion {
                     uint32_t startLevel;
@@ -510,11 +520,11 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp,
                         pos + Vector3(hext, hext, hext)
                     };
                     if (mvpFrustum.isAABBInside(aabb)) {
-                        auto c = pos.applying(trans);
-                        float distanceFromViewSq = (c - viewPosition).magnitudeSquared();
+                        auto p = pos.applying(modelView.transform());
+                        float distanceFromView = fabs(p.z);
                         float bestFit = calculateDepthLevel(aabb, width, height);
-                        if (auto k = distanceFromViewSq - distMaxDetailSq; k > 0.0f) {
-                            k = k / (distMinDetailSq - distMaxDetailSq);
+                        if (auto k = distanceFromView - distMaxDetail; k > 0.0f) {
+                            k = k / (distMinDetail - distMaxDetail);
                             k = 1.0f - std::clamp(k, 0.0f, 1.0f);
                             bestFit = bestFit * k;
                         }
@@ -526,9 +536,8 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp,
 
                 VoxelOctree::VolumePriorityCallback getPriority = [&]
                 (const Vector3& pos, uint32_t depth) -> float {
-                    auto c = pos.applying(trans);
-                    float distanceFromViewSq = (c - viewPosition).magnitudeSquared();
-                    return 1.0 / distanceFromViewSq;
+                    auto p = pos.applying(modelView.transform());
+                    return p.z;
                 };
 
                 std::function generator = [&](const Vector3& center,
@@ -664,8 +673,10 @@ void VolumeRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
             auto zfar = Vector3(0, 0, 1).applying(invProj, 1.0).magnitude();
             auto znear = Vector3(0, 0, 0).applying(invProj, 1.0).magnitude();
 
-            auto modelTransform = AffineTransform3{ transform.orientation.matrix3(), transform.position };
+            auto modelTransform = AffineTransform3();
             modelTransform.scale({ scale, scale, scale });
+            modelTransform.concatenate(AffineTransform3{ transform.orientation.matrix3(), transform.position });
+
             auto modelView = ViewTransform{
                 modelTransform.matrix3,
                 modelTransform.translation }.concatenate(view);
@@ -684,7 +695,7 @@ void VolumeRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
             };
 
             ComputePipeline* pipeline = &raycastVoxel;
-            if (config.mode == VisualMode::Raycast)
+            if (config.mode == VisualMode::Raycast || config.mode == VisualMode::LOD)
                 pipeline = &raycastVisualizer;
 
             auto encoder = cbuffer->makeComputeCommandEncoder();
