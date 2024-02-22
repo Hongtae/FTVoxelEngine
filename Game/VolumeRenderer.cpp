@@ -481,6 +481,8 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp,
 
             uint32_t _debug_numIterations = 0;
             uint32_t _debug_numCulling = 0;
+            uint32_t _debug_cacheHit = 0;
+            uint32_t _debug_cacheMiss = 0;
 
             VolumeArray volumeData = {};
             if (startLevel > 0) {
@@ -511,8 +513,8 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp,
                     }
                 };
 
-                std::function bestFit = [&]
-                (const Vector3& pos, uint32_t depth) -> uint32_t {
+                std::function bestFit = [&](const Vector3& pos,
+                                            uint32_t depth) -> uint32_t {
                     _debug_numIterations++;
                     float hext = VoxelOctree::halfExtent(depth);
                     AABB aabb = {
@@ -550,6 +552,7 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp,
                         iter != cachedData.volumeMap.end()) {
                         VolumeDataCache& cache = iter->second;
                         if (cache.depth == maxDepth) {
+                            _debug_cacheHit++;
                             build = false;
                         }
                     } else {
@@ -557,6 +560,7 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp,
                     }
                     VolumeDataCache& cache = cachedData.volumeMap.at(node);
                     if (build) {
+                        _debug_cacheMiss++;
                         cache.data.clear();
                         cache.depth = maxDepth;
                         node->makeSubarray(center, depth, maxDepth, cache.data);
@@ -612,13 +616,14 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp,
 
             if (printDebugInfo) {
                 Log::debug(enUS_UTF8,
-                           "VoxelModel nodes:{:Ld} (start:{}, depth:{}, bestfit:{}). iteration:{} cull:{}, elapsed: {:.4f}",
+                           "VoxelModel nodes:{:Ld} (start:{}, depth:{}, bestfit:{}). iteration:{} cull:{} cache:{}%, elapsed: {:.4f}",
                            volumeData.data.size(),
                            startLevel,
                            depthLevel,
                            bestFitDepth,
                            _debug_numIterations,
                            _debug_numCulling,
+                           int(float(_debug_cacheHit * 100) / float(_debug_cacheHit + _debug_cacheMiss)),
                            d.count());
             }
         } else {
