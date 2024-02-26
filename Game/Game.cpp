@@ -94,6 +94,7 @@ struct App : public Application {
     bool openPopupModal = false;
     std::string popupMessage;
     void messageBox(const std::string& mesg) {
+        Log::debug("messageBox(\"{}\")", mesg);
         popupMessage = mesg;
         openPopupModal = true;
     }
@@ -319,11 +320,9 @@ struct App : public Application {
                         volumeRenderer->setModel(model);
                         resetCamera();
                     } else {
-                        Log::debug("Deserialization failed.");
                         messageBox("Deserialization failed.");
                     }
                 } else {
-                    Log::debug("Failed to open file");
                     messageBox("Failed to open file");
                 }
             }
