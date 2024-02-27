@@ -275,7 +275,7 @@ void VolumeRenderer2::render(const RenderPassDescriptor&, const Rect& frame) {
             auto metadata = voxelModel->metadata;
             auto baseTM = AffineTransform3{ Vector3(-0.5,-0.5,-0.5) };  // glTF base transform
             baseTM.scale({ metadata.scale, metadata.scale, metadata.scale });
-            baseTM.translate(metadata.center);
+            //baseTM.translate(metadata.center);
 
             auto nodeTM = baseTM.matrix4() * transform.matrix4();
             auto mvp = nodeTM

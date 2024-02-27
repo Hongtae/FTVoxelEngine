@@ -30,29 +30,23 @@ AffineTransform3 AffineTransform3::scaled(const Vector3& s) const {
     auto c1 = matrix3.column1() * s.x;
     auto c2 = matrix3.column2() * s.y;
     auto c3 = matrix3.column3() * s.z;
-    return { Matrix3(c1, c2, c3).transposed(), translation };
+    auto t = translation * s;
+    return { Matrix3(c1, c2, c3).transposed(), t };
 }
 
 AffineTransform3& AffineTransform3::scale(const Vector3& s) {
-    matrix3._11 *= s.x;
-    matrix3._21 *= s.x;
-    matrix3._31 *= s.x;
-    matrix3._12 *= s.y;
-    matrix3._22 *= s.y;
-    matrix3._32 *= s.y;
-    matrix3._13 *= s.z;
-    matrix3._23 *= s.z;
-    matrix3._33 *= s.z;
+    *this = scaled(s);
     return *this;
 }
 
 AffineTransform3 AffineTransform3::rotated(const Quaternion& q) const {
-    Matrix3 mat = matrix3.concatenating(q.matrix3());
-    return { mat, this->translation };
+    auto mat = matrix3.concatenating(q.matrix3());
+    auto t = translation.applying(q);
+    return { mat, t };
 }
 
 AffineTransform3& AffineTransform3::rotate(const Quaternion& q) {
-    matrix3.concatenate(q.matrix3());
+    *this = rotated(q);
     return *this;
 }
 
@@ -69,7 +63,7 @@ AffineTransform3& AffineTransform3::invert() {
 
 AffineTransform3 AffineTransform3::concatenating(const AffineTransform3& rhs) const {
     return AffineTransform3(matrix3.concatenating(rhs.matrix3),
-                            translation + rhs.translation);
+                            translation.applying(rhs.matrix3) + rhs.translation);
 }
 
 AffineTransform3& AffineTransform3::concatenate(const AffineTransform3& rhs) {

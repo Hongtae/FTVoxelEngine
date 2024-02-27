@@ -1175,9 +1175,9 @@ std::shared_ptr<VoxelOctreeBuilder> Model::voxelBuilder(
                                            verts[2].pos);
                         Vector3 hitpoint = pt;
                         Vector3 normal = plane.normal();
-                        if (auto r = plane.rayTest(pt, normal) >= 0.0f) {
+                        if (auto r = plane.rayTest(pt, normal); r >= 0.0f) {
                             hitpoint = pt + normal * r;
-                        } else if (auto r = plane.rayTest(pt, -normal) >= 0.0f) {
+                        } else if (auto r = plane.rayTest(pt, -normal); r >= 0.0f) {
                             hitpoint = pt - normal * r;
                         }
 

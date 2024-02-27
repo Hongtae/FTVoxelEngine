@@ -25,14 +25,12 @@ AffineTransform2& AffineTransform2::translate(const Vector2& offset) {
 AffineTransform2 AffineTransform2::scaled(const Vector2& s) const {
     auto c1 = matrix2.column1() * s.x;
     auto c2 = matrix2.column2() * s.y;
-    return { Matrix2(c1, c2).transposed(), translation };
+    auto t = translation * s;
+    return { Matrix2(c1, c2).transposed(), t };
 }
 
 AffineTransform2& AffineTransform2::scale(const Vector2& s) {
-    matrix2._11 *= s.x;
-    matrix2._21 *= s.x;
-    matrix2._12 *= s.y;
-    matrix2._22 *= s.y;
+    *this = scaled(s);
     return *this;
 }
 
@@ -40,14 +38,12 @@ AffineTransform2 AffineTransform2::rotated(float r) const {
     float c = cos(r);
     float s = sin(r);
     Matrix2 m = { c, s, -s, c };
-    return { matrix2.concatenating(m), translation };
+    auto t = translation.applying(m);
+    return { matrix2.concatenating(m), t };
 }
 
 AffineTransform2& AffineTransform2::rotate(float r) {
-    float c = cos(r);
-    float s = sin(r);
-    Matrix2 m = { c, s, -s, c };
-    matrix2.concatenate(m);
+    *this = rotated(r);
     return *this;
 }
 
@@ -64,7 +60,7 @@ AffineTransform2& AffineTransform2::invert() {
 
 AffineTransform2 AffineTransform2::concatenating(const AffineTransform2& rhs) const {
     return AffineTransform2(matrix2.concatenating(rhs.matrix2),
-                            translation + rhs.translation);
+                            translation.applying(rhs.matrix2) + rhs.translation);
 }
 
 AffineTransform2& AffineTransform2::concatenate(const AffineTransform2& rhs) {
