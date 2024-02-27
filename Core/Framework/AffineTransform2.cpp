@@ -47,6 +47,17 @@ AffineTransform2& AffineTransform2::rotate(float r) {
     return *this;
 }
 
+AffineTransform2 AffineTransform2::applying(const Matrix2& m) const {
+    return AffineTransform2(matrix2.concatenating(m),
+                            translation.applying(m));
+}
+
+AffineTransform2& AffineTransform2::apply(const Matrix2& m) {
+    matrix2.concatenate(m);
+    translation.applying(m);
+    return *this;
+}
+
 AffineTransform2 AffineTransform2::inverted() const {
     Matrix2 matrix = matrix2.inverted();
     Vector2 origin = (-translation).applying(matrix);

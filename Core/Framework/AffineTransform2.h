@@ -42,6 +42,9 @@ namespace FV
         AffineTransform2 rotated(float radian) const;
         AffineTransform2& rotate(float radian);
 
+        AffineTransform2 applying(const Matrix2& m) const;
+        AffineTransform2& apply(const Matrix2& m);
+
         AffineTransform2 inverted() const;
         AffineTransform2& invert();
 

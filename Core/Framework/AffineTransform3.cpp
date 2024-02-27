@@ -50,6 +50,17 @@ AffineTransform3& AffineTransform3::rotate(const Quaternion& q) {
     return *this;
 }
 
+AffineTransform3 AffineTransform3::applying(const Matrix3& m) const {
+    return AffineTransform3(matrix3.concatenating(m),
+                            translation.applying(m));
+}
+
+AffineTransform3& AffineTransform3::apply(const Matrix3& m) {
+    matrix3.concatenate(m);
+    translation.apply(m);
+    return *this;
+}
+
 AffineTransform3 AffineTransform3::inverted() const {
     Matrix3 matrix = matrix3.inverted();
     Vector3 origin = (-translation).applying(matrix);

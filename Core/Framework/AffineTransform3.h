@@ -47,6 +47,9 @@ namespace FV {
         AffineTransform3 rotated(const Quaternion& quat) const;
         AffineTransform3& rotate(const Quaternion& quat);
 
+        AffineTransform3 applying(const Matrix3& m) const;
+        AffineTransform3& apply(const Matrix3& m);
+
         AffineTransform3 inverted() const;
         AffineTransform3& invert();
 
