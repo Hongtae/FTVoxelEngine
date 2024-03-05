@@ -197,7 +197,7 @@ void VoxelOctree::makeSubarray(const Vector3& center,
     auto index = vector.size();
     vector.push_back({});
     {
-        auto& n = vector.at(index);
+        auto& n = vector[index];
         constexpr float q = float(std::numeric_limits<uint16_t>::max());
         n.x = static_cast<uint16_t>(center.x * q);
         n.y = static_cast<uint16_t>(center.y * q);
@@ -238,7 +238,7 @@ void VoxelOctree::makeSubarray(const Vector3& center,
         }
     }
     auto advance = (vector.size() - index);
-    auto& n = vector.at(index);
+    auto& n = vector[index];
     FVASSERT_DEBUG(advance < std::numeric_limits<decltype(n.advance)>::max());
     n.advance = static_cast<decltype(n.advance)>(advance);
     if (n.advance == 1) { // leaf-node
@@ -259,7 +259,7 @@ void VoxelOctree::makeSubarray(const Vector3& center,
     auto index = vector.size();
     vector.push_back({});
     {
-        auto& n = vector.at(index);
+        auto& n = vector[index];
         constexpr float q = float(std::numeric_limits<uint16_t>::max());
         n.x = static_cast<uint16_t>(center.x * q);
         n.y = static_cast<uint16_t>(center.y * q);
@@ -301,7 +301,7 @@ void VoxelOctree::makeSubarray(const Vector3& center,
     }
     
     auto advance = (vector.size() - index);
-    auto& n = vector.at(index);
+    auto& n = vector[index];
     FVASSERT_DEBUG(advance < std::numeric_limits<decltype(n.advance)>::max());
     n.advance = static_cast<decltype(n.advance)>(advance);
     if (n.advance == 1) { // leaf-node
@@ -317,7 +317,7 @@ void VoxelOctree::makeSubarray(const Vector3& center,
     auto index = vector.size();
     vector.push_back({});
     {
-        auto& n = vector.at(index);
+        auto& n = vector[index];
         constexpr float q = float(std::numeric_limits<uint16_t>::max());
         n.x = static_cast<uint16_t>(center.x * q);
         n.y = static_cast<uint16_t>(center.y * q);
@@ -333,7 +333,7 @@ void VoxelOctree::makeSubarray(const Vector3& center,
         });
     }
     auto advance = (vector.size() - index);
-    auto& n = vector.at(index);
+    auto& n = vector[index];
     FVASSERT_DEBUG(advance < std::numeric_limits<decltype(n.advance)>::max());
     n.advance = static_cast<decltype(n.advance)>(advance);
     if (n.advance == 1) { // leaf-node
@@ -373,7 +373,7 @@ VolumeArray VoxelOctree::makeArray(uint32_t maxDepth,
             auto index = vector.size();
             vector.push_back({});
             {
-                auto& n = vector.at(index);
+                auto& n = vector[index];
                 constexpr float q = float(std::numeric_limits<uint16_t>::max());
                 n.x = static_cast<uint16_t>(center.x * q);
                 n.y = static_cast<uint16_t>(center.y * q);
@@ -390,7 +390,7 @@ VolumeArray VoxelOctree::makeArray(uint32_t maxDepth,
                 });
             }
             auto advance = (vector.size() - index);
-            auto& n = vector.at(index);
+            auto& n = vector[index];
             FVASSERT_DEBUG(advance < std::numeric_limits<decltype(n.advance)>::max());
             n.advance = static_cast<decltype(n.advance)>(advance);
             if (n.advance == 1) { // leaf-node
@@ -427,7 +427,7 @@ VolumeArray VoxelOctree::makeSubarray(const Vector3& center,
             auto index = vector.size();
             vector.push_back({});
             {
-                auto& n = vector.at(index);
+                auto& n = vector[index];
                 constexpr float q = float(std::numeric_limits<uint16_t>::max());
                 n.x = static_cast<uint16_t>(center.x * q);
                 n.y = static_cast<uint16_t>(center.y * q);
@@ -444,7 +444,7 @@ VolumeArray VoxelOctree::makeSubarray(const Vector3& center,
                 });
             }
             auto advance = (vector.size() - index);
-            auto& n = vector.at(index);
+            auto& n = vector[index];
             FVASSERT_DEBUG(advance < std::numeric_limits<decltype(n.advance)>::max());
             n.advance = static_cast<decltype(n.advance)>(advance);
             if (n.advance == 1) { // leaf-node
