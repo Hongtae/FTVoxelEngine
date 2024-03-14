@@ -6,7 +6,7 @@ using namespace FV;
 
 class Renderer {
 public:
-    virtual ~Renderer() {}
+    virtual ~Renderer() = default;
 
     virtual void initialize(std::shared_ptr<GraphicsDeviceContext>, std::shared_ptr<SwapChain>, PixelFormat) = 0;
     virtual void finalize() = 0;

@@ -8,7 +8,7 @@ namespace FV {
     class GraphicsDevice;
     class ShaderFunction {
     public:
-        virtual ~ShaderFunction() {}
+        virtual ~ShaderFunction() = default;
 
         struct Constant {
             std::string name;

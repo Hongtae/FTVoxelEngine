@@ -43,7 +43,7 @@ namespace FV {
     class GraphicsDevice;
     class DepthStencilState {
     public:
-        virtual ~DepthStencilState() {}
+        virtual ~DepthStencilState() = default;
         virtual std::shared_ptr<GraphicsDevice> device() const = 0;
     };
 }

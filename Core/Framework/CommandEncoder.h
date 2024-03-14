@@ -7,7 +7,7 @@ namespace FV {
     class CommandBuffer;
     class CommandEncoder {
     public:
-        virtual ~CommandEncoder() {}
+        virtual ~CommandEncoder() = default;
 
         virtual void endEncoding() = 0;
         virtual bool isCompleted() const = 0;

@@ -23,7 +23,7 @@ namespace FV {
 
     class CopyCommandEncoder : public CommandEncoder {
     public:
-        virtual ~CopyCommandEncoder() {}
+        virtual ~CopyCommandEncoder() = default;
 
         virtual void copy(std::shared_ptr<GPUBuffer> src,
                           size_t srcOffset,

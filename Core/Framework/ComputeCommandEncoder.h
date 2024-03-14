@@ -7,7 +7,7 @@
 namespace FV {
     class ComputeCommandEncoder : public CommandEncoder {
     public:
-        virtual ~ComputeCommandEncoder() {}
+        virtual ~ComputeCommandEncoder() = default;
 
         virtual void setResource(uint32_t set, std::shared_ptr<ShaderBindingSet>) = 0;
         virtual void setComputePipelineState(std::shared_ptr<ComputePipelineState>) = 0;

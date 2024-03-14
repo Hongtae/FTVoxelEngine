@@ -22,7 +22,7 @@ namespace FV {
         std::map<VkSemaphore, TimelineSemaphoreStageValue> waitSemaphores;
         std::map<VkSemaphore, TimelineSemaphoreStageValue> signalSemaphores;
 
-        virtual ~VulkanCommandEncoder() {}
+        virtual ~VulkanCommandEncoder() = default;
         virtual bool encode(VkCommandBuffer) = 0;
 
         void addWaitSemaphore(VkSemaphore semaphore, uint64_t value, VkPipelineStageFlags2 flags) {

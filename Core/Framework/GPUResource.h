@@ -9,11 +9,11 @@ namespace FV {
 
     class GPUEvent {
     public:
-        virtual ~GPUEvent() {}
+        virtual ~GPUEvent() = default;
     };
 
     class GPUSemaphore {
     public:
-        virtual ~GPUSemaphore() {}
+        virtual ~GPUSemaphore() = default;
     };
 }

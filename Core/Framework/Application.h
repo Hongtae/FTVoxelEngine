@@ -19,7 +19,7 @@ namespace FV {
             UserTemp,			// temporary directory for current user.
         };
 
-        virtual ~Application() {}
+        virtual ~Application() = default;
 
         virtual void initialize() {}
         virtual void finalize() {}

@@ -12,7 +12,7 @@ namespace FV {
     class GraphicsDevice;
     class ComputePipelineState {
     public:
-        virtual ~ComputePipelineState() {}
+        virtual ~ComputePipelineState() = default;
         virtual std::shared_ptr<GraphicsDevice> device() const = 0;
     };
 }

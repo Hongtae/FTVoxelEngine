@@ -29,7 +29,7 @@ namespace FV {
 
     class RenderCommandEncoder : public CommandEncoder {
     public:
-        virtual ~RenderCommandEncoder() {}
+        virtual ~RenderCommandEncoder() = default;
 
         virtual void setResource(uint32_t set, std::shared_ptr<ShaderBindingSet>) = 0;
         virtual void setViewport(const Viewport&) = 0;

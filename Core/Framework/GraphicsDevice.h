@@ -16,7 +16,7 @@
 namespace FV {
     class GraphicsDevice {
     public:
-        virtual ~GraphicsDevice() {}
+        virtual ~GraphicsDevice() = default;
 
         virtual std::string deviceName() const = 0;
 

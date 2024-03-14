@@ -5,7 +5,7 @@ namespace FV {
     class GraphicsDevice;
     class GPUBuffer {
     public:
-        virtual ~GPUBuffer() {}
+        virtual ~GPUBuffer() = default;
 
         enum StorageMode {
             StorageModeShared = 0,	// accessible to both the CPU and the GPU

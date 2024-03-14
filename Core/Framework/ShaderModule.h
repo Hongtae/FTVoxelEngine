@@ -12,7 +12,7 @@ namespace FV {
 
     class ShaderModule {
     public:
-        virtual ~ShaderModule() {}
+        virtual ~ShaderModule() = default;
 
         virtual std::shared_ptr<ShaderFunction> makeFunction(const std::string& name) = 0;
         virtual std::shared_ptr<ShaderFunction> makeSpecializedFunction(const std::string& name, const std::vector<ShaderSpecialization>& constantValues) = 0;

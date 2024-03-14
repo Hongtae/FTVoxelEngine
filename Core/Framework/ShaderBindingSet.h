@@ -21,7 +21,7 @@ namespace FV {
 
     class ShaderBindingSet {
     public:
-        virtual ~ShaderBindingSet() {}
+        virtual ~ShaderBindingSet() = default;
 
         struct BufferInfo {
             std::shared_ptr<GPUBuffer> buffer;

@@ -48,7 +48,7 @@ namespace FV {
     class GraphicsDevice;
     class SamplerState {
     public:
-        virtual ~SamplerState() {}
+        virtual ~SamplerState() = default;
         virtual std::shared_ptr<GraphicsDevice> device() const = 0;
     };
 }

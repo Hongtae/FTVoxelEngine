@@ -8,7 +8,7 @@ namespace FV {
     class CommandQueue;
     class SwapChain {
     public:
-        virtual ~SwapChain() {}
+        virtual ~SwapChain() = default;
 
         virtual PixelFormat pixelFormat() const = 0;
         virtual void setPixelFormat(PixelFormat) = 0;

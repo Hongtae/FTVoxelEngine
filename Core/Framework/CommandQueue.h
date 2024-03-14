@@ -15,7 +15,7 @@ namespace FV {
             Compute = 1 << 1,
         };
 
-        virtual ~CommandQueue() {}
+        virtual ~CommandQueue() = default;
 
         virtual std::shared_ptr<CommandBuffer> makeCommandBuffer() = 0;
         virtual std::shared_ptr<SwapChain> makeSwapChain(std::shared_ptr<Window>) = 0;

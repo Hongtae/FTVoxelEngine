@@ -9,7 +9,7 @@ namespace FV {
     class CommandQueue;
     class CommandBuffer {
     public:
-        virtual ~CommandBuffer() {}
+        virtual ~CommandBuffer() = default;
 
         virtual std::shared_ptr<RenderCommandEncoder> makeRenderCommandEncoder(const RenderPassDescriptor&) = 0;
         virtual std::shared_ptr<ComputeCommandEncoder> makeComputeCommandEncoder() = 0;

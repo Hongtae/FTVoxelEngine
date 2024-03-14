@@ -12,7 +12,7 @@ namespace {
     class StreamSource {
     public:
         StreamSource() {}
-        virtual ~StreamSource() {}
+        virtual ~StreamSource() = default;
 
         virtual uint64_t setPosition(uint64_t) = 0;
         virtual uint64_t getPosition() = 0;

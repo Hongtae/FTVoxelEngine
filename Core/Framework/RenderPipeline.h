@@ -64,7 +64,7 @@ namespace FV {
     class GraphicsDevice;
     class RenderPipelineState {
     public:
-        virtual ~RenderPipelineState() {}
+        virtual ~RenderPipelineState() = default;
         virtual std::shared_ptr<GraphicsDevice> device() const = 0;
     };
 }
