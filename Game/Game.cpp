@@ -16,7 +16,6 @@ bool hideUI = false;
 
 struct App : public Application {
     std::shared_ptr<Window> window;
-    std::jthread renderThread;
     std::atomic<bool> isVisible;
 
     std::shared_ptr<GraphicsDeviceContext> graphicsContext;
@@ -27,6 +26,9 @@ struct App : public Application {
     UIRenderer* uiRenderer;
     VolumeRenderer* volumeRenderer;
     std::vector<std::shared_ptr<Renderer>> renderers;
+
+    std::atomic_flag running;
+    std::atomic_flag renderThread;
 
     void initialize() override {
         appResourcesRoot = environmentPath(EnvironmentPath::AppRoot) / "Game.Resources";
@@ -41,8 +43,8 @@ struct App : public Application {
                     }
                 },
                 .closeRequest { [this](Window*) {
-                    renderThread.request_stop();
                     terminate(1234);
+                    running.clear();
                     return true;
                 }
             },
@@ -78,11 +80,14 @@ struct App : public Application {
         graphicsContext = GraphicsDeviceContext::makeDefault();
         commandQueue = graphicsContext->commandQueue(CommandQueue::Render | CommandQueue::Compute);
 
-        renderThread = std::jthread([this](auto stop) { renderLoop(stop); });
+        running.test_and_set();
+        renderThread.test_and_set();
+        detachedTask(renderLoop());
     }
 
     void finalize() override {
-        renderThread.join();
+        running.clear();
+        renderThread.wait(true);
 
         renderers.clear();
         uiRenderer = nullptr;
@@ -362,7 +367,7 @@ struct App : public Application {
     std::mutex mutex;
     std::unordered_set<VirtualKey> pressingKeys;
 
-    void renderLoop(std::stop_token stop) {
+    Async<> renderLoop() {
         auto swapchain = commandQueue->makeSwapChain(window);
         if (swapchain == nullptr)
             throw std::runtime_error("swapchain creation failed");
@@ -391,7 +396,7 @@ struct App : public Application {
         auto timestamp = std::chrono::high_resolution_clock::now();
         double delta = 0.0;
 
-        while (stop.stop_requested() == false) {
+        while (running.test()) {
             {
                 auto t = std::chrono::high_resolution_clock::now();
                 std::chrono::duration<double> d = t - timestamp;
@@ -488,6 +493,7 @@ struct App : public Application {
                 }
 
                 swapchain->present();
+                co_await asyncYield();
             } while (0);
 
 #if 0
@@ -503,6 +509,10 @@ struct App : public Application {
         for (auto& renderer : this->renderers) {
             renderer->finalize();
         }
+        Log::info("Render thread terminated.");
+        renderThread.clear();
+        renderThread.notify_all();
+        co_return;
     }
 
     void onWindowEvent(const Window::WindowEvent& event) {

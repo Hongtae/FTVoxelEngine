@@ -1,4 +1,8 @@
+#include <deque>
+#include <unordered_map>
+#include <unordered_set>
 #include "DispatchQueue.h"
+
 #ifdef _WIN32
 #include <Windows.h>
 #endif
@@ -116,328 +120,279 @@ namespace {
 using namespace FV;
 
 namespace {
-    // cond, mutex for AsyncTask client waiting, thread registration locking
-    std::condition_variable globalDispatchCond;
-    std::mutex globalDispatchMutex;
-
-    struct ThreadDispatcher {
-        std::thread::id threadID;
-        std::weak_ptr<DispatchQueue::_Dispatcher> dispatcher;
-    };
-    std::thread::id mainThreadID = {};
-    std::vector<ThreadDispatcher> threadDispatcher;
-    std::weak_ptr<DispatchQueue::_Dispatcher> mainDispatcher;
-
-    void setThreadDispatcher(std::shared_ptr<DispatchQueue::_Dispatcher> dispatcher) {
-        std::thread::id threadID = std::this_thread::get_id();
-        std::unique_lock lock(globalDispatchMutex);
-        if (auto it = std::find_if(
-            threadDispatcher.begin(),
-            threadDispatcher.end(),
-            [threadID](auto&& it) {
-                return it.threadID == threadID;
-            }); it != threadDispatcher.end()) {
-            if (dispatcher)
-                it->dispatcher = dispatcher;
-            else
-                threadDispatcher.erase(it);
-        } else {
-                if (dispatcher) {
-                    threadDispatcher.push_back(ThreadDispatcher{ threadID, dispatcher });
-                }
-            }
-            globalDispatchCond.notify_all();
-    }
-
-    std::shared_ptr<DispatchQueue::_Dispatcher> getLocalDispatcher(std::unique_lock<std::mutex>& lock) {
-        FVASSERT_DEBUG(lock.mutex() == &globalDispatchMutex);
-        FVASSERT_DEBUG(lock.owns_lock());
-
-        std::thread::id threadID = std::this_thread::get_id();
-        if (threadID == mainThreadID) {
-            if (auto dp = mainDispatcher.lock())
-                return dp;
-        }
-        if (auto it = std::find_if(
-            threadDispatcher.begin(),
-            threadDispatcher.end(),
-            [threadID](auto&& it) {
-                return it.threadID == threadID;
-            }); it != threadDispatcher.end()) {
-            if (auto dp = it->dispatcher.lock())
-                return dp;
-        }
-        return nullptr;
-    }
-
-    std::shared_ptr<DispatchQueue::_Dispatcher> getLocalDispatcher() {
-        std::unique_lock lock(globalDispatchMutex);
-    }
-
-    class AsyncTaskImpl : public AsyncTask {
-    public:
-        AsyncTaskImpl(std::function<void()>& task, State st)
-            : _op(task), _state(st) {
-        }
-        std::function<void()> _op;
-        State _state;
-
-        State state() const override {
-            std::unique_lock lock(globalDispatchMutex);
-            return _state;
-        }
-        void setState(State st) {
-            std::unique_lock lock(globalDispatchMutex);
-            _state = st;
-        }
-        bool wait() const override {
-            std::unique_lock lock(globalDispatchMutex);
-            auto st = _state;
-            while (st != StateCompleted && st != StateCancelled) {
-                if (auto dp = getLocalDispatcher(lock); dp) {
-                    lock.unlock();
-                    dp->dispatch();
-                    lock.lock();
-                } else {
-                    globalDispatchCond.wait(lock);
-                }
-                st = _state;
-            }
-            return st == StateCompleted;
-        }
-        static bool waitAny(std::vector<AsyncTaskImpl*> tasks) {
-            if (tasks.empty() == false) {
-                std::unique_lock lock(globalDispatchMutex);
-                do {
-                    for (auto& task : tasks) {
-                        auto st = task->_state;
-                        if (st == AsyncTask::StateCancelled || st == AsyncTask::StateCompleted) {
-                            return st == AsyncTask::StateCompleted;
-                        }
-                    }
-                    if (auto dp = getLocalDispatcher(lock); dp) {
-                        lock.unlock();
-                        dp->dispatch();
-                        lock.lock();
-                    } else {
-                        globalDispatchCond.wait(lock);
-                    }
-                } while (true);
-            }
-            return true;
-        }
-        static bool waitAll(std::vector<AsyncTaskImpl*> tasks) {
-            if (tasks.empty() == false) {
-                std::unique_lock lock(globalDispatchMutex);
-                do {
-                    std::optional<bool> result = {};
-                    for (auto& task : tasks) {
-                        auto st = task->_state;
-                        if (st == AsyncTask::StateCompleted) {
-                            if (result.has_value() == false)
-                                result = true;
-                        } else if (st == AsyncTask::StateCancelled) {
-                            result = false;
-                        } else {
-                            result.reset();
-                            break;
-                        }
-                    }
-                    if (result.has_value())
-                        return result.value();
-
-                    if (auto dp = getLocalDispatcher(lock); dp) {
-                        lock.unlock();
-                        dp->dispatch();
-                        lock.lock();
-                    } else {
-                        globalDispatchCond.wait(lock);
-                    }
-                } while (true);
-            }
-            return true;
+    static bool _initializedLocalStorage;
+    struct _local { // linkage local storage
+        std::unordered_map<std::thread::id, std::weak_ptr<DispatchQueue::_Dispatcher>> dispatchers;
+        std::weak_ptr<DispatchQueue::_Dispatcher> mainDispatcher;
+        std::thread::id mainThreadID;
+        std::mutex mutex;
+        std::unordered_set<std::coroutine_handle<>> detachedCoroutines;
+        std::unordered_map<std::thread::id, std::vector<std::function<void()>>> threadLocalDeferred;
+        _local() { _initializedLocalStorage = true; }
+        ~_local() { _initializedLocalStorage = false; }
+        _local(_local&) = delete;
+        _local(_local&&) = delete;
+        static _local& get() {
+            static _local local{};
+            return local;
         }
     };
 
     class Dispatcher : public DispatchQueue::_Dispatcher {
     public:
-        std::vector<std::shared_ptr<AsyncTaskImpl>> tasks;
-        // cond, mutex for enqueued tasks
-        std::condition_variable cond;
-        std::mutex mutex;
-
-        std::shared_ptr<AsyncTask> enqueue(DispatchQueue::Task& t) override {
-            auto task = std::make_shared<AsyncTaskImpl>(t, AsyncTask::StatePending);
-            std::unique_lock lock(mutex);
-            tasks.push_back(task);
-            cond.notify_all();
-            return task;
-        }
+        using Clock = std::chrono::steady_clock;
+        struct Task {
+            std::coroutine_handle<> coroutine;
+            std::chrono::time_point<Clock> timepoint;
+        };
+        std::deque<Task> tasks;
+        struct {
+            std::mutex mutex;
+            std::condition_variable cv;
+        } cond;
 
         uint32_t dispatch() override {
-            std::shared_ptr<AsyncTaskImpl> task;
-            std::unique_lock lock(mutex);
-            if (tasks.empty() == false) {
-                task = tasks.front();
-                tasks.erase(tasks.begin());
-            }
-            if (task && task->state() == AsyncTask::StatePending) {
-                task->setState(AsyncTask::StateProcessing);
+            uint32_t fetch = 0;
+            Task task{};
+            do {
+                auto lock = std::scoped_lock{ cond.mutex };
+                if (tasks.empty() == false &&
+                    tasks.front().timepoint <= Clock::now()) {
+                    task = tasks.front();
+                    tasks.pop_front();
+                    fetch += 1;
+                }
+            } while (0);
+            if (task.coroutine) {
+                task.coroutine.resume();
 
-                if (task->_op) {
-                    lock.unlock();
-                    task->_op();
-                    lock.lock();
-                }
-                task->_op = nullptr;
-                task->setState(AsyncTask::StateCompleted);
-                globalDispatchCond.notify_all();
-                return 1;
-            }
-            return 0;
-        }
-        void cancelAllTasks() override {
-            std::vector<DispatchQueue::Task> ops;
-            std::unique_lock lock(mutex);
-            for (auto& task : tasks) {
-                if (task->_state == AsyncTask::StatePending) {
-                    task->_state = AsyncTask::StateCancelled;
-                    // temporary save to avoid immediate destruction
-                    ops.push_back(task->_op);
-                    task->_op = nullptr;
+                if (task.coroutine.done()) {
+                    auto& local = _local::get();
+                    auto lock = std::scoped_lock{ local.mutex };
+                    if (local.detachedCoroutines.contains(task.coroutine)) {
+                        local.detachedCoroutines.erase(task.coroutine);
+                        task.coroutine.destroy();
+                    }
                 }
             }
-            lock.unlock();
-            globalDispatchCond.notify_all();
-            // tasks will be destroyed afterwards
+            std::vector<std::function<void()>> deferred;
+            do {
+                auto& local = _local::get();
+                auto lock = std::scoped_lock{ local.mutex };
+                if (auto it = local.threadLocalDeferred.find(std::this_thread::get_id());
+                    it != local.threadLocalDeferred.end()) {
+                    it->second.swap(deferred);
+                    it->second.clear();
+                }
+            } while (0);
+            std::ranges::for_each(deferred, [](auto&& fn) { fn(); });
+            return fetch;
         }
+
+        void enqueue(std::coroutine_handle<> coro) override {
+            auto tp = Clock::now();
+            auto lock = std::unique_lock{ cond.mutex };
+            auto pos = std::lower_bound(tasks.begin(), tasks.end(), tp,
+                                        [](const auto& value, const auto& tp) {
+                return value.timepoint < tp;
+            });
+            tasks.emplace(pos, coro, tp);
+            cond.cv.notify_all();
+        }
+
+        void enqueue(std::coroutine_handle<> coro, double t) override {
+            auto offset = std::chrono::duration<double>(std::max(t, 0.0));
+            auto timepoint = Clock::now() + offset;
+            auto tp = std::chrono::time_point_cast<Clock::duration>(timepoint);
+            auto lock = std::unique_lock{ cond.mutex };
+            auto pos = std::lower_bound(tasks.begin(), tasks.end(), tp,
+                                        [](const auto& value, const auto& tp) {
+                return value.timepoint < tp;
+            });
+            tasks.emplace(pos, coro, tp);
+            cond.cv.notify_all();
+        }
+
+        void detach(std::coroutine_handle<> coro) override {
+            if (coro) {
+                enqueue(coro);
+                auto& local = _local::get();
+                auto lock = std::unique_lock{ local.mutex };
+                local.detachedCoroutines.insert(coro);
+            }
+        }
+
         void wait() override {
-            std::unique_lock lock(mutex);
-            cond.wait(lock);
+            auto lock = std::unique_lock{ cond.mutex };
+            if (tasks.empty() == false) {
+                std::chrono::duration<double> interval = tasks.front().timepoint - Clock::now();
+                if (interval.count() > 0)
+                    cond.cv.wait_for(lock, interval);
+            } else {
+                cond.cv.wait(lock);
+            }
         }
+
+        bool wait(double timeout) override {
+            auto offset = std::chrono::duration<double>(std::max(timeout, 0.0));
+            auto tp = std::chrono::time_point_cast<Clock::duration>(Clock::now() + offset);
+            auto lock = std::unique_lock{ cond.mutex };
+            if (tasks.empty() == false && tasks.front().timepoint < tp) {
+                std::chrono::duration<double> interval = tasks.front().timepoint - Clock::now();
+                if (interval.count() > 0) {
+                    cond.cv.wait_for(lock, interval);
+                }
+                return true;
+            }
+            return cond.cv.wait_until(lock, tp) == std::cv_status::no_timeout;
+        }
+
         void notify() override {
-            cond.notify_all();
+            cond.cv.notify_all();
+        }
+
+        bool isMain() const override {
+            return _local::get().mainDispatcher.lock().get() == this;
         }
     };
-}
 
-void setDispatchQueueMainThread() {
-    std::unique_lock lock(globalDispatchMutex);
-    mainThreadID = std::this_thread::get_id();
-}
-
-DispatchQueue::DispatchQueue(_DispatchQueueMain)
-    : maxConcurrentQueues(1) {
-    this->dispatcher = std::make_shared<Dispatcher>();
-    mainDispatcher = this->dispatcher;
-}
-
-bool AsyncTask::waitAny(std::vector<std::shared_ptr<AsyncTask>> tasks) {
-    std::vector<AsyncTaskImpl*> tasks2;
-    tasks2.reserve(tasks.size());
-    for (auto& item : tasks) {
-        if (item.get() == nullptr) continue;
-        auto p = std::dynamic_pointer_cast<AsyncTaskImpl>(item).get();
-        if (p == nullptr) { throw std::runtime_error("Type error!"); }
-        tasks2.push_back(p);
-    }
-    return AsyncTaskImpl::waitAny(tasks2);
-}
-
-bool AsyncTask::waitAll(std::vector<std::shared_ptr<AsyncTask>> tasks) {
-    std::vector<AsyncTaskImpl*> tasks2;
-    tasks2.reserve(tasks.size());
-    for (auto& item : tasks) {
-        if (item.get() == nullptr) continue;
-        auto p = std::dynamic_pointer_cast<AsyncTaskImpl>(item).get();
-        if (p == nullptr) { throw std::runtime_error("Type error!"); }
-        tasks2.push_back(p);
-    }
-    return AsyncTaskImpl::waitAll(tasks2);
-}
-
-DispatchQueue::DispatchQueue(uint32_t q)
-    : maxConcurrentQueues(q) {
-
-    this->dispatcher = std::make_shared<Dispatcher>();
-    auto threadProc = [this](std::stop_token token) {
-        setThreadDispatcher(this->dispatcher);
-        while (token.stop_requested() == false) {
-            if (dispatcher->dispatch() == 0) {
-                dispatcher->wait();
+    void setThreadDispatcher(std::shared_ptr<DispatchQueue::_Dispatcher> dispatcher) {
+        auto threadID = std::this_thread::get_id();
+        auto& local = _local::get();
+        auto lock = std::unique_lock{ local.mutex };
+        if (dispatcher) {
+            local.dispatchers.emplace(threadID, dispatcher);
+        } else {
+            if (_initializedLocalStorage) {
+                local.dispatchers.erase(threadID);
+                local.threadLocalDeferred.erase(threadID);
+            } else {
+                // app is begin terminated or unloading DLL. do nothing.
             }
+        }
+    }
+
+    std::shared_ptr<DispatchQueue::_Dispatcher> getThreadDispatcher(std::thread::id threadID) {
+        if (threadID != std::thread::id()) {
+            auto& local = _local::get();
+            auto lock = std::unique_lock{ local.mutex };
+
+            if (threadID == local.mainThreadID) {
+                return local.mainDispatcher.lock();
+            }
+            if (auto iter = local.dispatchers.find(threadID);
+                iter != local.dispatchers.end()) {
+                return iter->second.lock();
+            }
+        }
+        return nullptr;
+    }
+}
+
+namespace FV {
+    void setDispatchQueueMainThread() {
+        auto& local = _local::get();
+        auto lock = std::unique_lock{ local.mutex };
+        local.mainThreadID = std::this_thread::get_id();
+        lock.unlock();
+    }
+
+    void _threadLocalDeferred(std::function<void()> fn) {
+        if (fn) {
+            auto& local = _local::get();
+            auto lock = std::unique_lock{ local.mutex };
+            local.threadLocalDeferred[std::this_thread::get_id()].push_back(fn);
+        }
+    }
+}
+
+DispatchQueue::DispatchQueue(_mainQueue) noexcept
+    : _numThreads(1) {
+    this->_dispatcher = std::make_shared<Dispatcher>();
+    auto& local = _local::get();
+    auto lock = std::unique_lock{ local.mutex };
+    local.mainDispatcher = this->_dispatcher;
+}
+
+DispatchQueue::DispatchQueue(uint32_t maxThreads) noexcept
+    : _numThreads(std::max(maxThreads, 1U)) {
+    _dispatcher = std::make_shared<Dispatcher>();
+
+    auto work = [this](std::stop_token token) {
+        setThreadDispatcher(_dispatcher);
+        while (token.stop_requested() == false) {
+            if (_dispatcher->dispatch() == 0)
+                _dispatcher->wait();
         }
         setThreadDispatcher(nullptr);
     };
 
-    for (uint32_t i = 0; i < q; ++i) {
-        auto t = std::jthread(threadProc);
-        threads.push_back(std::move(t));
-    }
+    this->_threads.reserve(_numThreads);
+    for (uint32_t i = 0; i < _numThreads; ++i)
+        this->_threads.push_back(std::jthread(work));
 }
 
-DispatchQueue::~DispatchQueue() {
+DispatchQueue::DispatchQueue(DispatchQueue&& tmp) noexcept
+    : _threads(std::move(tmp._threads))
+    , _dispatcher(std::move(tmp._dispatcher))
+    , _numThreads(tmp._numThreads) {
+    tmp._threads.clear();
+    tmp._dispatcher = {};
+    tmp._numThreads = 0;
+}
 
-    dispatcher->cancelAllTasks();
+DispatchQueue& DispatchQueue::operator = (DispatchQueue&& tmp) noexcept {
+    shutdown();
+    this->_threads = std::move(tmp._threads);
+    this->_dispatcher = std::move(tmp._dispatcher);
+    this->_numThreads = tmp._numThreads;
+    tmp._threads.clear();
+    tmp._dispatcher = {};
+    tmp._numThreads = 0;
+    return *this;
+}
 
-    if (threads.empty() == false) {
-        for (auto& t : threads)
+void DispatchQueue::shutdown() noexcept {
+    if (_threads.empty() == false) {
+        for (auto& t : _threads)
             t.request_stop();
-        dispatcher->notify();
-        for (auto& t : threads)
+
+        _dispatcher->notify();
+
+        for (auto& t : _threads)
             t.join();
     }
+    _threads.clear();
+    _dispatcher = nullptr;
+    _numThreads = 0;
 }
 
-DispatchQueue& DispatchQueue::main() {
-    static DispatchQueue queue(_DispatchQueueMain{});
+DispatchQueue& DispatchQueue::main() noexcept {
+    static DispatchQueue queue(_mainQueue{});
     return queue;
 }
 
-DispatchQueue& DispatchQueue::global() {
-    static DispatchQueue queue(std::max(numberOfCPUCores() - 1, 2U));
+DispatchQueue& DispatchQueue::global() noexcept {
+    static uint32_t maxThreads =
+#ifdef CPP_CORO_DISPATCHQUEUE_MAX_GLOBAL_THREADS
+    (uint32_t)std::max(int(CPP_CORO_DISPATCHQUEUE_MAX_GLOBAL_THREADS), 1);
+#else
+        std::max(std::jthread::hardware_concurrency(), 3U) - 1;
+#endif
+    static DispatchQueue queue(maxThreads);
     return queue;
 }
 
-std::shared_ptr<AsyncTask> DispatchQueue::async(Task fn) {
-    auto task = dispatcher->enqueue(fn);
-    notifyHook(fn);
-    return task;
+std::shared_ptr<DispatchQueue::_Dispatcher>
+DispatchQueue::threadDispatcher(std::thread::id threadID) noexcept {
+    return getThreadDispatcher(threadID);
 }
 
-void DispatchQueue::yield() {
-    dispatcher->dispatch();
+std::shared_ptr<DispatchQueue::_Dispatcher>
+DispatchQueue::localDispatcher() noexcept {
+    return getThreadDispatcher(std::this_thread::get_id());
 }
 
-uint32_t DispatchQueue::dispatch() {
-    return dispatcher->dispatch();
-}
-
-void DispatchQueue::setHook(const void* key, std::function<void(Task&)> fn) {
-    std::unique_lock lock(mutex);
-    if (auto it = std::find_if(
-        hooks.begin(), hooks.end(), [key](auto&& it) { return it.key == key; });
-        it != hooks.end()) {
-        if (fn) {
-            it->notify = fn;
-        } else {
-            hooks.erase(it);
-        }
-    } else {
-        if (fn)
-            hooks.push_back({ key, fn });
-    }
-}
-
-void DispatchQueue::unsetHook(const void* key) {
-    setHook(key, nullptr);
-}
-
-void DispatchQueue::notifyHook(Task& t) const {
-    std::unique_lock lock(mutex);
-    auto hooksCopy = hooks;
-    lock.unlock();
-    for (auto& h : hooksCopy) {
-        h.notify(t);
-    }
+bool DispatchQueue::isMainThread() noexcept {
+    return std::this_thread::get_id() == _local::get().mainThreadID;
 }

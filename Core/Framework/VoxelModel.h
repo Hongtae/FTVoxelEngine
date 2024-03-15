@@ -245,7 +245,6 @@ namespace FV {
     public:
         VoxelModel(int depth);
         VoxelModel(VoxelOctreeBuilder*, int depth);
-        VoxelModel(VoxelOctreeBuilder*, int depth, DispatchQueue&);
         ~VoxelModel();
 
         void update(uint32_t x, uint32_t y, uint32_t z, const Voxel& value);

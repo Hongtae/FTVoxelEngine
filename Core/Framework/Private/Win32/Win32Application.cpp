@@ -45,9 +45,7 @@ namespace {
         return CallNextHookEx(keyboardHook, nCode, wParam, lParam);
     }
 
-    bool terminateRequested = false;
     int exitCode = 0;
-    DWORD mainThreadID = 0;
     std::mutex mainLoopLock;
 }
 
@@ -60,15 +58,13 @@ int Win32App::runApplication(Application* app) {
     auto logger = std::make_shared<Win32Logger>();
     logger->bind(false);
 
-    mainThreadID = ::GetCurrentThreadId();
+    DispatchQueue& mainQueue = dispatchMain();
 
-    DispatchQueue& mainQueue = DispatchQueue::main();
-    const void* dispatchQueueHook = &runApplication;
-    mainQueue.setHook(
-        dispatchQueueHook, [](auto fn) {
-            PostThreadMessageW(mainThreadID, WM_NULL, 0, 0);
-        });
-
+    TIMERPROC timerProc = [](HWND, UINT, UINT_PTR, DWORD) {
+        auto& dq = dispatchMain();
+        while (dq.dispatcher()->dispatch()) {}
+    };
+    auto timerID = ::SetTimer(nullptr, 0, USER_TIMER_MINIMUM, timerProc);
 
     if (::IsDebuggerPresent() == false) {
         if (keyboardHook) {
@@ -81,8 +77,8 @@ int Win32App::runApplication(Application* app) {
 
         if (installHook) {
             keyboardHook = ::SetWindowsHookExW(WH_KEYBOARD_LL,
-                                                keyboardHookProc,
-                                                GetModuleHandleW(0), 0);
+                                               keyboardHookProc,
+                                               GetModuleHandleW(0), 0);
             if (keyboardHook == nullptr) {
                 Log::error("SetWindowsHookEx Failed.");
             }
@@ -98,7 +94,6 @@ int Win32App::runApplication(Application* app) {
         Log::warning("Windows DPI-Awareness not set, please check application manifest.");
     }
 
-    terminateRequested = false;
     exitCode = 0;
 
     if (app)
@@ -117,15 +112,13 @@ int Win32App::runApplication(Application* app) {
             ::TranslateMessage(&msg);
             ::DispatchMessageW(&msg);
         }
-        while (terminateRequested == false && mainQueue.dispatch() != 0) {
-        }
-        if (terminateRequested) {
-            PostQuitMessage(0);
-        }
+        while (mainQueue.dispatcher()->dispatch() != 0) {}
     }
 
     if (app)
         app->finalize();
+
+    ::KillTimer(nullptr, timerID);
 
     auto const finalizedAt = std::chrono::system_clock::now();
     auto running = finalizedAt - initializedAt;
@@ -139,18 +132,16 @@ int Win32App::runApplication(Application* app) {
     keyboardHook = nullptr;
 
     logger->unbind();
-    mainQueue.unsetHook(dispatchQueueHook);
-    mainThreadID = 0;
 
     return exitCode;
 }
 
 void Win32App::terminateApplication(int code) {
-    DispatchQueue::main().async(
-        [&] {
-            terminateRequested = true;
-            exitCode = code;
-        });
+    detachedTask([=]()->Task<> {
+        co_await dispatchMain();
+        exitCode = code;
+        PostQuitMessage(0);
+    }());
 }
 
 std::vector<std::u8string> Win32App::commandLineArguments() {
