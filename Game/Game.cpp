@@ -30,6 +30,8 @@ struct App : public Application {
     std::atomic_flag running;
     std::atomic_flag renderThread;
 
+    bool frameLock = true;
+
     void initialize() override {
         appResourcesRoot = environmentPath(EnvironmentPath::AppRoot) / "Game.Resources";
         Log::debug("App-Resources: \"{}\"", appResourcesRoot.generic_u8string());
@@ -496,15 +498,15 @@ struct App : public Application {
                 co_await asyncYield();
             } while (0);
 
-#if 0
-            double interval;
-            do {
-                std::this_thread::yield();
-                auto t = std::chrono::high_resolution_clock::now();
-                std::chrono::duration<double> d = t - timestamp;
-                interval = std::max(frameInterval - d.count(), 0.0);
-            } while (interval > 0.0);
-#endif
+            if (frameLock) {
+                double interval;
+                do {
+                    co_await asyncYield();
+                    auto t = std::chrono::high_resolution_clock::now();
+                    std::chrono::duration<double> d = t - timestamp;
+                    interval = frameInterval - d.count();
+                } while (interval > std::numeric_limits<double>::epsilon());
+            }
         }
         for (auto& renderer : this->renderers) {
             renderer->finalize();
