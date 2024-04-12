@@ -527,7 +527,7 @@ VoxelModel::VoxelModel(VoxelOctreeBuilder* builder, int depth)
                                 node->subdivisionMasks = 0;
                                 int n = 0;
                                 for (int i = 0; i < 8; ++i) {
-                                    if (auto* p = subdivisions[i]; p) {
+                                    if (auto* p = subdivisions[i]) {
                                         node->subdivisionMasks = node->subdivisionMasks | (1 << i);
                                         node->subdivisions[n++] = std::move(*p);
                                         delete p;
@@ -866,7 +866,7 @@ std::optional<VoxelModel::RayHitResult> VoxelModel::rayTest(const Vector3& rayOr
     if (option == CloestHit) {
         auto numHits = rayTest(
             rayOrigin, dir, [&](const auto& p2) {
-                if (rayHit.has_value()) {
+                if (rayHit) {
                     auto p1 = rayHit.value();
                     if (p2.t < p1.t) {
                         rayHit = p2;
@@ -879,7 +879,7 @@ std::optional<VoxelModel::RayHitResult> VoxelModel::rayTest(const Vector3& rayOr
     } else if (option == LongestHit) {
         auto numHits = rayTest(
             rayOrigin, dir, [&](const auto& p2) {
-                if (rayHit.has_value()) {
+                if (rayHit) {
                     auto p1 = rayHit.value();
                     if (p2.t > p1.t) {
                         rayHit = p2;

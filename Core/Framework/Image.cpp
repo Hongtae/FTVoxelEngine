@@ -252,7 +252,7 @@ std::shared_ptr<Image> Image::resample(uint32_t width, uint32_t height,
     if (width == 0 || height == 0 || format == ImagePixelFormat::Invalid)
         return nullptr;
     if (width == this->width && height == this->height && format == this->pixelFormat) {
-        if (auto p = const_cast<Image*>(this)->shared_from_this(); p)
+        if (auto p = const_cast<Image*>(this)->shared_from_this())
             return p;
         // copy
         return std::make_shared<Image>(width, height, format, data.data());
@@ -568,7 +568,7 @@ std::shared_ptr<Texture> Image::makeTexture(CommandQueue* queue, uint32_t usage)
         return nullptr;
     }
     if (imageFormat != this->pixelFormat) {
-        if (auto image = resample(imageFormat); image)
+        if (auto image = resample(imageFormat))
             return image->makeTexture(queue);
         return nullptr;
     }

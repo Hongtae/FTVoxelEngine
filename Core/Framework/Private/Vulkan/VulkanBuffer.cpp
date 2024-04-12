@@ -29,12 +29,12 @@ VulkanBuffer::VulkanBuffer(std::shared_ptr<VulkanGraphicsDevice> dev, VkBuffer b
 VulkanBuffer::~VulkanBuffer() {
     FVASSERT_DEBUG(buffer);
     vkDestroyBuffer(gdevice->device, buffer, gdevice->allocationCallbacks());
-    if (memory.has_value())
+    if (memory)
         memory.value().chunk->pool->dealloc(memory.value());
 }
 
 void* VulkanBuffer::contents() {
-    if (memory.has_value()) {
+    if (memory) {
         auto& mem = memory.value();
         auto chunk = mem.chunk;
         FVASSERT_DEBUG(chunk);
@@ -47,7 +47,7 @@ void* VulkanBuffer::contents() {
 }
 
 void VulkanBuffer::flush(size_t offset, size_t size) {
-    if (memory.has_value()) {
+    if (memory) {
         auto& mem = memory.value();
         auto chunk = mem.chunk;
         FVASSERT_DEBUG(chunk);

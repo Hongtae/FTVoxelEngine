@@ -14,7 +14,7 @@ AABBOctreeLayer::rayTest(const Vector3& rayOrigin, const Vector3& dir,
         auto numHits = rayTest(
             rayOrigin, dir,
             [&](const auto& p2) {
-                if (rayHit.has_value()) {
+                if (rayHit) {
                     auto p1 = rayHit.value();
                     auto sq1 = (p1.hitPoint - rayOrigin).magnitudeSquared();
                     auto sq2 = (p2.hitPoint - rayOrigin).magnitudeSquared();
@@ -29,7 +29,7 @@ AABBOctreeLayer::rayTest(const Vector3& rayOrigin, const Vector3& dir,
     } else if (option == LongestHit) {
         auto numHits = rayTest(
             rayOrigin, dir, [&](const auto& p2) {
-                if (rayHit.has_value()) {
+                if (rayHit) {
                     auto p1 = rayHit.value();
                     auto sq1 = (p1.hitPoint - rayOrigin).magnitudeSquared();
                     auto sq2 = (p2.hitPoint - rayOrigin).magnitudeSquared();
@@ -329,7 +329,7 @@ AABBOctree::rayTest(const Vector3& rayOrigin, const Vector3& dir, RayHitResultOp
     std::optional<RayHitResult> rayHit = {};
     if (option == CloestHit) {
         auto numHits = rayTest(rayOrigin, dir, [&](const auto& p2) {
-            if (rayHit.has_value()) {
+            if (rayHit) {
                 auto p1 = rayHit.value();
                 auto sq1 = (p1.hitPoint - rayOrigin).magnitudeSquared();
                 auto sq2 = (p2.hitPoint - rayOrigin).magnitudeSquared();
@@ -343,7 +343,7 @@ AABBOctree::rayTest(const Vector3& rayOrigin, const Vector3& dir, RayHitResultOp
         });
     } else if (option == LongestHit) {
         auto numHits = rayTest(rayOrigin, dir, [&](const auto& p2) {
-            if (rayHit.has_value()) {
+            if (rayHit) {
                 auto p1 = rayHit.value();
                 auto sq1 = (p1.hitPoint - rayOrigin).magnitudeSquared();
                 auto sq2 = (p2.hitPoint - rayOrigin).magnitudeSquared();

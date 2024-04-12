@@ -33,7 +33,7 @@ VulkanImage::VulkanImage(std::shared_ptr<VulkanGraphicsDevice> dev, const Vulkan
         layoutInfo.layout == VK_IMAGE_LAYOUT_PREINITIALIZED)
         layoutInfo.stageMaskEnd = VK_PIPELINE_STAGE_2_HOST_BIT;
 
-    FVASSERT_DEBUG(memory.has_value());
+    FVASSERT_DEBUG(memory);
     FVASSERT_DEBUG(extent.width > 0);
     FVASSERT_DEBUG(extent.height > 0);
     FVASSERT_DEBUG(extent.depth > 0);
@@ -63,7 +63,7 @@ VulkanImage::~VulkanImage() {
     if (image) {
         vkDestroyImage(gdevice->device, image, gdevice->allocationCallbacks());
     }
-    if (memory.has_value())
+    if (memory)
         memory.value().chunk->pool->dealloc(memory.value());
 }
 

@@ -23,7 +23,7 @@ void VolumeRenderer2::initialize(std::shared_ptr<GraphicsDeviceContext> gc, std:
         {
             { 0, ShaderDescriptorType::StorageTexture, 1, nullptr }, // color (rgba8)
             { 1, ShaderDescriptorType::StorageTexture, 1, nullptr }, // depth (r32f)
-        }); pso.has_value()) {
+        })) {
         clearBuffers = pso.value();
     } else {
         throw std::runtime_error("failed to load shader");
@@ -35,7 +35,7 @@ void VolumeRenderer2::initialize(std::shared_ptr<GraphicsDeviceContext> gc, std:
             { 0, ShaderDescriptorType::StorageTexture, 1, nullptr }, // color (rgba8)
             { 1, ShaderDescriptorType::StorageTexture, 1, nullptr }, // depth (r32f)
             { 2, ShaderDescriptorType::StorageBuffer, 1, nullptr },  // voxel data
-        }); pso.has_value()) {
+        })) {
         raycastVoxel = pso.value();
     } else {
         throw std::runtime_error("failed to load shader");
@@ -109,7 +109,7 @@ std::optional<VolumeRenderer2::PipelineState> VolumeRenderer2::loadPipeline(
     if (Shader shader(path); shader.validate()) {
         Log::info("Shader description: \"{}\"", path.generic_u8string());
         printShaderReflection(shader);
-        if (auto module = device->makeShaderModule(shader); module) {
+        if (auto module = device->makeShaderModule(shader)) {
             auto names = module->functionNames();
             fn = module->makeFunction(names.front());
             auto groupSize = shader.threadgroupSize();
@@ -246,7 +246,7 @@ void VolumeRenderer2::render(const RenderPassDescriptor&, const Rect& frame) {
 
         // clear
         auto cbuffer = queue->makeCommandBuffer();
-        if (auto encoder = cbuffer->makeComputeCommandEncoder(); encoder) {
+        if (auto encoder = cbuffer->makeComputeCommandEncoder()) {
             encoder->setComputePipelineState(clearBuffers.pso);
             encoder->setResource(0, clearBuffers.bindingSet);
             encoder->dispatch(width / clearBuffers.threadgroupSize.x,

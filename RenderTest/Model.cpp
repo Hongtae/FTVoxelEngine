@@ -31,7 +31,7 @@ std::shared_ptr<GPUBuffer> makeBuffer(CommandBuffer* cbuffer, size_t length, con
     if (storageMode == GPUBuffer::StorageModeShared) {
         buffer = device->makeBuffer(length, storageMode, cpuCacheMode);
         FVASSERT(buffer);
-        if (auto p = buffer->contents(); p) {
+        if (auto p = buffer->contents()) {
             memcpy(p, data, length);
             buffer->flush();
         } else {
@@ -44,7 +44,7 @@ std::shared_ptr<GPUBuffer> makeBuffer(CommandBuffer* cbuffer, size_t length, con
                                             GPUBuffer::StorageModeShared,
                                             CPUCacheModeWriteCombined);
         FVASSERT(stgBuffer);
-        if (auto p = stgBuffer->contents(); p) {
+        if (auto p = stgBuffer->contents()) {
             memcpy(p, data, length);
             stgBuffer->flush();
         } else {
@@ -140,7 +140,7 @@ void loadImages(LoaderContext& context) {
             continue;
         }
         auto image = std::make_shared<Image>(width, height, imageFormat, glTFImage.image.data());
-        if (auto texture = image->makeTexture(context.queue); texture) {
+        if (auto texture = image->makeTexture(context.queue)) {
             context.images.at(index) = texture;
         } else {
             Log::error("Failed to load image: {}", glTFImage.name);
@@ -552,7 +552,7 @@ std::optional<MaterialShaderMap::Function> loadShader(std::filesystem::path path
     if (Shader shader(path); shader.validate()) {
         Log::info("Shader description: \"{}\"", path.generic_u8string());
         printShaderReflection(shader);
-        if (auto module = device->makeShaderModule(shader); module) {
+        if (auto module = device->makeShaderModule(shader)) {
             auto names = module->functionNames();
             auto fn = module->makeFunction(names.front());
             return MaterialShaderMap::Function { fn, shader.descriptors() };

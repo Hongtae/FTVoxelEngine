@@ -25,7 +25,7 @@ AudioDeviceContext::AudioDeviceContext(std::shared_ptr<AudioDevice> dev)
                     std::scoped_lock guard(lock);
                     activePlayers.reserve(this->players.size());
                     for (auto& wpl : this->players) {
-                        if (auto player = wpl.lock(); player)
+                        if (auto player = wpl.lock())
                             activePlayers.push_back(player);
                     }
                 }
@@ -123,7 +123,7 @@ AudioDeviceContext::~AudioDeviceContext() {
 }
 
 std::shared_ptr<AudioPlayer> AudioDeviceContext::makePlayer(std::shared_ptr<AudioStream> stream) {
-    if (auto source = device->makeSource(); source) {
+    if (auto source = device->makeSource()) {
         auto player = std::make_shared<AudioPlayer>(source, stream);
 
         std::scoped_lock guard(lock);
@@ -137,11 +137,11 @@ std::shared_ptr<AudioDeviceContext> AudioDeviceContext::makeDefault() {
     static std::weak_ptr<AudioDeviceContext> defaultCtxt;
     static std::mutex lock;
 
-    if (auto ctxt = defaultCtxt.lock(); ctxt)
+    if (auto ctxt = defaultCtxt.lock())
         return ctxt;
 
     std::scoped_lock guard(lock);
-    if (auto ctxt = defaultCtxt.lock(); ctxt)
+    if (auto ctxt = defaultCtxt.lock())
         return ctxt;
 
     if (auto devices = AudioDevice::availableDevices(); devices.empty() == false) {

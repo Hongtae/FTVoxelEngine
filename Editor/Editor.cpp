@@ -213,9 +213,9 @@ public:
                                            face.vertex[1].pos,
                                            face.vertex[2].pos);
                         Vector3 hitpoint = p;
-                        if (auto r = plane.rayTest(p, plane.normal()) >= 0.0f) {
+                        if (auto r = plane.rayTest(p, plane.normal()); r >= 0.0f) {
                             hitpoint = p + plane.normal() * r;
-                        } else if (auto r = plane.rayTest(p, -plane.normal()) >= 0.0f) {
+                        } else if (auto r = plane.rayTest(p, -plane.normal()); r >= 0.0f) {
                             hitpoint = p - plane.normal() * r;
                         }
                         auto uvw = Triangle{
@@ -422,7 +422,7 @@ public:
                         Log::debug("insert {} items, {} elapsed.", count, d.count());
 
                         int numLeafNodes = 0;
-                        if (auto root = model.root(); root) {
+                        if (auto root = model.root()) {
                             numLeafNodes = root->numLeafNodes();
                         }
                         Log::debug("Num-LeafNodes: {}", numLeafNodes);
@@ -433,7 +433,7 @@ public:
                         t1 = std::chrono::high_resolution_clock::now();
                         for (auto& loc : locations) {
                             model.erase(loc.x, loc.y, loc.z);
-                            if (auto p = model.lookup(loc.x, loc.y, loc.z); p.has_value()) {
+                            if (auto p = model.lookup(loc.x, loc.y, loc.z)) {
                                 Log::debug("error!");
                                 model.lookup(loc.x, loc.y, loc.z);
                                 model.erase(loc.x, loc.y, loc.z);
@@ -444,7 +444,7 @@ public:
                         Log::debug("erase {} items, {} elapsed.", count, d.count());
 
                         numLeafNodes = 0;
-                        if (auto root = model.root(); root) {
+                        if (auto root = model.root()) {
                             numLeafNodes = root->numLeafNodes();
                         }
                         Log::debug("Num-LeafNodes: {}", numLeafNodes);
@@ -481,7 +481,7 @@ public:
                         Log::debug("insert {} items, {} elapsed.", locations.size(), d.count());
 
                         int numLeafNodes = 0;
-                        if (auto root = model.root(); root) {
+                        if (auto root = model.root()) {
                             numLeafNodes = root->numLeafNodes();
                         }
                         Log::debug("Num-LeafNodes: {}", numLeafNodes);
@@ -496,7 +496,7 @@ public:
                         Log::debug("erase {} items, {} elapsed.", locations.size(), d.count());
 
                         numLeafNodes = 0;
-                        if (auto root = model.root(); root) {
+                        if (auto root = model.root()) {
                             numLeafNodes = root->numLeafNodes();
                         }
                         Log::debug("Num-LeafNodes: {}", numLeafNodes);
@@ -697,7 +697,7 @@ public:
                         if (voxelModel) {
                             uint64_t numNodes = 0;
                             uint64_t numLeafNodes = 0;
-                            if (auto root = voxelModel->root(); root) {
+                            if (auto root = voxelModel->root()) {
                                 numNodes = root->numDescendants();
                                 numLeafNodes = root->numLeafNodes();
                             }

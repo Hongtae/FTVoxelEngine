@@ -9,7 +9,7 @@ std::optional<Vector3> BVH::rayTest(const Vector3& rayOrigin, const Vector3& dir
     std::optional<Vector3> rayHit = {};
     if (option == CloestHit) {
         auto numHits = rayTest(rayOrigin, dir, [&](const Vector3& p2) {
-            if (rayHit.has_value()) {
+            if (rayHit) {
                 auto p1 = rayHit.value();
                 auto sq1 = (p1 - rayOrigin).magnitudeSquared();
                 auto sq2 = (p2 - rayOrigin).magnitudeSquared();
@@ -23,7 +23,7 @@ std::optional<Vector3> BVH::rayTest(const Vector3& rayOrigin, const Vector3& dir
         });
     } else if (option == LongestHit) {
         auto numHits = rayTest(rayOrigin, dir, [&](const Vector3& p2) {
-            if (rayHit.has_value()) {
+            if (rayHit) {
                 auto p1 = rayHit.value();
                 auto sq1 = (p1 - rayOrigin).magnitudeSquared();
                 auto sq2 = (p2 - rayOrigin).magnitudeSquared();

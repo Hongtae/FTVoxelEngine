@@ -23,8 +23,7 @@ VulkanRenderCommandEncoder::Encoder::Encoder(class VulkanCommandBuffer* cb, cons
     cleanupCommands.reserve(InitialNumberOfCommands);
 
     for (const auto& colorAttachment : renderPassDescriptor.colorAttachments) {
-        if (auto rt = std::dynamic_pointer_cast<VulkanImageView>(colorAttachment.renderTarget);
-            rt && rt->image) {
+        if (auto rt = std::dynamic_pointer_cast<VulkanImageView>(colorAttachment.renderTarget); rt && rt->image) {
             this->addWaitSemaphore(rt->waitSemaphore, 0, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT);
             this->addSignalSemaphore(rt->signalSemaphore, 0, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT);
         }
@@ -119,14 +118,14 @@ bool VulkanRenderCommandEncoder::Encoder::encode(VkCommandBuffer commandBuffer) 
             colorAttachment.clearColor.a
         };
 
-        if (auto renderTarget = colorAttachment.renderTarget.get(); renderTarget) {
+        if (auto renderTarget = colorAttachment.renderTarget.get()) {
             VulkanImageView* imageView = dynamic_cast<VulkanImageView*>(renderTarget);
             FVASSERT_DEBUG(imageView);
 
             attachment.imageView = imageView->imageView;
             attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-            if (VulkanImage* image = imageView->image.get(); image) {
+            if (VulkanImage* image = imageView->image.get()) {
                 FVASSERT_DEBUG(isColorFormat(image->pixelFormat()));
 
                 frameWidth = (frameWidth > 0) ? std::min(frameWidth, imageView->width()) : imageView->width();

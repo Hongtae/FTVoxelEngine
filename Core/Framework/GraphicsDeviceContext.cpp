@@ -51,7 +51,7 @@ std::shared_ptr<GraphicsDeviceContext> GraphicsDeviceContext::makeDefault() {
             enableExtensionsForEnabledLayers,
             enableLayersForEnabledExtensions,
             enableValidation,
-            enableDebugUtils); instance) {
+            enableDebugUtils)) {
             device = instance->makeDevice({}, {});
         }
 #endif
@@ -109,8 +109,7 @@ std::shared_ptr<GPUBuffer> GraphicsDeviceContext::makeCPUAccessible(
 
     if (auto stgBuffer = device->makeBuffer(buffer->length(),
                                             GPUBuffer::StorageModeShared,
-                                            CPUCacheModeDefault);
-        stgBuffer != nullptr) {
+                                            CPUCacheModeDefault)) {
 
         auto cond = std::make_shared<
             std::tuple<std::mutex, std::condition_variable>>();
@@ -166,8 +165,7 @@ std::shared_ptr<GPUBuffer> GraphicsDeviceContext::makeCPUAccessible(
 
     if (auto buffer = device->makeBuffer(bufferLength,
                                          GPUBuffer::StorageModeShared,
-                                         CPUCacheModeDefault);
-        buffer != nullptr) {
+                                         CPUCacheModeDefault)) {
 
         auto cond = std::make_shared<
             std::tuple<std::mutex, std::condition_variable>>();

@@ -8,7 +8,7 @@ std::shared_ptr<ShaderFunction> loadShader(GraphicsDevice* device,
     if (Shader shader(sp.path); shader.validate()) {
         Log::info("Shader description: \"{}\"", sp.path.generic_u8string());
         printShaderReflection(shader);
-        if (auto module = device->makeShaderModule(shader); module) {
+        if (auto module = device->makeShaderModule(shader)) {
             auto names = module->functionNames();
             std::shared_ptr<ShaderFunction> fn = {};
             if (sp.specializedConstants.empty())

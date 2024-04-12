@@ -235,8 +235,7 @@ void UIRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
         colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
         colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
-        if (auto imageView = dynamic_cast<VulkanImageView*>(rp.colorAttachments.front().renderTarget.get());
-            imageView) {
+        if (auto imageView = dynamic_cast<VulkanImageView*>(rp.colorAttachments.front().renderTarget.get())) {
             colorAttachment.imageView = imageView->imageView;
             colorAttachment.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
         }
@@ -277,7 +276,7 @@ ImTextureID UIRenderer::registerTexture(std::shared_ptr<Texture> texture,
     if (sampler == nullptr)
         sampler = this->defaultSampler;
 
-    if (auto t = textureID(texture.get()); t)
+    if (auto t = textureID(texture.get()))
         return t;
 
 #if FVCORE_ENABLE_VULKAN

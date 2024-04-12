@@ -464,7 +464,7 @@ std::shared_ptr<GPUBuffer> VulkanGraphicsDevice::makeBuffer(size_t length, GPUBu
         [&] {
             if (buffer != VK_NULL_HANDLE)
                 vkDestroyBuffer(device, buffer, allocationCallbacks());
-            if (memory.has_value())
+            if (memory)
                 memory.value().chunk->pool->dealloc(memory.value());
         }
     };
@@ -514,7 +514,7 @@ std::shared_ptr<GPUBuffer> VulkanGraphicsDevice::makeBuffer(size_t length, GPUBu
     } else {
         memory = memoryPools.at(memoryTypeIndex)->alloc(memReqs.size);
     }
-    if (memory.has_value() == false) {
+    if (!memory) {
         Log::error("Memory allocation failed.");
         return nullptr;
     }
@@ -539,7 +539,7 @@ std::shared_ptr<Texture> VulkanGraphicsDevice::makeTexture(const TextureDescript
         [&] {
             if (image != VK_NULL_HANDLE)
                 vkDestroyImage(device, image, allocationCallbacks());
-            if (memory.has_value())
+            if (memory)
                 memory.value().chunk->pool->dealloc(memory.value());
         }
     };
@@ -644,7 +644,7 @@ std::shared_ptr<Texture> VulkanGraphicsDevice::makeTexture(const TextureDescript
     } else {
         memory = memoryPools.at(memoryTypeIndex)->alloc(memReqs.size);
     }
-    if (memory.has_value() == false) {
+    if (!memory) {
         Log::error("Memory allocation failed.");
         return nullptr;
     }
@@ -671,7 +671,7 @@ std::shared_ptr<Texture> VulkanGraphicsDevice::makeTransientRenderTarget(Texture
         [&] {
             if (image != VK_NULL_HANDLE)
                 vkDestroyImage(device, image, allocationCallbacks());
-            if (memory.has_value())
+            if (memory)
                 memory.value().chunk->pool->dealloc(memory.value());
         }
     };
@@ -758,7 +758,7 @@ std::shared_ptr<Texture> VulkanGraphicsDevice::makeTransientRenderTarget(Texture
     } else {
         memory = memoryPools.at(memoryTypeIndex)->alloc(memReqs.size);
     }
-    if (memory.has_value() == false) {
+    if (!memory) {
         Log::error("Memory allocation failed.");
         return nullptr;
     }

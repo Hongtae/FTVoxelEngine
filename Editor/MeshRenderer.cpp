@@ -22,7 +22,7 @@ void MeshRenderer::initialize(std::shared_ptr<GraphicsDeviceContext>, std::share
         if (Shader shader(path); shader.validate()) {
             Log::info("Shader description: \"{}\"", path.generic_u8string());
             printShaderReflection(shader);
-            if (auto module = device->makeShaderModule(shader); module) {
+            if (auto module = device->makeShaderModule(shader)) {
                 auto names = module->functionNames();
                 auto fn = module->makeFunction(names.front());
                 return MaterialShaderMap::Function { fn, shader.descriptors() };

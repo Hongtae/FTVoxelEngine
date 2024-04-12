@@ -31,7 +31,7 @@ void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc,
             { 0, ShaderDescriptorType::StorageTexture, 1, nullptr }, // color (rgba8)
             { 1, ShaderDescriptorType::StorageTexture, 1, nullptr }, // depth (r32f)
             { 2, ShaderDescriptorType::StorageTexture, 1, nullptr }, // normal (rgb10_a2)
-        }); pso.has_value()) {
+        })) {
         clearBuffers = pso.value();
     } else {
         throw std::runtime_error("failed to load shader");
@@ -55,7 +55,7 @@ void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc,
             { 1, ShaderDescriptorType::StorageTexture, 1, nullptr }, // depth (r32f)
             { 2, ShaderDescriptorType::StorageTexture, 1, nullptr }, // normal (rgb10_a2)
             { 3, ShaderDescriptorType::StorageBuffer, 1, nullptr },  // voxel data
-        }); pso.has_value()) {
+        })) {
         raycastVoxel = pso.value();
     } else {
         throw std::runtime_error("failed to load shader");
@@ -77,7 +77,7 @@ void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc,
             { 1, ShaderDescriptorType::StorageTexture, 1, nullptr }, // depth (r32f)
             { 2, ShaderDescriptorType::StorageTexture, 1, nullptr }, // normal (rgb10_a2)
             { 3, ShaderDescriptorType::StorageBuffer, 1, nullptr },  // voxel data
-        }); pso.has_value()) {
+        })) {
         raycastVisualizer = pso.value();
     } else {
         throw std::runtime_error("failed to load shader");
@@ -116,7 +116,7 @@ void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc,
                                             GPUBuffer::StorageModeShared,
                                             CPUCacheModeWriteCombined);
         FVASSERT(stgBuffer);
-        if (auto p = stgBuffer->contents(); p) {
+        if (auto p = stgBuffer->contents()) {
             memcpy(p, data, length);
             stgBuffer->flush();
         } else {
@@ -174,7 +174,7 @@ void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc,
             { 1, ShaderDescriptorType::TextureSampler, 1, nullptr },
             { 2, ShaderDescriptorType::TextureSampler, 1, nullptr },
             { 3, ShaderDescriptorType::UniformBuffer, 1, nullptr },
-        }); pso.has_value()) {
+        })) {
         ssao = pso.value();
         for (int i = 0; i < 3; ++i)
             ssao.bindingSet->setSamplerState(i, blitSamplerLinear);
@@ -196,7 +196,7 @@ void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc,
         {
             // ShaderBinding
             { 0, ShaderDescriptorType::TextureSampler, 1, nullptr },
-        }); pso.has_value()) {
+        })) {
         blur = pso.value();
         blur.bindingSet->setSamplerState(0, blitSamplerLinear);
     } else {
@@ -214,7 +214,7 @@ void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc,
         {
             // ShaderBinding
             { 0, ShaderDescriptorType::TextureSampler, 1, nullptr },
-        }); pso.has_value()) {
+        })) {
         blur2 = pso.value();
         blur2.bindingSet->setSamplerState(0, blitSamplerLinear);
     } else {
@@ -237,7 +237,7 @@ void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc,
             { 1, ShaderDescriptorType::TextureSampler, 1, nullptr }, // normal;
             { 2, ShaderDescriptorType::TextureSampler, 1, nullptr }, // albedo;
             { 3, ShaderDescriptorType::TextureSampler, 1, nullptr }, // ssao;
-        }); pso.has_value()) {
+        })) {
         composition = pso.value();
         for (int i = 0; i < 4; ++i)
             composition.bindingSet->setSamplerState(i, blitSamplerLinear);
@@ -662,7 +662,7 @@ void VolumeRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
         auto cbuffer = queue->makeCommandBuffer();
 #if 0
         // clear
-        if (auto encoder = cbuffer->makeComputeCommandEncoder(); encoder) {
+        if (auto encoder = cbuffer->makeComputeCommandEncoder()) {
             encoder->setComputePipelineState(clearBuffers.state);
             encoder->setResource(0, clearBuffers.bindingSet);
             encoder->dispatch(width / clearBuffers.threadgroupSize.x,

@@ -205,7 +205,7 @@ std::optional<VulkanMemoryBlock> VulkanMemoryAllocator::alloc(uint64_t size) {
     for (auto chunk : chunks) {
         if (chunk->numFreeBlocks() > 0) {
             auto item = chunk->pop();
-            FVASSERT_DEBUG(item.has_value());
+            FVASSERT_DEBUG(item);
             FVASSERT_DEBUG(item.value().size >= size);
             item.value().size = size;
             memoryInUse += size;
@@ -237,7 +237,7 @@ std::optional<VulkanMemoryBlock> VulkanMemoryAllocator::alloc(uint64_t size) {
                                        false);
     chunks.push_back(chunk);
     auto block = chunk->pop();
-    FVASSERT_DEBUG(block.has_value());
+    FVASSERT_DEBUG(block);
     FVASSERT_DEBUG(block.value().size >= size);
     block.value().size = size;
     memoryInUse += size;

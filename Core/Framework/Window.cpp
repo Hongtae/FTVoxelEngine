@@ -37,21 +37,21 @@ void Window::removeEventObserver(const void* ctxt) {
 void Window::postMouseEvent(const MouseEvent& event) {
     std::unique_lock guard(observerLock);
     for (auto& pair : eventObservers)
-        if (auto& handler = pair.second.mouseEventHandler; handler)
+        if (auto& handler = pair.second.mouseEventHandler)
             handler(event);
 }
 
 void Window::postKeyboardEvent(const KeyboardEvent& event) {
     std::unique_lock guard(observerLock);
     for (auto& pair : eventObservers)
-        if (auto& handler = pair.second.keyboardEventHandler; handler)
+        if (auto& handler = pair.second.keyboardEventHandler)
             handler(event);
 }
 
 void Window::postWindowEvent(const WindowEvent& event) {
     std::unique_lock guard(observerLock);
     for (auto& pair : eventObservers)
-        if (auto& handler = pair.second.windowEventHandler; handler)
+        if (auto& handler = pair.second.windowEventHandler)
             handler(event);
 }
 

@@ -17,7 +17,7 @@ AudioPlayer::~AudioPlayer() {
 }
 
 void AudioPlayer::play() {
-    if (playing = false) {
+    if (playing == false) {
         playing = true;
         buffering = true;
         playLoopCount = 1;

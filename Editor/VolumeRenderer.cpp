@@ -22,7 +22,7 @@ void VolumeRenderer::initialize(std::shared_ptr<GraphicsDeviceContext> gc, std::
     if (Shader shader(path); shader.validate()) {
         Log::info("Shader description: \"{}\"", path.generic_u8string());
         printShaderReflection(shader);
-        if (auto module = device->makeShaderModule(shader); module) {
+        if (auto module = device->makeShaderModule(shader)) {
             auto names = module->functionNames();
             fn = module->makeFunction(names.front());
             auto groupSize = shader.threadgroupSize();

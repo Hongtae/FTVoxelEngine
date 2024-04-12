@@ -65,7 +65,7 @@ VertexDescriptor Mesh::vertexDescriptor() const {
         if (semantic == VertexAttributeSemantic::UserDefined && input.name.empty() == false)
             bufferIndexAttr = findBufferIndexAttributeByName(input.name);
 
-        if (bufferIndexAttr.has_value() == false)
+        if (!bufferIndexAttr)
             bufferIndexAttr = findBufferIndexAttribute(semantic);
 
         if (bufferIndexAttr) {
@@ -329,7 +329,7 @@ bool Mesh::buildPipelineState(GraphicsDevice* device, PipelineReflection* rep) {
     std::vector<ResourceBindingSet> resourceBindings;
     for (const ShaderResource& res : reflection.resources) {
         if (auto optDescriptor = material->shader.descriptor
-        ({ res.set, res.binding, 0 }, res.stages); optDescriptor) {
+        ({ res.set, res.binding, 0 }, res.stages)) {
             ShaderDescriptor& descriptor = optDescriptor.value();
             std::optional<ShaderResource::Type> type = {};
             switch (descriptor.type) {
@@ -350,7 +350,7 @@ bool Mesh::buildPipelineState(GraphicsDevice* device, PipelineReflection* rep) {
                 type = ShaderResource::TypeSampler;
                 break;
             }
-            if (type.has_value() && type.value() == res.type) {
+            if (type && type.value() == res.type) {
                 ResourceBindingSet* rbset = nullptr;
                 for (ResourceBindingSet& s : resourceBindings) {
                     if (s.index == res.set) {
@@ -474,7 +474,7 @@ void Mesh::updateShadingProperties(const SceneState* sceneState) {
                     it != material->shader.resourceSemantics.end())
                     semantic = it->second;
 
-                if (ShaderUniformSemantic* ss = std::get_if<ShaderUniformSemantic>(&semantic); ss) {
+                if (ShaderUniformSemantic* ss = std::get_if<ShaderUniformSemantic>(&semantic)) {
                     if (sceneState)
                         copied = mesh->bindShaderUniformBuffer(*ss,
                                                                member.dataType,
@@ -484,7 +484,7 @@ void Mesh::updateShadingProperties(const SceneState* sceneState) {
                 }
                 if (copied == 0) {
                     MaterialSemantic ms = MaterialSemantic::UserDefined;
-                    if (auto p = std::get_if<MaterialSemantic>(&semantic); p)
+                    if (auto p = std::get_if<MaterialSemantic>(&semantic))
                         ms = *p;
                     auto offset = member.count * member.stride * structArrayIndex;
                     copied = mesh->bindMaterialProperty(ms, location,
@@ -555,13 +555,13 @@ void Mesh::updateShadingProperties(const SceneState* sceneState) {
                     it != material->shader.resourceSemantics.end())
                     semantic = it->second;
 
-                if (ShaderUniformSemantic* ss = std::get_if<ShaderUniformSemantic>(&semantic); ss) {
+                if (ShaderUniformSemantic* ss = std::get_if<ShaderUniformSemantic>(&semantic)) {
                     if (sceneState)
                         copied = bindShaderUniformBuffer(*ss, type, name, *sceneState, buffer, bufferLength);
                 }
                 if (copied == 0) {
                     MaterialSemantic ms = MaterialSemantic::UserDefined;
-                    if (auto p = std::get_if<MaterialSemantic>(&semantic); p)
+                    if (auto p = std::get_if<MaterialSemantic>(&semantic))
                         ms = *p;
                     auto offset = arrayIndex * stride;
                     copied = bindMaterialProperty(ms, location, type,
@@ -596,7 +596,7 @@ void Mesh::updateShadingProperties(const SceneState* sceneState) {
 
                         if (bufferInfo.buffer &&
                             bufferInfo.offset + bufferInfo.length <= bufferInfo.buffer->length()) {
-                            if (uint8_t* buffer = (uint8_t*)bufferInfo.buffer->contents(); buffer) {
+                            if (uint8_t* buffer = (uint8_t*)bufferInfo.buffer->contents()) {
                                 buffer = &buffer[bufferInfo.offset];
                                 auto bufferLength = bufferInfo.length;
 
@@ -642,7 +642,7 @@ void Mesh::updateShadingProperties(const SceneState* sceneState) {
                     semantic = it->second;
 
                 size_t bounds = 0;
-                if (ShaderUniformSemantic* ss = std::get_if<ShaderUniformSemantic>(&semantic); ss) {
+                if (ShaderUniformSemantic* ss = std::get_if<ShaderUniformSemantic>(&semantic)) {
                     if (sceneState) {
                         switch (res.type) {
                         case ShaderResource::TypeTexture:
@@ -660,7 +660,7 @@ void Mesh::updateShadingProperties(const SceneState* sceneState) {
                 }
                 if (bounds == 0) {
                     MaterialSemantic ms = MaterialSemantic::UserDefined;
-                    if (auto p = std::get_if<MaterialSemantic>(&semantic); p)
+                    if (auto p = std::get_if<MaterialSemantic>(&semantic))
                         ms = *p;
                     switch (res.type) {
                     case ShaderResource::TypeTexture:

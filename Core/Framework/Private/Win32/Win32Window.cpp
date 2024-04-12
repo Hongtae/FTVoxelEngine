@@ -28,7 +28,7 @@ using namespace FV;
 
 namespace {
     float dpiScaleForWindow(HWND hWnd) {
-        if (UINT dpi = ::GetDpiForWindow(hWnd); dpi) {
+        if (UINT dpi = ::GetDpiForWindow(hWnd)) {
             return float(dpi) / 96.0f;
         }
         return 1.0f;

@@ -1,3 +1,5 @@
+#include <thread>
+#include <chrono>
 #include "Application.h"
 #include "Unicode.h"
 
@@ -50,6 +52,14 @@ int Application::run(std::vector<std::u8string> args) {
 #ifdef _WIN32
     result = Win32App::runApplication(this);
 #endif
+    auto yield = [](std::chrono::milliseconds t) {
+        auto start = std::chrono::high_resolution_clock::now();
+        auto end = start + t;
+        do {
+            std::this_thread::yield();
+        } while (std::chrono::high_resolution_clock::now() < end);
+    };
+    yield(std::chrono::milliseconds(1));
     shared = nullptr;
     return result;
 }
