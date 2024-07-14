@@ -13,6 +13,10 @@ namespace FV {
 
         std::shared_ptr<VulkanGraphicsDevice> device;
         VkSemaphore semaphore;
+
+        void signal(uint64_t value);
+        bool wait(uint64_t value, uint64_t timeout);
+        uint64_t value() const;
     };
 }
 
