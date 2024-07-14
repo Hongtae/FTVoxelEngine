@@ -83,6 +83,8 @@ namespace FV {
 
         void pushConstant(uint32_t stages, uint32_t offset, uint32_t size, const void*) override;
 
+        void memoryBarrier(RenderStages after, RenderStages before) override;
+
         void draw(uint32_t vertexStart, uint32_t vertexCount, uint32_t instanceCount, uint32_t baseInstance) override;
         void drawIndexed(uint32_t indexCount, IndexType indexType, std::shared_ptr<GPUBuffer> indexBuffer, uint32_t indexBufferOffset, uint32_t instanceCount, uint32_t baseVertex, uint32_t baseInstance) override;
 

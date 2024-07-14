@@ -58,6 +58,8 @@ namespace FV {
 
         void pushConstant(uint32_t stages, uint32_t offset, uint32_t size, const void*) override;
 
+        void memoryBarrier() override;
+
         void dispatch(uint32_t, uint32_t, uint32_t) override;
 
         std::shared_ptr<VulkanCommandBuffer> cbuffer;

@@ -599,6 +599,44 @@ void VulkanRenderCommandEncoder::pushConstant(uint32_t stages, uint32_t offset, 
     }
 }
 
+void VulkanRenderCommandEncoder::memoryBarrier(RenderStages after, RenderStages before) {
+    auto stageMask = [](RenderStages stages) {
+        VkPipelineStageFlags2 mask = VK_PIPELINE_STAGE_2_NONE;
+        using T = std::underlying_type_t<RenderStages>;
+        if (T(stages) & T(RenderStages::Vertex)) {
+            mask |= VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT;
+        }
+        if (T(stages) & T(RenderStages::Fragment)) {
+            mask |= VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+        }
+        if (T(stages) & T(RenderStages::Object)) {
+            mask |= VK_PIPELINE_STAGE_2_TASK_SHADER_BIT_EXT;
+        }
+        if (T(stages) & T(RenderStages::Mesh)) {
+            mask |= VK_PIPELINE_STAGE_2_MESH_SHADER_BIT_EXT;
+        }
+        return mask;
+    };
+
+    auto srcStages = stageMask(after);
+    auto dstStages = stageMask(before);
+
+    EncoderCommand command = [=](VkCommandBuffer commandBuffer, EncodingState& state) mutable {
+        VkMemoryBarrier2 memoryBarrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER_2 };
+        memoryBarrier.srcStageMask = srcStages;
+        memoryBarrier.srcAccessMask = VK_ACCESS_2_NONE;
+        memoryBarrier.dstStageMask = dstStages;
+        memoryBarrier.dstAccessMask = VK_ACCESS_2_NONE;
+
+        VkDependencyInfo dependencyInfo = { VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+        dependencyInfo.memoryBarrierCount = 1;
+        dependencyInfo.pMemoryBarriers = &memoryBarrier;
+
+        vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
+    };
+    encoder->commands.push_back(command);
+}
+
 void VulkanRenderCommandEncoder::draw(uint32_t vertexStart, uint32_t vertexCount, uint32_t instanceCount, uint32_t baseInstance) {
     if (vertexCount > 0 && instanceCount > 0) {
         EncoderCommand command = [=](VkCommandBuffer commandBuffer, EncodingState& state) mutable {

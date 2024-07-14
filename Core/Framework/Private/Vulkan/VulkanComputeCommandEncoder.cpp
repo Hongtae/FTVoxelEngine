@@ -173,6 +173,23 @@ void VulkanComputeCommandEncoder::pushConstant(uint32_t stages, uint32_t offset,
     }
 }
 
+void VulkanComputeCommandEncoder::memoryBarrier() {
+    EncoderCommand command = [=](VkCommandBuffer cbuffer, EncodingState& state) mutable {
+        VkMemoryBarrier2 memoryBarrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER_2 };
+        memoryBarrier.srcStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+        memoryBarrier.srcAccessMask = VK_ACCESS_2_NONE;
+        memoryBarrier.dstStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+        memoryBarrier.dstAccessMask = VK_ACCESS_2_NONE;
+
+        VkDependencyInfo dependencyInfo = { VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+        dependencyInfo.memoryBarrierCount = 1;
+        dependencyInfo.pMemoryBarriers = &memoryBarrier;
+
+        vkCmdPipelineBarrier2(cbuffer, &dependencyInfo);
+    };
+    encoder->commands.push_back(command);
+}
+
 void VulkanComputeCommandEncoder::dispatch(uint32_t numGroupsX, uint32_t numGroupsY, uint32_t numGroupsZ) {
     EncoderCommand command = [=](VkCommandBuffer cbuffer, EncodingState& state) mutable {
         vkCmdDispatch(cbuffer, numGroupsX, numGroupsY, numGroupsZ);

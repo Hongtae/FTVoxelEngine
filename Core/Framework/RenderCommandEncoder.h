@@ -27,6 +27,13 @@ namespace FV {
         int32_t height;
     };
 
+    enum class RenderStages : uint32_t {
+        Vertex = 1 << 0,
+        Fragment = 1 << 1,
+        Object = 1 << 2,
+        Mesh = 1 << 3,
+    };
+
     class RenderCommandEncoder : public CommandEncoder {
     public:
         virtual ~RenderCommandEncoder() = default;
@@ -50,6 +57,8 @@ namespace FV {
         virtual void setDepthBias(float depthBias, float slopeScale, float clamp) = 0;
 
         virtual void pushConstant(uint32_t stages, uint32_t offset, uint32_t size, const void*) = 0;
+
+        virtual void memoryBarrier(RenderStages after, RenderStages before) = 0;
 
         virtual void draw(uint32_t vertexStart, uint32_t vertexCount, uint32_t instanceCount, uint32_t baseInstance) = 0;
         virtual void drawIndexed(uint32_t indexCount, IndexType indexType, std::shared_ptr<GPUBuffer> indexBuffer, uint32_t indexBufferOffset, uint32_t instanceCount, uint32_t baseVertex, uint32_t baseInstance) = 0;

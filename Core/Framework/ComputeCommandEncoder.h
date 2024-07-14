@@ -13,6 +13,9 @@ namespace FV {
         virtual void setComputePipelineState(std::shared_ptr<ComputePipelineState>) = 0;
 
         virtual void pushConstant(uint32_t stages, uint32_t offset, uint32_t size, const void*) = 0;
+
+        virtual void memoryBarrier() = 0;
+
         virtual void dispatch(uint32_t numGroupsX, uint32_t numGroupsY, uint32_t numGroupsZ) = 0;
     };
 }
