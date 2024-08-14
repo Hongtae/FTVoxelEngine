@@ -887,6 +887,8 @@ std::shared_ptr<GPUEvent> VulkanGraphicsDevice::makeEvent() {
         Log::error("vkCreateSemaphore failed: {}", err);
         return nullptr;
     }
+    if (typeCreateInfo.semaphoreType == VK_SEMAPHORE_TYPE_TIMELINE)
+        return std::make_shared<VulkanSemaphoreAutoIncrementalTimeline>(shared_from_this(), semaphore);
     return std::make_shared<VulkanSemaphore>(shared_from_this(), semaphore);
 }
 
