@@ -352,44 +352,6 @@ public:
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Test")) {
-                if (ImGui::BeginMenu("Async Test")) {
-                    auto currentThreadID = []()-> std::string {
-                        std::stringstream ss;
-                        ss << std::this_thread::get_id();
-                        return ss.str();
-                    };
-                    if (ImGui::MenuItem("Async test")) {
-                        Log::debug("async test - thread:{}", currentThreadID());
-                        auto t = async(
-                            [&] {
-                                Log::debug("async - thread:{}", currentThreadID());
-                            });
-                        t->wait();
-                    }
-                    if (ImGui::MenuItem("Await test")) {
-                        Log::debug("await test - thread:{}", currentThreadID());
-                        auto t = await(
-                            [&] {
-                                Log::debug("await - thread:{}", currentThreadID());
-                                return 1234;
-                            });
-                        Log::debug("await result: {}, thread:{}", t, currentThreadID());
-                    }
-                    if (ImGui::MenuItem("Await await test")) {
-                        Log::debug("await await test - thread:{}", currentThreadID());
-                        auto t = await(
-                            [&] {
-                                Log::debug("await - 1 - thread:{}", currentThreadID());
-                                return await(
-                                    [&] {
-                                        Log::debug("await - 2 - thread:{}", currentThreadID());
-                                        return 1234;
-                                    });
-                            });
-                        Log::debug("await result: {}, thread:{}", t, currentThreadID());
-                    }
-                    ImGui::EndMenu();
-                }
                 if (ImGui::BeginMenu("VoxelOctree Test")) {
                     if (ImGui::MenuItem("VoxelOctree random update test")) {
                         VoxelModel model(12);
