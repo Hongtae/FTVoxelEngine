@@ -870,7 +870,7 @@ std::shared_ptr<GPUEvent> VulkanGraphicsDevice::makeEvent() {
     };
     VkSemaphore semaphore = VK_NULL_HANDLE;
 
-    VkSemaphoreTypeCreateInfoKHR typeCreateInfo = {
+    VkSemaphoreTypeCreateInfo typeCreateInfo = {
         VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO
     };
 
@@ -896,7 +896,7 @@ std::shared_ptr<GPUSemaphore> VulkanGraphicsDevice::makeSemaphore() {
     VkSemaphoreCreateInfo createInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
     VkSemaphore semaphore = VK_NULL_HANDLE;
 
-    VkSemaphoreTypeCreateInfoKHR typeCreateInfo = {
+    VkSemaphoreTypeCreateInfo typeCreateInfo = {
         VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO
     };
     typeCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;

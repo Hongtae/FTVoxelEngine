@@ -51,6 +51,9 @@ namespace FV {
         void waitSemaphoreValue(std::shared_ptr<GPUSemaphore>, uint64_t) override;
         void signalSemaphoreValue(std::shared_ptr<GPUSemaphore>, uint64_t) override;
 
+        void waitSemaphore(VkSemaphore semaphore, uint64_t value, VkPipelineStageFlags2 flags);
+        void signalSemaphore(VkSemaphore semaphore, uint64_t value, VkPipelineStageFlags2 flags);
+
         void copy(std::shared_ptr<GPUBuffer> src,
                   size_t srcOffset,
                   std::shared_ptr<GPUBuffer> dst,

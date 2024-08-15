@@ -10,6 +10,8 @@
 #if FVCORE_ENABLE_VULKAN
 using namespace FV;
 
+constexpr int maxFrameSemaphores = 3;
+
 VulkanSwapChain::VulkanSwapChain(std::shared_ptr<VulkanCommandQueue> q, std::shared_ptr<Window> w)
     : cqueue(q)
     , window(w)
@@ -17,22 +19,44 @@ VulkanSwapChain::VulkanSwapChain(std::shared_ptr<VulkanCommandQueue> q, std::sha
     , swapchain(nullptr)
     , enableVSync(false)
     , deviceReset(false)
-    , frameReadySemaphore(VK_NULL_HANDLE) {
+    , frameReady(nullptr)
+    , frameTimelineSemaphore(VK_NULL_HANDLE)
+    , frameCount(0) {
     auto& gdevice = cqueue->gdevice;
     VkDevice device = gdevice->device;
 
-    // create semaphore
+    while (frameSemaphores.size() < maxFrameSemaphores) {
+        // create semaphore
+        VkSemaphore semaphore = VK_NULL_HANDLE;
+        VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+        VkResult err = vkCreateSemaphore(device, &semaphoreCreateInfo, gdevice->allocationCallbacks(), &semaphore);
+        if (err != VK_SUCCESS) {
+            Log::error("vkCreateSemaphore failed: {}", err);
+            FVASSERT(0);
+        }
+        if (semaphore != VK_NULL_HANDLE) {
+            frameSemaphores.push_back({ semaphore, 0 });
+        }
+    }
+    FVASSERT(!frameSemaphores.empty());
+    frameSemaphores.shrink_to_fit();
+
+    // create timeline semaphore
     VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-    VkResult err = vkCreateSemaphore(device, &semaphoreCreateInfo, gdevice->allocationCallbacks(), &frameReadySemaphore);
+    VkSemaphoreTypeCreateInfo typeCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO };
+    typeCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+    typeCreateInfo.initialValue = 0;
+    semaphoreCreateInfo.pNext = &typeCreateInfo;
+
+    VkResult err = vkCreateSemaphore(device, &semaphoreCreateInfo, gdevice->allocationCallbacks(), &frameTimelineSemaphore);
     if (err != VK_SUCCESS) {
         Log::error("vkCreateSemaphore failed: {}", err);
-        FVASSERT_DEBUG(0);
+        FVASSERT(0);
     }
 
     window->addEventObserver(this, (Window::WindowEventHandler)[this](auto param) {
         this->onWindowEvent(param);
-                             });
-
+    });
 }
 
 VulkanSwapChain::~VulkanSwapChain() {
@@ -59,7 +83,10 @@ VulkanSwapChain::~VulkanSwapChain() {
     if (surface)
         vkDestroySurfaceKHR(instance->instance, surface, gdevice->allocationCallbacks());
 
-    vkDestroySemaphore(device, frameReadySemaphore, gdevice->allocationCallbacks());
+    for (auto frame : frameSemaphores) {
+        vkDestroySemaphore(device, frame.semaphore, gdevice->allocationCallbacks());
+    }
+    vkDestroySemaphore(device, frameTimelineSemaphore, gdevice->allocationCallbacks());
 }
 
 bool VulkanSwapChain::setup() {
@@ -352,8 +379,8 @@ bool VulkanSwapChain::updateDevice() {
 
         std::shared_ptr<VulkanImageView> swapChainImageView = std::make_shared<VulkanImageView>(gdevice, imageView);
         swapChainImageView->image = swapChainImage;
-        swapChainImageView->waitSemaphore = frameReadySemaphore;
-        swapChainImageView->signalSemaphore = frameReadySemaphore;
+        swapChainImageView->waitSemaphore = VK_NULL_HANDLE;
+        swapChainImageView->signalSemaphore = VK_NULL_HANDLE;
 
         this->imageViews.push_back(swapChainImageView);
     }
@@ -415,8 +442,23 @@ void VulkanSwapChain::setupFrame() {
     auto& gdevice = cqueue->gdevice;
     VkDevice device = gdevice->device;
 
+    auto index = frameCount % frameSemaphores.size();
+    frameReady = &frameSemaphores.at(index);
+    if (frameReady->frameIndex > 0) {
+        uint64_t value = frameReady->frameIndex;
+        VkSemaphoreWaitInfo waitInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO };
+        waitInfo.semaphoreCount = 1;
+        waitInfo.pSemaphores = &frameTimelineSemaphore;
+        waitInfo.pValues = &value;
+        VkResult err = vkWaitSemaphores(device, &waitInfo, UINT64_MAX);
+        if (err != VK_SUCCESS) {
+            Log::error("vkWaitSemaphores failed: {}", err);
+            FVASSERT_DEBUG(0);
+        }
+    }
+
     std::unique_lock guard(lock);
-    VkResult err = vkAcquireNextImageKHR(device, this->swapchain, UINT64_MAX, frameReadySemaphore, VK_NULL_HANDLE, &this->frameIndex);
+    VkResult err = vkAcquireNextImageKHR(device, this->swapchain, UINT64_MAX, frameReady->semaphore, VK_NULL_HANDLE, &this->frameIndex);
     guard.unlock();
 
     switch (err) {
@@ -429,8 +471,12 @@ void VulkanSwapChain::setupFrame() {
         Log::error("vkAcquireNextImageKHR failed: {}", err);
     }
 
+    auto renderTarget = imageViews.at(frameIndex);
+    renderTarget->waitSemaphore = frameReady->semaphore;
+    renderTarget->signalSemaphore = frameReady->semaphore;
+
     RenderPassColorAttachmentDescriptor colorAttachment = {};
-    colorAttachment.renderTarget = imageViews.at(frameIndex);
+    colorAttachment.renderTarget = renderTarget;
     colorAttachment.clearColor = Color(0, 0, 0, 0);
     colorAttachment.loadAction = RenderPassAttachmentDescriptor::LoadActionClear;
     colorAttachment.storeAction = RenderPassAttachmentDescriptor::StoreActionStore;
@@ -440,6 +486,8 @@ void VulkanSwapChain::setupFrame() {
 }
 
 bool VulkanSwapChain::present(GPUEvent** waitEvents, size_t numEvents) {
+    FVASSERT_DEBUG(frameReady);
+
     auto presentSrc = imageViews.at(frameIndex);
     if (presentSrc->image->layout() != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
         if (auto cbuffer = cqueue->makeCommandBuffer()) {
@@ -447,11 +495,13 @@ bool VulkanSwapChain::present(GPUEvent** waitEvents, size_t numEvents) {
                 encoder->callback([&](auto commandBuffer) {
                     presentSrc->image->setLayout(VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
                     VK_ACCESS_2_NONE,
-                    VK_PIPELINE_STAGE_2_NONE,
+                    VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
                     VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
                     cqueue->family->familyIndex,
                     commandBuffer);
                 });
+                encoder->waitSemaphore(frameReady->semaphore, 0, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT);
+                encoder->signalSemaphore(frameReady->semaphore, 0, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT);
                 encoder->endEncoding();
                 cbuffer->commit();
             }
@@ -467,7 +517,7 @@ bool VulkanSwapChain::present(GPUEvent** waitEvents, size_t numEvents) {
         FVASSERT_DEBUG(s);
         waitSemaphores.push_back(s->semaphore);
     }
-    waitSemaphores.push_back(frameReadySemaphore);
+    waitSemaphores.push_back(frameReady->semaphore);
 
     VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
     presentInfo.swapchainCount = 1;
@@ -504,6 +554,29 @@ bool VulkanSwapChain::present(GPUEvent** waitEvents, size_t numEvents) {
         if (this->updateDevice() == false) {
             Log::error("VulkanSwapChain.updateDevice() failed.");
         }
+    }
+
+    frameCount += 1;
+    if (err == VK_SUCCESS) {
+        frameReady->frameIndex = frameCount;
+
+        // signal timeline semaphore
+        VkSubmitInfo2 submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO_2 };
+        VkSemaphoreSubmitInfo signalSemaphoreInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO };
+        signalSemaphoreInfo.semaphore = frameTimelineSemaphore;
+        signalSemaphoreInfo.value = frameCount;
+        signalSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_NONE;
+        signalSemaphoreInfo.deviceIndex = 0;
+
+        submitInfo.signalSemaphoreInfoCount = 1;
+        submitInfo.pSignalSemaphoreInfos = &signalSemaphoreInfo;
+
+        if (vkQueueSubmit2(cqueue->queue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
+            Log::error("vkQueueSubmit2 failed: {}", err);
+            //FVASSERT_DEBUG(0);
+        }
+    } else {
+        frameReady->frameIndex = 0;
     }
 
     return err == VK_SUCCESS;

@@ -83,6 +83,16 @@ void VulkanCopyCommandEncoder::signalSemaphoreValue(std::shared_ptr<GPUSemaphore
     encoder->semaphores.push_back(semaphore);
 }
 
+void VulkanCopyCommandEncoder::waitSemaphore(VkSemaphore semaphore, uint64_t value, VkPipelineStageFlags2 flags) {
+    FVASSERT_DEBUG(semaphore);
+    encoder->addWaitSemaphore(semaphore, value, flags);
+}
+
+void VulkanCopyCommandEncoder::signalSemaphore(VkSemaphore semaphore, uint64_t value, VkPipelineStageFlags2 flags) {
+    FVASSERT_DEBUG(semaphore);
+    encoder->addSignalSemaphore(semaphore, value, flags);
+}
+
 void VulkanCopyCommandEncoder::copy(
     std::shared_ptr<GPUBuffer> src, size_t srcOffset,
     std::shared_ptr<GPUBuffer> dst, size_t dstOffset, size_t size) {

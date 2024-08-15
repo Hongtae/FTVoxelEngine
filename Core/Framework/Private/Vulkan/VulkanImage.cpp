@@ -145,59 +145,59 @@ VkImageLayout VulkanImage::setLayout(VkImageLayout layout,
                                      VkCommandBuffer commandBuffer) const {
     FVASSERT_DEBUG(layout != VK_IMAGE_LAYOUT_UNDEFINED);
     FVASSERT_DEBUG(layout != VK_IMAGE_LAYOUT_PREINITIALIZED);
+    FVASSERT_DEBUG(commandBuffer != VK_NULL_HANDLE);
 
     std::scoped_lock guard(layoutLock);
-    if (commandBuffer) {
-        VkImageMemoryBarrier2 barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
-        barrier.srcAccessMask = layoutInfo.accessMask;
-        barrier.dstAccessMask = accessMask;
-        barrier.oldLayout = layoutInfo.layout;
-        barrier.newLayout = layout;
-        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.image = image;
 
-        PixelFormat pixelFormat = this->pixelFormat();
-        if (isColorFormat(pixelFormat))
-            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        else {
-            if (isDepthFormat(pixelFormat))
-                barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
-            if (isStencilFormat(pixelFormat))
-                barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-        }
-        barrier.subresourceRange.baseMipLevel = 0;
-        barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
-        barrier.subresourceRange.baseArrayLayer = 0;
-        barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+    VkImageMemoryBarrier2 barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
+    barrier.srcAccessMask = layoutInfo.accessMask;
+    barrier.dstAccessMask = accessMask;
+    barrier.oldLayout = layoutInfo.layout;
+    barrier.newLayout = layout;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.image = image;
 
-        barrier.srcStageMask = layoutInfo.stageMaskEnd;
-
-        if (layoutInfo.queueFamilyIndex != queueFamilyIndex) {
-            if (layoutInfo.queueFamilyIndex == VK_QUEUE_FAMILY_IGNORED || queueFamilyIndex == VK_QUEUE_FAMILY_IGNORED)                 {
-                barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-            } else {
-                barrier.srcQueueFamilyIndex = layoutInfo.queueFamilyIndex;
-                    barrier.dstQueueFamilyIndex = queueFamilyIndex;
-            }
-        }
-        if (barrier.srcStageMask == VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT) {
-            barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-        }
-        barrier.dstStageMask = stageBegin;
-#if 0
-        // full pipeline barrier for debugging
-        barrier.srcAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
-        barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-        barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-#endif
-        VkDependencyInfo dependencyInfo = { VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
-        dependencyInfo.imageMemoryBarrierCount = 1;
-        dependencyInfo.pImageMemoryBarriers = &barrier;
-
-        vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
+    PixelFormat pixelFormat = this->pixelFormat();
+    if (isColorFormat(pixelFormat))
+        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    else {
+        if (isDepthFormat(pixelFormat))
+            barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
+        if (isStencilFormat(pixelFormat))
+            barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
     }
+    barrier.subresourceRange.baseMipLevel = 0;
+    barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+    barrier.srcStageMask = layoutInfo.stageMaskEnd;
+
+    if (layoutInfo.queueFamilyIndex != queueFamilyIndex) {
+        if (layoutInfo.queueFamilyIndex == VK_QUEUE_FAMILY_IGNORED || queueFamilyIndex == VK_QUEUE_FAMILY_IGNORED) {
+            barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+        } else {
+            barrier.srcQueueFamilyIndex = layoutInfo.queueFamilyIndex;
+            barrier.dstQueueFamilyIndex = queueFamilyIndex;
+        }
+    }
+    if (barrier.srcStageMask == VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT) {
+        barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+    }
+    barrier.dstStageMask = stageBegin;
+#if 0
+    // full pipeline barrier for debugging
+    barrier.srcAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+    barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+    barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+#endif
+    VkDependencyInfo dependencyInfo = { VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+    dependencyInfo.imageMemoryBarrierCount = 1;
+    dependencyInfo.pImageMemoryBarriers = &barrier;
+
+    vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
 
     VkImageLayout oldLayout = layoutInfo.layout;
     layoutInfo.layout = layout;

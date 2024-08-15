@@ -70,8 +70,8 @@ VkBool32 VKAPI_PTR debugUtilsMessengerCallback(
                         message));
     }
     if (level == Level::Error) {
-        //FVERROR_ABORT("FATAL ERROR");
-        //FV_TRAP();
+        FVERROR_ABORT("FATAL ERROR");
+        FV_TRAP();
     }
     return VK_FALSE;
 }

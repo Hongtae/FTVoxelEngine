@@ -9,6 +9,7 @@
 #include <vulkan/vulkan.h>
 #include "VulkanCommandQueue.h"
 #include "VulkanImageView.h"
+#include "VulkanSemaphore.h"
 
 namespace FV {
     class VulkanCommandQueue;
@@ -37,7 +38,14 @@ namespace FV {
         VkSwapchainKHR swapchain;
         std::vector<VkSurfaceFormatKHR> availableSurfaceFormats;
 
-        VkSemaphore frameReadySemaphore;
+        struct SemaphoreFrameIndex {
+            VkSemaphore semaphore;
+            uint64_t frameIndex;
+        };
+        std::vector<SemaphoreFrameIndex> frameSemaphores;
+        SemaphoreFrameIndex* frameReady;
+        VkSemaphore frameTimelineSemaphore;
+        uint64_t frameCount;
 
         std::vector<std::shared_ptr<VulkanImageView>> imageViews;
 
