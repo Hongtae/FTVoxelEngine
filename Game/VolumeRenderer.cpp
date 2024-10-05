@@ -473,7 +473,7 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp,
         }
 
         AABB aabb = { Vector3::zero, {1, 1, 1} };
-        if (mvpFrustum.isAABBInside(aabb)) {
+        if (mvpFrustum.intersects(aabb)) {
             const VoxelOctree* root = voxelModel->root();
 
             uint32_t minDetailLevel = config.minDetailLevel;
@@ -530,7 +530,7 @@ void VolumeRenderer::prepareScene(const RenderPassDescriptor& rp,
                         pos - Vector3(hext, hext, hext),
                         pos + Vector3(hext, hext, hext)
                     };
-                    if (mvpFrustum.isAABBInside(aabb)) {
+                    if (mvpFrustum.intersects(aabb)) {
                         auto p = pos.applying(modelView.transform());
                         float distanceFromView;
                         if (sortByLinearZ)
@@ -766,7 +766,7 @@ void VolumeRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
 
             int drawLayers = 0;
             for (auto& layer : layersCopy) {
-                if (mvpFrustum.isAABBInside(layer.aabb) == false)
+                if (mvpFrustum.intersects(layer.aabb) == false)
                     continue;
 
                 pipeline->bindingSet->setBuffer(3, layer.buffer, 0, layer.buffer->length());

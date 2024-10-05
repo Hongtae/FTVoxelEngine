@@ -30,10 +30,12 @@ namespace FV {
         ViewTransform(const AffineTransform3& t)
             : matrix(t.matrix3), t(t.translation) {
         }
+
         ViewTransform(const Matrix3& mat = Matrix3::identity,
                       const Vector3& trans = Vector3::zero)
             : matrix(mat), t(trans) {
         }
+
         ViewTransform(const Vector3& pos, const Vector3& dir, const Vector3& up) {
             FVASSERT_DEBUG(dir.magnitudeSquared() > 0.0f);
             FVASSERT_DEBUG(up.magnitudeSquared() > 0.0f);
@@ -104,6 +106,7 @@ namespace FV {
                     0, 0, -(farZ * nearZ) / (farZ - nearZ), 0)
             };
         }
+
         static ProjectionTransform perspectiveRH(float fov, float aspect, float nearZ, float farZ) {
             FVASSERT_DEBUG(aspect > 0.0);
             FVASSERT_DEBUG(fov > 0.0);
@@ -119,6 +122,7 @@ namespace FV {
                     0, 0, -(farZ * nearZ) / (farZ - nearZ), 0)
             };
         }
+
         static ProjectionTransform perspective(float fov, float aspect, float nearZ, float farZ) {
             if constexpr (leftHanded) {
                 return perspectiveLH(fov, aspect, nearZ, farZ);
@@ -137,6 +141,7 @@ namespace FV {
                     -(right + left) / (right - left), -(top + bottom) / (top - bottom), -nearZ / (farZ - nearZ), 1)
             };
         }
+
         static ProjectionTransform orthographicRH(float left, float right,
                                                   float bottom, float top,
                                                   float nearZ, float farZ) {
@@ -196,7 +201,7 @@ namespace FV {
 
             auto makePlane = [](const Vector3& v1, const Vector3& v2, const Vector3& v3)->Vector4 {
                 auto n = Vector3::cross(v2 - v1, v3 - v1).normalized();
-                return Vector4(n.x, n.y, n.z, -Vector3::dot(n, v1));
+                return {n.x, n.y, n.z, -Vector3::dot(n, v1)};
             };
 
             if constexpr (ProjectionTransform::leftHanded) {
@@ -216,7 +221,7 @@ namespace FV {
             }
         }
 
-        bool isSphereInside(const Sphere& sp) const {
+        bool intersects(const Sphere& sp) const {
             if (sp.radius < 0.0f) return false;
 
             Vector4 pt = Vector4(sp.center.x, sp.center.y, sp.center.z, 1.0f);
@@ -230,10 +235,10 @@ namespace FV {
         }
 
         bool isPointInside(const Vector3& point) const {
-            return isSphereInside({ point, 0.0f });
+            return intersects(Sphere{ point, 0.0f });
         }
 
-        bool isAABBInside(const AABB& aabb) const {
+        bool intersects(const AABB& aabb, bool* isInside = nullptr) const {
             if (aabb.isNull())
                 return false;
 
@@ -247,9 +252,9 @@ namespace FV {
             };
 
             const Vector3* minMax[2] = { &aabb.min, &aabb.max };
-
-            for (int i = 0; i < 6; ++i) {
-                auto plane = planes[i];
+            bool intersects = isInside == nullptr; 
+            
+            for (const Plane * plane : planes) {
                 int bx = (plane->a > 0.0f) ? 1 : 0;
                 int by = (plane->b > 0.0f) ? 1 : 0;
                 int bz = (plane->c > 0.0f) ? 1 : 0;
@@ -258,13 +263,18 @@ namespace FV {
                 if (d < 0.0f)
                     return false;
 
-                bx = 1 - bx;
-                by = 1 - by;
-                bz = 1 - bz;
-                d = plane->dot(Vector3(minMax[bx]->x, minMax[by]->z, minMax[bz]->z));
-                if (d <= 0.0f)
-                    return true; // intersects
+                if (!intersects) {
+                    bx = 1 - bx;
+                    by = 1 - by;
+                    bz = 1 - bz;
+                    d = plane->dot(Vector3(minMax[bx]->x, minMax[by]->z, minMax[bz]->z));
+                    if (d <= 0.0f)
+                        intersects = true;  // intersects
+                }
             }
+            if (isInside)
+                *isInside = !intersects;
+
             // inside
             return true;
         }

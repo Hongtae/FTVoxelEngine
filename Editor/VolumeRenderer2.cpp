@@ -338,7 +338,7 @@ void VolumeRenderer2::render(const RenderPassDescriptor&, const Rect& frame) {
 
             std::vector<VoxelLayer> layersCopy = sortLayers(voxelLayers, mvp);
             for (auto& layer : layersCopy) {
-                if (viewFrustum.isAABBInside(layer.aabb) == false)
+                if (viewFrustum.intersects(layer.aabb) == false)
                     continue;
 
                 raycastVoxel.bindingSet->setBuffer(2, layer.buffer, 0, layer.buffer->length());
