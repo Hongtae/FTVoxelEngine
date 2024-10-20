@@ -300,14 +300,15 @@ void loadMeshes(LoaderContext& context) {
         SceneNode node = {};
         node.name = glTFMesh.name;
 
-        std::vector<Vector3> positions;
-        std::vector<uint32_t> indices;
-
-        bool hasVertexNormal = false;
-        bool hasVertexColor = false;
-
         for (auto& glTFPrimitive : glTFMesh.primitives) {
             Mesh mesh = {};
+
+            std::vector<Vector3> positions;
+            std::vector<uint32_t> indices;
+
+            bool hasVertexNormal = false;
+            bool hasVertexColor = false;
+
             std::unordered_map<int, Mesh::VertexBuffer> vertexBuffers;
 
             for (auto& [attributeName, accessorIndex] : glTFPrimitive.attributes) {
