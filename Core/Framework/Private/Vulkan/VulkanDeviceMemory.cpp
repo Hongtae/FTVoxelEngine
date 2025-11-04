@@ -109,13 +109,25 @@ bool VulkanMemoryChunk::invalidate(uint64_t offset, uint64_t size) const {
     FVASSERT_DEBUG(memory != VK_NULL_HANDLE);
     if (mapped && propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) {
         if (offset < chunkSize) {
+            auto atomSize = gdevice->physicalDevice.properties.limits.nonCoherentAtomSize;
+            auto alignUp = [atomSize](uint64_t value) {
+                if (value % atomSize)
+                    value += atomSize - (value % atomSize);
+                return value;
+            };
+
             VkMappedMemoryRange range = { VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE };
             range.memory = memory;
-            range.offset = offset;
+            // VUID-VkMappedMemoryRange-offset-00687
+            range.offset = alignUp(offset);
             if (size == VK_WHOLE_SIZE)
                 range.size = size;
-            else
-                range.size = std::min(size, chunkSize - offset);
+            else {
+                // VUID-VkMappedMemoryRange-size-01390
+                auto begin = alignUp(offset);
+                auto end = alignUp(offset + size);
+                range.size = std::min(end - begin, chunkSize - begin);
+            }
             VkResult err = vkInvalidateMappedMemoryRanges(device, 1, &range);
             if (err == VK_SUCCESS) {
                 return true;
@@ -134,13 +146,25 @@ bool VulkanMemoryChunk::flush(uint64_t offset, uint64_t size) const {
     FVASSERT_DEBUG(memory != VK_NULL_HANDLE);
     if (mapped && propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) {
         if (offset < chunkSize) {
+            auto atomSize = gdevice->physicalDevice.properties.limits.nonCoherentAtomSize;
+            auto alignUp = [atomSize](uint64_t value) {
+                if (value % atomSize)
+                    value += atomSize - (value % atomSize);
+                return value;
+            };
+            
             VkMappedMemoryRange range = { VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE };
             range.memory = memory;
-            range.offset = offset;
+            // VUID-VkMappedMemoryRange-offset-00687
+            range.offset = alignUp(offset);
             if (size == VK_WHOLE_SIZE)
                 range.size = size;
-            else
-                range.size = std::min(size, chunkSize - offset);
+            else {
+                // VUID-VkMappedMemoryRange-size-01390
+                uint64_t begin = range.offset;
+                uint64_t end = alignUp(offset + size);
+                range.size = std::min(end - begin, chunkSize - begin);
+            }
             VkResult err = vkFlushMappedMemoryRanges(device, 1, &range);
             if (err == VK_SUCCESS) {
                 return true;
