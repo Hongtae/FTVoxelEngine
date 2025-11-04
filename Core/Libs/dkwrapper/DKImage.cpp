@@ -1156,6 +1156,7 @@ static DKImageEncodeContext EncodePng(uint32_t width,
         {
             if (png_image_write_to_memory(&image, output, &bufferSize, 0, data, 0, nullptr))
             {
+                ctx.error = DKImageEncodeError_Success;
                 ctx.encodedData = output;
                 ctx.encodedDataLength = bufferSize;
                 ctx.imageFormat = DKImageFormat_PNG;
