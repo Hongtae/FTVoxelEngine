@@ -177,7 +177,7 @@ Image::Image(uint32_t w, uint32_t h, ImagePixelFormat format, const void* p)
 }
 
 Image::Image(const std::vector<uint8_t>& encodedData)
-    : Image(data.data(), data.size()) {
+    : Image(encodedData.data(), encodedData.size()) {
 }
 
 Image::Image(const std::filesystem::path& path)
