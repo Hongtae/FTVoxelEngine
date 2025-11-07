@@ -541,7 +541,7 @@ bool VulkanSwapChain::present(GPUEvent** waitEvents, size_t numEvents) {
     if (resetSwapchain == false) {
         // Check if a device reset is requested and update the device if necessary.
         guard.lock();
-        bool resetSwapchain = this->deviceReset;
+        resetSwapchain = this->deviceReset;
         guard.unlock();
     }
 
