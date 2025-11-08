@@ -107,7 +107,7 @@ std::optional<VulkanMemoryBlock> VulkanMemoryChunk::pop() {
 bool VulkanMemoryChunk::invalidate(uint64_t offset, uint64_t size) const {
     auto device = gdevice->device;
     FVASSERT_DEBUG(memory != VK_NULL_HANDLE);
-    if (mapped && propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) {
+    if (mapped && (propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0) {
         if (offset < chunkSize) {
             auto atomSize = gdevice->physicalDevice.properties.limits.nonCoherentAtomSize;
             auto alignUp = [atomSize](uint64_t value) {
@@ -144,7 +144,7 @@ bool VulkanMemoryChunk::invalidate(uint64_t offset, uint64_t size) const {
 bool VulkanMemoryChunk::flush(uint64_t offset, uint64_t size) const {
     auto device = gdevice->device;
     FVASSERT_DEBUG(memory != VK_NULL_HANDLE);
-    if (mapped && propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) {
+    if (mapped && (propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0) {
         if (offset < chunkSize) {
             auto atomSize = gdevice->physicalDevice.properties.limits.nonCoherentAtomSize;
             auto alignUp = [atomSize](uint64_t value) {
@@ -354,14 +354,14 @@ VulkanMemoryPool::~VulkanMemoryPool() {
 
 std::optional<VulkanMemoryBlock> VulkanMemoryPool::alloc(uint64_t size) {
     FVASSERT_DEBUG(size > 0);
-    if (auto iter = std::lower_bound(allocators.begin(), allocators.end(),
-                                     size,
-                                     [](VulkanMemoryAllocator* a, uint64_t value) {
-                                         return a->blockSize < value;
-                                     }); iter != allocators.end()) {
-        FVASSERT_DEBUG((*iter)->blockSize >= size);
-        return (*iter)->alloc(size);
-    }
+    //if (auto iter = std::lower_bound(allocators.begin(), allocators.end(),
+    //                                 size,
+    //                                 [](VulkanMemoryAllocator* a, uint64_t value) {
+    //    return a->blockSize < value;
+    //}); iter != allocators.end()) {
+    //    FVASSERT_DEBUG((*iter)->blockSize >= size);
+    //    return (*iter)->alloc(size);
+    //}
 
     auto device = gdevice->device;
     auto allocationCallbacks = gdevice->allocationCallbacks();

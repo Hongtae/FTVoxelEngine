@@ -108,10 +108,10 @@ std::shared_ptr<VulkanImageView> VulkanImage::makeImageView(PixelFormat format, 
 
         imageViewCreateInfo.format = getVkFormat(format);
         imageViewCreateInfo.components = {
-            VK_COMPONENT_SWIZZLE_R,
-            VK_COMPONENT_SWIZZLE_G,
-            VK_COMPONENT_SWIZZLE_B,
-            VK_COMPONENT_SWIZZLE_A
+            VK_COMPONENT_SWIZZLE_IDENTITY,
+            VK_COMPONENT_SWIZZLE_IDENTITY,
+            VK_COMPONENT_SWIZZLE_IDENTITY,
+            VK_COMPONENT_SWIZZLE_IDENTITY
         };
 
         if (isColorFormat(pixelFormat))
