@@ -19,40 +19,11 @@ VulkanSwapChain::VulkanSwapChain(std::shared_ptr<VulkanCommandQueue> q, std::sha
     , swapchain(nullptr)
     , enableVSync(false)
     , deviceReset(false)
-    , frameReady(nullptr)
-    , frameTimelineSemaphore(VK_NULL_HANDLE)
-    , frameCount(0) {
-    auto& gdevice = cqueue->gdevice;
-    VkDevice device = gdevice->device;
+    , frameCount(0)
+    , imageIndex(0)
+    , numberOfSwapchainImages(0) {
 
-    while (frameSemaphores.size() < maxFrameSemaphores) {
-        // create semaphore
-        VkSemaphore semaphore = VK_NULL_HANDLE;
-        VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-        VkResult err = vkCreateSemaphore(device, &semaphoreCreateInfo, gdevice->allocationCallbacks(), &semaphore);
-        if (err != VK_SUCCESS) {
-            Log::error("vkCreateSemaphore failed: {}", err);
-            FVASSERT(0);
-        }
-        if (semaphore != VK_NULL_HANDLE) {
-            frameSemaphores.push_back({ semaphore, 0 });
-        }
-    }
-    FVASSERT(!frameSemaphores.empty());
-    frameSemaphores.shrink_to_fit();
-
-    // create timeline semaphore
-    VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-    VkSemaphoreTypeCreateInfo typeCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO };
-    typeCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
-    typeCreateInfo.initialValue = 0;
-    semaphoreCreateInfo.pNext = &typeCreateInfo;
-
-    VkResult err = vkCreateSemaphore(device, &semaphoreCreateInfo, gdevice->allocationCallbacks(), &frameTimelineSemaphore);
-    if (err != VK_SUCCESS) {
-        Log::error("vkCreateSemaphore failed: {}", err);
-        FVASSERT(0);
-    }
+    cachedResolution = window->resolution();
 
     window->addEventObserver(this, (Window::WindowEventHandler)[this](auto param) {
         this->onWindowEvent(param);
@@ -79,14 +50,14 @@ VulkanSwapChain::~VulkanSwapChain() {
 
     if (swapchain)
         vkDestroySwapchainKHR(device, swapchain, gdevice->allocationCallbacks());
-
     if (surface)
         vkDestroySurfaceKHR(instance->instance, surface, gdevice->allocationCallbacks());
-
-    for (auto frame : frameSemaphores) {
-        vkDestroySemaphore(device, frame.semaphore, gdevice->allocationCallbacks());
+    for (auto semaphore : acquireSemaphores) {
+        vkDestroySemaphore(device, semaphore, gdevice->allocationCallbacks());
     }
-    vkDestroySemaphore(device, frameTimelineSemaphore, gdevice->allocationCallbacks());
+    for (auto semaphore : submitSemaphores) {
+        vkDestroySemaphore(device, semaphore, gdevice->allocationCallbacks());
+    }
 }
 
 bool VulkanSwapChain::setup() {
@@ -174,7 +145,15 @@ bool VulkanSwapChain::updateDevice() {
     auto& physicalDevice = gdevice->physicalDevice;
     VkDevice device = gdevice->device;
 
-    Size resolution = this->window->resolution();
+    auto withLock = [this](auto&& fn) {
+        std::scoped_lock guard(lock);
+        return fn();
+    };
+
+    Size resolution = withLock([this]() {
+        return this->cachedResolution;
+    });
+
     uint32_t width = static_cast<uint32_t>(std::lround(resolution.width));
     uint32_t height = static_cast<uint32_t>(std::lround(resolution.height));
 
@@ -250,7 +229,7 @@ bool VulkanSwapChain::updateDevice() {
     }
 
     // Determine the number of images
-    uint32_t desiredNumberOfSwapchainImages = surfaceCaps.minImageCount + 1;
+    uint32_t desiredNumberOfSwapchainImages = std::max(surfaceCaps.minImageCount, 2U);
     if ((surfaceCaps.maxImageCount > 0) && (desiredNumberOfSwapchainImages > surfaceCaps.maxImageCount)) {
         desiredNumberOfSwapchainImages = surfaceCaps.maxImageCount;
     }
@@ -289,7 +268,9 @@ bool VulkanSwapChain::updateDevice() {
         swapchainCI.imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     }
 
-    err = vkCreateSwapchainKHR(device, &swapchainCI, gdevice->allocationCallbacks(), &this->swapchain);
+    err = withLock([&] {
+        return vkCreateSwapchainKHR(device, &swapchainCI, gdevice->allocationCallbacks(), &this->swapchain);
+    });
     if (err != VK_SUCCESS) {
         Log::error("vkCreateSwapchainKHR failed: {}", err);
         return false;
@@ -299,23 +280,25 @@ bool VulkanSwapChain::updateDevice() {
               swapchainExtent.width, swapchainExtent.height,
               this->enableVSync,
               [](VkPresentModeKHR mode)->const char* {
-                  switch (mode) {
-                  case VK_PRESENT_MODE_IMMEDIATE_KHR:
-                      return "VK_PRESENT_MODE_IMMEDIATE_KHR";
-                  case VK_PRESENT_MODE_MAILBOX_KHR:
-                      return "VK_PRESENT_MODE_MAILBOX_KHR";
-                  case VK_PRESENT_MODE_FIFO_KHR:
-                      return "VK_PRESENT_MODE_FIFO_KHR";
-                  case VK_PRESENT_MODE_FIFO_RELAXED_KHR:
-                      return "VK_PRESENT_MODE_FIFO_RELAXED_KHR";
-                  }
-                  return "## UNKNOWN ##";
-              }(swapchainPresentMode));
+        switch (mode) {
+        case VK_PRESENT_MODE_IMMEDIATE_KHR:
+            return "VK_PRESENT_MODE_IMMEDIATE_KHR";
+        case VK_PRESENT_MODE_MAILBOX_KHR:
+            return "VK_PRESENT_MODE_MAILBOX_KHR";
+        case VK_PRESENT_MODE_FIFO_KHR:
+            return "VK_PRESENT_MODE_FIFO_KHR";
+        case VK_PRESENT_MODE_FIFO_RELAXED_KHR:
+            return "VK_PRESENT_MODE_FIFO_RELAXED_KHR";
+        }
+        return "## UNKNOWN ##";
+    }(swapchainPresentMode));
 
     // If an existing swap chain is re-created, destroy the old swap chain
     // This also cleans up all the presentable images
     if (swapchainOld) {
-        vkDestroySwapchainKHR(device, swapchainOld, gdevice->allocationCallbacks());
+        withLock([&] {
+            vkDestroySwapchainKHR(device, swapchainOld, gdevice->allocationCallbacks());
+        });
     }
 
     for (auto& imageView : imageViews) {
@@ -348,10 +331,10 @@ bool VulkanSwapChain::updateDevice() {
         VkImageViewCreateInfo imageViewCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
         imageViewCreateInfo.format = this->surfaceFormat.format;
         imageViewCreateInfo.components = {
-            VK_COMPONENT_SWIZZLE_R,
-            VK_COMPONENT_SWIZZLE_G,
-            VK_COMPONENT_SWIZZLE_B,
-            VK_COMPONENT_SWIZZLE_A
+            VK_COMPONENT_SWIZZLE_IDENTITY,
+            VK_COMPONENT_SWIZZLE_IDENTITY,
+            VK_COMPONENT_SWIZZLE_IDENTITY,
+            VK_COMPONENT_SWIZZLE_IDENTITY
         };
         imageViewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
@@ -385,7 +368,95 @@ bool VulkanSwapChain::updateDevice() {
         this->imageViews.push_back(swapChainImageView);
     }
 
+    auto resizeSemaphoreVector = [&](std::vector<VkSemaphore>& semaphores, size_t count) {
+        while (semaphores.size() > count) {
+            VkSemaphore semaphore = semaphores.back();
+            vkDestroySemaphore(device, semaphore, gdevice->allocationCallbacks());
+            semaphores.pop_back();
+        }
+        while (semaphores.size() < count) {
+            VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+            VkSemaphore semaphore = VK_NULL_HANDLE;
+            err = vkCreateSemaphore(device, &semaphoreCreateInfo, gdevice->allocationCallbacks(), &semaphore);
+            if (err != VK_SUCCESS) {
+                Log::error("vkCreateSemaphore failed: {}", err);
+                FVERROR_ABORT("vkCreateSemaphore failed");
+                return false;
+            }
+            semaphores.push_back(semaphore);
+        }
+        return semaphores.size() == count;
+    };
+    if (!resizeSemaphoreVector(acquireSemaphores, swapchainImageCount))
+        return false;
+    if (!resizeSemaphoreVector(submitSemaphores, swapchainImageCount))
+        return false;
+
+    this->imageIndex = 0;
+    this->frameCount = 0;
+    this->numberOfSwapchainImages = swapchainImageCount;
+
+    FVASSERT(this->numberOfSwapchainImages > 0);
+    FVASSERT(this->imageViews.size() == this->numberOfSwapchainImages);
+    FVASSERT(this->acquireSemaphores.size() == this->numberOfSwapchainImages);
+    FVASSERT(this->submitSemaphores.size() == this->numberOfSwapchainImages);
+
     return true;
+}
+
+void VulkanSwapChain::updateDeviceIfNeeded() {
+    lock.lock();
+    bool needsUpdate = this->deviceReset;
+    lock.unlock();
+
+    if (needsUpdate) {
+        cqueue->waitIdle();
+
+        if (this->updateDevice() == false) {
+            Log::error("VulkanSwapChain::updateDevice() failed!");
+        }
+    }
+}
+
+void VulkanSwapChain::setupFrame() {
+    this->updateDeviceIfNeeded();
+
+    auto& gdevice = cqueue->gdevice;
+    VkDevice device = gdevice->device;
+
+    auto frameIndex = this->frameCount % this->numberOfSwapchainImages;
+    auto waitSemaphore = acquireSemaphores.at(frameIndex);
+
+    std::unique_lock lock(this->lock);
+    VkResult err = vkAcquireNextImageKHR(device, this->swapchain, UINT64_MAX,
+                                         waitSemaphore, VK_NULL_HANDLE,
+                                         &this->imageIndex);
+    lock.unlock();
+
+    switch (err) {
+    case VK_SUCCESS:
+    case VK_TIMEOUT:
+    case VK_NOT_READY:
+    case VK_SUBOPTIMAL_KHR:
+        break;
+    default:
+        Log::error("vkAcquireNextImageKHR failed: {}", err);
+    }
+
+    auto renderTarget = imageViews.at(frameIndex);
+    renderTarget->waitSemaphore = waitSemaphore;
+    renderTarget->signalSemaphore = waitSemaphore;
+
+    RenderPassColorAttachmentDescriptor colorAttachment = {};
+    colorAttachment.renderTarget = renderTarget;
+    colorAttachment.clearColor = Color(0, 0, 0, 0);
+    colorAttachment.loadAction = RenderPassAttachmentDescriptor::LoadActionClear;
+    colorAttachment.storeAction = RenderPassAttachmentDescriptor::StoreActionStore;
+
+    this->renderPassDescriptor = RenderPassDescriptor{
+        { colorAttachment },
+        RenderPassDepthStencilAttachmentDescriptor{},
+    };
 }
 
 void VulkanSwapChain::setPixelFormat(PixelFormat pf) {
@@ -425,86 +496,40 @@ PixelFormat VulkanSwapChain::pixelFormat() const {
     return getPixelFormat(this->surfaceFormat.format);
 }
 
-RenderPassDescriptor VulkanSwapChain::currentRenderPassDescriptor() {
-    if (renderPassDescriptor.colorAttachments.empty())
-        this->setupFrame();
-
-    FVASSERT_DEBUG(renderPassDescriptor.colorAttachments.empty() == false);
-    return renderPassDescriptor;
-}
-
 size_t VulkanSwapChain::maximumBufferCount() const {
     std::scoped_lock guard(lock);
     return imageViews.size();
 }
 
-void VulkanSwapChain::setupFrame() {
-    auto& gdevice = cqueue->gdevice;
-    VkDevice device = gdevice->device;
-
-    auto index = frameCount % frameSemaphores.size();
-    frameReady = &frameSemaphores.at(index);
-    if (frameReady->frameIndex > 0) {
-        uint64_t value = frameReady->frameIndex;
-        VkSemaphoreWaitInfo waitInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO };
-        waitInfo.semaphoreCount = 1;
-        waitInfo.pSemaphores = &frameTimelineSemaphore;
-        waitInfo.pValues = &value;
-        VkResult err = vkWaitSemaphores(device, &waitInfo, UINT64_MAX);
-        if (err != VK_SUCCESS) {
-            Log::error("vkWaitSemaphores failed: {}", err);
-            FVASSERT_DEBUG(0);
-        }
-    }
-
-    std::unique_lock guard(lock);
-    VkResult err = vkAcquireNextImageKHR(device, this->swapchain, UINT64_MAX, frameReady->semaphore, VK_NULL_HANDLE, &this->frameIndex);
-    guard.unlock();
-
-    switch (err) {
-    case VK_SUCCESS:
-    case VK_TIMEOUT:
-    case VK_NOT_READY:
-    case VK_SUBOPTIMAL_KHR:
-        break;
-    default:
-        Log::error("vkAcquireNextImageKHR failed: {}", err);
-    }
-
-    auto renderTarget = imageViews.at(frameIndex);
-    renderTarget->waitSemaphore = frameReady->semaphore;
-    renderTarget->signalSemaphore = frameReady->semaphore;
-
-    RenderPassColorAttachmentDescriptor colorAttachment = {};
-    colorAttachment.renderTarget = renderTarget;
-    colorAttachment.clearColor = Color(0, 0, 0, 0);
-    colorAttachment.loadAction = RenderPassAttachmentDescriptor::LoadActionClear;
-    colorAttachment.storeAction = RenderPassAttachmentDescriptor::StoreActionStore;
-
-    this->renderPassDescriptor.colorAttachments.clear();
-    this->renderPassDescriptor.colorAttachments.push_back(colorAttachment);
+RenderPassDescriptor VulkanSwapChain::currentRenderPassDescriptor() {
+    if (renderPassDescriptor.has_value() == false)
+        this->setupFrame();
+    FVASSERT(renderPassDescriptor.has_value());
+    RenderPassDescriptor renderPassDescriptor = this->renderPassDescriptor.value();
+    FVASSERT(renderPassDescriptor.colorAttachments.size() > 0);
+    return renderPassDescriptor;
 }
 
 bool VulkanSwapChain::present(GPUEvent** waitEvents, size_t numEvents) {
-    FVASSERT_DEBUG(frameReady);
-
+    auto frameIndex = this->frameCount % this->numberOfSwapchainImages;
+    auto waitSemaphore = acquireSemaphores.at(frameIndex);
+    auto submitSemaphore = submitSemaphores.at(frameIndex);
     auto presentSrc = imageViews.at(frameIndex);
-    if (presentSrc->image->layout() != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
-        if (auto cbuffer = cqueue->makeCommandBuffer()) {
-            if (auto encoder = std::dynamic_pointer_cast<VulkanCopyCommandEncoder>(cbuffer->makeCopyCommandEncoder())) {
-                encoder->callback([&](auto commandBuffer) {
-                    presentSrc->image->setLayout(VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                    VK_ACCESS_2_NONE,
-                    VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
-                    VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
-                    cqueue->family->familyIndex,
-                    commandBuffer);
-                });
-                encoder->waitSemaphore(frameReady->semaphore, 0, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT);
-                encoder->signalSemaphore(frameReady->semaphore, 0, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT);
-                encoder->endEncoding();
-                cbuffer->commit();
-            }
+
+    if (auto cbuffer = cqueue->makeCommandBuffer()) {
+        if (auto encoder = std::dynamic_pointer_cast<VulkanCopyCommandEncoder>(cbuffer->makeCopyCommandEncoder())) {
+            encoder->callback([&](auto commandBuffer) {
+                presentSrc->image->setLayout(VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                VK_ACCESS_2_NONE,
+                VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+                VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+                cqueue->family->familyIndex,
+                commandBuffer);
+            });
+            encoder->waitSemaphore(waitSemaphore, 0, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT);
+            encoder->signalSemaphore(submitSemaphore, 0, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT);
+            encoder->endEncoding();
+            cbuffer->commit();
         }
     }
 
@@ -515,77 +540,48 @@ bool VulkanSwapChain::present(GPUEvent** waitEvents, size_t numEvents) {
         GPUEvent* event = waitEvents[i];
         VulkanSemaphore* s = dynamic_cast<VulkanSemaphore*>(event);
         FVASSERT_DEBUG(s);
+        // VUID-vkQueuePresentKHR-pWaitSemaphores-03267
+        FVASSERT_DEBUG(s->isBinarySemaphore());
         waitSemaphores.push_back(s->semaphore);
     }
-    waitSemaphores.push_back(frameReady->semaphore);
+    waitSemaphores.push_back(submitSemaphore);
 
     VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = &this->swapchain;
-    presentInfo.pImageIndices = &this->frameIndex;
+    presentInfo.pImageIndices = &this->imageIndex;
 
     // Check if a wait semaphore has been specified to wait for before presenting the image
     presentInfo.pWaitSemaphores = waitSemaphores.data();
     presentInfo.waitSemaphoreCount = (uint32_t)waitSemaphores.size();
 
-    VkResult err = vkQueuePresentKHR(cqueue->queue, &presentInfo);
+    VkResult err = cqueue->withVkQueue([&](VkQueue queue) {
+        return vkQueuePresentKHR(queue, &presentInfo);
+    });
     if (err != VK_SUCCESS) {
         Log::error("vkQueuePresentKHR failed: {}", err);
         //FVASSERT_DEBUG(err == VK_SUCCESS);
     }
 
-    renderPassDescriptor.colorAttachments.clear();
+    this->renderPassDescriptor.reset();
 
-    bool resetSwapchain = err == VK_ERROR_OUT_OF_DATE_KHR;
-    std::unique_lock guard(lock, std::defer_lock_t{});
-    if (resetSwapchain == false) {
-        // Check if a device reset is requested and update the device if necessary.
-        guard.lock();
-        resetSwapchain = this->deviceReset;
-        guard.unlock();
+    if (err == VK_ERROR_OUT_OF_DATE_KHR) {
+        std::scoped_lock guard(lock);
+        this->deviceReset = true;
     }
+    this->updateDeviceIfNeeded();
 
-    if (resetSwapchain) {
-        auto& gdevice = cqueue->gdevice;
-        vkDeviceWaitIdle(gdevice->device);
-        guard.lock();
-        this->deviceReset = false;
-        guard.unlock();
-        if (this->updateDevice() == false) {
-            Log::error("VulkanSwapChain.updateDevice() failed.");
-        }
-    }
-
-    frameCount += 1;
-    if (err == VK_SUCCESS) {
-        frameReady->frameIndex = frameCount;
-
-        // signal timeline semaphore
-        VkSubmitInfo2 submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO_2 };
-        VkSemaphoreSubmitInfo signalSemaphoreInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO };
-        signalSemaphoreInfo.semaphore = frameTimelineSemaphore;
-        signalSemaphoreInfo.value = frameCount;
-        signalSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_NONE;
-        signalSemaphoreInfo.deviceIndex = 0;
-
-        submitInfo.signalSemaphoreInfoCount = 1;
-        submitInfo.pSignalSemaphoreInfos = &signalSemaphoreInfo;
-
-        if (vkQueueSubmit2(cqueue->queue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
-            Log::error("vkQueueSubmit2 failed: {}", err);
-            //FVASSERT_DEBUG(0);
-        }
-    } else {
-        frameReady->frameIndex = 0;
-    }
+    this->frameCount += 1;
 
     return err == VK_SUCCESS;
 }
 
 void VulkanSwapChain::onWindowEvent(const Window::WindowEvent& e) {
     if (e.type == Window::WindowEvent::WindowResized) {
+        auto resolution = window->resolution();
         std::scoped_lock guard(lock);
         this->deviceReset = true;
+        this->cachedResolution = resolution;
     }
 }
 

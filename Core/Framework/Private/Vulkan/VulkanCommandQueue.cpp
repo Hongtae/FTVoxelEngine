@@ -34,27 +34,16 @@ std::shared_ptr<CommandBuffer> VulkanCommandQueue::makeCommandBuffer() {
 }
 
 std::shared_ptr<SwapChain> VulkanCommandQueue::makeSwapChain(std::shared_ptr<Window> window) {
-    auto swapChain = std::make_shared<VulkanSwapChain>(shared_from_this(), window);
-    if (swapChain->setup()) {
-        if (!this->family->supportPresentation) {
-            auto& physicalDevice = gdevice->physicalDevice;
+    if (this->family->supportPresentation == false) {
+        Log::error("Vulkan WSI not supported with this queue family. Try to use other queue family!");
+        return nullptr;
+    }
 
-            VkBool32 supported = VK_FALSE;
-            VkResult err = gdevice->instance->extensionProc
-                .vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice.device,
-                                                      this->family->familyIndex,
-                                                      swapChain->surface,
-                                                      &supported);
-            if (err != VK_SUCCESS) {
-                Log::error("vkGetPhysicalDeviceSurfaceSupportKHR failed: {}", err);
-                return nullptr;
-            }
-            if (!supported) {
-                Log::error("Vulkan WSI not supported with this queue family. Try to use other queue family!");
-                return nullptr;
-            }
-        }
-        return swapChain;
+    auto swapchain = std::make_shared<VulkanSwapChain>(shared_from_this(), window);
+    if (swapchain->setup()) {
+        return swapchain;
+    } else {
+        Log::error("VulkanSwapChain.setup() failed.");
     }
     return nullptr;
 }

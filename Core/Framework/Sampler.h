@@ -42,7 +42,10 @@ namespace FV {
         bool normalizedCoordinates = true;
 
         /// comparison function used when sampling texels from a depth texture.
-        CompareFunction compareFunction = CompareFunctionNever;
+        // NOTE: Some drivers have bugs that cause them to perform comparisons even
+        //       when the texture is not a depth texture.
+        //       Therefore, we will set the default value to 'CompareFunctionAlways'.
+        CompareFunction compareFunction = CompareFunctionAlways;
     };
 
     class GraphicsDevice;

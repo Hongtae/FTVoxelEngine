@@ -18,6 +18,8 @@ namespace FV {
 
         virtual uint64_t nextWaitValue() const { return 0; }
         virtual uint64_t nextSignalValue() const { return 0; }
+
+        virtual bool isBinarySemaphore() const { return true; }
     };
 
     class VulkanSemaphoreAutoIncrementalTimeline : public VulkanSemaphore {
@@ -29,6 +31,8 @@ namespace FV {
 
         uint64_t nextWaitValue() const override;
         uint64_t nextSignalValue() const override;
+
+        bool isBinarySemaphore() const override { return false; }
     };
 }
 

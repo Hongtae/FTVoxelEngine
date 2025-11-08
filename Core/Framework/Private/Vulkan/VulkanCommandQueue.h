@@ -25,10 +25,17 @@ namespace FV {
         std::shared_ptr<GraphicsDevice> device() const override;
 
         VulkanQueueFamily* family;
-        VkQueue queue;
 
         std::shared_ptr<VulkanGraphicsDevice> gdevice;
+
+        template <typename T> requires std::is_invocable_r_v<void, T, VkQueue>
+        auto withVkQueue(T&& func) {
+            std::scoped_lock guard(lock);
+            return func(queue);
+        }
+    private:
         std::mutex lock;
+        VkQueue queue;
     };
 }
 #endif //#if FVCORE_ENABLE_VULKAN
