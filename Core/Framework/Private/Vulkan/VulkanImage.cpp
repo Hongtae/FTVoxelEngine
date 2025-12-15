@@ -102,7 +102,7 @@ std::shared_ptr<VulkanImageView> VulkanImage::makeImageView(PixelFormat format, 
                 imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
             break;
         default:
-            FVASSERT_DEBUG(0, "Unknown texture type!");
+            FVASSERT_DESC(0, "Unknown texture type!");
             return nullptr;
         }
 

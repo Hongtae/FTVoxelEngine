@@ -19,11 +19,16 @@ VulkanSwapChain::VulkanSwapChain(std::shared_ptr<VulkanCommandQueue> q, std::sha
     , swapchain(nullptr)
     , enableVSync(false)
     , deviceReset(false)
+    , surfaceReady(false)
+    , validWindow(false)
     , frameCount(0)
     , imageIndex(0)
     , numberOfSwapchainImages(0) {
 
     cachedResolution = window->resolution();
+    if (window && window->platformHandle() != nullptr) {
+        validWindow = true;
+    }
 
     window->addEventObserver(this, (Window::WindowEventHandler)[this](auto param) {
         this->onWindowEvent(param);
@@ -124,7 +129,7 @@ bool VulkanSwapChain::setup() {
     }
 
     // If the surface format list only includes one entry with VK_FORMAT_UNDEFINED,
-    // there is no preferered format, so we assume VK_FORMAT_B8G8R8A8_UNORM
+    // there is no preferred format, so we assume VK_FORMAT_B8G8R8A8_UNORM
     if ((surfaceFormatCount == 1) && (availableSurfaceFormats[0].format == VK_FORMAT_UNDEFINED)) {
         this->surfaceFormat.format = VK_FORMAT_B8G8R8A8_UNORM;
     } else {
@@ -145,17 +150,15 @@ bool VulkanSwapChain::updateDevice() {
     auto& physicalDevice = gdevice->physicalDevice;
     VkDevice device = gdevice->device;
 
-    auto withLock = [this](auto&& fn) {
-        std::scoped_lock guard(lock);
-        return fn();
-    };
-
-    Size resolution = withLock([this]() {
+    Size resolution = withLock([this] {
+        this->deviceReset = false;
+        this->surfaceReady = false;
         return this->cachedResolution;
     });
 
     uint32_t width = static_cast<uint32_t>(std::lround(resolution.width));
     uint32_t height = static_cast<uint32_t>(std::lround(resolution.height));
+
 
     VkResult err = VK_SUCCESS;
     VkSwapchainKHR swapchainOld = this->swapchain;
@@ -201,6 +204,25 @@ bool VulkanSwapChain::updateDevice() {
         swapchainExtent = surfaceCaps.currentExtent;
         width = surfaceCaps.currentExtent.width;
         height = surfaceCaps.currentExtent.height;
+    }
+
+    if (swapchainExtent.width == 0 || swapchainExtent.height == 0) {
+        // surface is not visible, swapchain cannot be created until the size changes.
+        Log::warning("Swapchain cannot be created with zero area ({} x {})", swapchainExtent.width, swapchainExtent.height);
+
+        // create off-screen render-target. (fallback)
+        auto imageView = gdevice->makeTransientRenderTarget(
+            TextureType::TextureType2D,
+            pixelFormat(),
+            std::max(1U, width),
+            std::max(1U, height),
+            1);
+
+        if (imageView) {
+            FVASSERT_DEBUG(std::dynamic_pointer_cast<VulkanImageView>(imageView));
+        }
+        this->offscreenImageView = std::dynamic_pointer_cast<VulkanImageView>(imageView);
+        return false;
     }
 
     // Select a present mode for the swapchain
@@ -395,25 +417,27 @@ bool VulkanSwapChain::updateDevice() {
     this->imageIndex = 0;
     this->frameCount = 0;
     this->numberOfSwapchainImages = swapchainImageCount;
+    this->offscreenImageView = nullptr;
 
     FVASSERT(this->numberOfSwapchainImages > 0);
     FVASSERT(this->imageViews.size() == this->numberOfSwapchainImages);
     FVASSERT(this->acquireSemaphores.size() == this->numberOfSwapchainImages);
     FVASSERT(this->submitSemaphores.size() == this->numberOfSwapchainImages);
 
+    withLock([this] { this->surfaceReady = true; });
     return true;
 }
 
 void VulkanSwapChain::updateDeviceIfNeeded() {
-    lock.lock();
-    bool needsUpdate = this->deviceReset;
-    lock.unlock();
+    bool needsUpdate = withLock([this] {
+        return this->deviceReset;
+    });
 
     if (needsUpdate) {
         cqueue->waitIdle();
 
         if (this->updateDevice() == false) {
-            Log::error("VulkanSwapChain::updateDevice() failed!");
+            Log::error("VulkanSwapChain::updateDevice() failed! (surfaceReady: {})", this->surfaceReady);
         }
     }
 }
@@ -424,28 +448,38 @@ void VulkanSwapChain::setupFrame() {
     auto& gdevice = cqueue->gdevice;
     VkDevice device = gdevice->device;
 
-    auto frameIndex = this->frameCount % this->numberOfSwapchainImages;
+    auto frameIndex = this->frameCount % acquireSemaphores.size();
     auto waitSemaphore = acquireSemaphores.at(frameIndex);
 
-    std::unique_lock lock(this->lock);
-    VkResult err = vkAcquireNextImageKHR(device, this->swapchain, UINT64_MAX,
-                                         waitSemaphore, VK_NULL_HANDLE,
-                                         &this->imageIndex);
-    lock.unlock();
+    bool frameReady = withLock([&] {
+        if (this->surfaceReady) {
+            VkResult err = vkAcquireNextImageKHR(device,
+                                                 this->swapchain, UINT64_MAX,
+                                                 waitSemaphore, VK_NULL_HANDLE,
+                                                 &this->imageIndex);
 
-    switch (err) {
-    case VK_SUCCESS:
-    case VK_TIMEOUT:
-    case VK_NOT_READY:
-    case VK_SUBOPTIMAL_KHR:
-        break;
-    default:
-        Log::error("vkAcquireNextImageKHR failed: {}", err);
+            switch (err) {
+            case VK_SUCCESS:
+            case VK_TIMEOUT:
+            case VK_NOT_READY:
+            case VK_SUBOPTIMAL_KHR:
+                return true;
+                break;
+            default:
+                Log::error("vkAcquireNextImageKHR failed: {}", err);
+            }
+        }
+        return false;
+    });
+
+    std::shared_ptr<VulkanImageView> renderTarget = nullptr;
+    if (frameReady) {
+        renderTarget = imageViews.at(imageIndex);
+        renderTarget->waitSemaphore = waitSemaphore;
+        renderTarget->signalSemaphore = waitSemaphore;
+    } else {
+        renderTarget = offscreenImageView;
     }
-
-    auto renderTarget = imageViews.at(frameIndex);
-    renderTarget->waitSemaphore = waitSemaphore;
-    renderTarget->signalSemaphore = waitSemaphore;
 
     RenderPassColorAttachmentDescriptor colorAttachment = {};
     colorAttachment.renderTarget = renderTarget;
@@ -492,13 +526,16 @@ void VulkanSwapChain::setPixelFormat(PixelFormat pf) {
 }
 
 PixelFormat VulkanSwapChain::pixelFormat() const {
-    std::scoped_lock guard(lock);
-    return getPixelFormat(this->surfaceFormat.format);
+    return withLock([&] {
+        return getPixelFormat(this->surfaceFormat.format);
+    });
 }
 
 size_t VulkanSwapChain::maximumBufferCount() const {
-    std::scoped_lock guard(lock);
-    return imageViews.size();
+    return withLock([this] {
+        FVASSERT_DEBUG(this->numberOfSwapchainImages == imageViews.size());
+        return this->numberOfSwapchainImages;
+    });
 }
 
 RenderPassDescriptor VulkanSwapChain::currentRenderPassDescriptor() {
@@ -511,10 +548,26 @@ RenderPassDescriptor VulkanSwapChain::currentRenderPassDescriptor() {
 }
 
 bool VulkanSwapChain::present(GPUEvent** waitEvents, size_t numEvents) {
-    auto frameIndex = this->frameCount % this->numberOfSwapchainImages;
+
+    auto [validWindow, surfaceReady] = withLock([this] {
+        return std::make_tuple(this->validWindow, this->surfaceReady);
+    });
+
+    if (validWindow == false) {
+        Log::error("VulkanSwapChain::present() failed: window is not valid.");
+        return false;
+    }
+
+    if (surfaceReady == false) {
+        this->renderPassDescriptor.reset();
+        return false;
+    }
+
+    auto frameIndex = this->frameCount % acquireSemaphores.size();
     auto waitSemaphore = acquireSemaphores.at(frameIndex);
-    auto submitSemaphore = submitSemaphores.at(frameIndex);
-    auto presentSrc = imageViews.at(frameIndex);
+
+    auto submitSemaphore = submitSemaphores.at(this->imageIndex);
+    auto presentSrc = imageViews.at(this->imageIndex);
 
     if (auto cbuffer = cqueue->makeCommandBuffer()) {
         if (auto encoder = std::dynamic_pointer_cast<VulkanCopyCommandEncoder>(cbuffer->makeCopyCommandEncoder())) {
@@ -566,8 +619,9 @@ bool VulkanSwapChain::present(GPUEvent** waitEvents, size_t numEvents) {
     this->renderPassDescriptor.reset();
 
     if (err == VK_ERROR_OUT_OF_DATE_KHR) {
-        std::scoped_lock guard(lock);
-        this->deviceReset = true;
+        withLock([this] {
+            this->deviceReset = true;
+        });
     }
     this->updateDeviceIfNeeded();
 
@@ -577,11 +631,31 @@ bool VulkanSwapChain::present(GPUEvent** waitEvents, size_t numEvents) {
 }
 
 void VulkanSwapChain::onWindowEvent(const Window::WindowEvent& e) {
-    if (e.type == Window::WindowEvent::WindowResized) {
-        auto resolution = window->resolution();
-        std::scoped_lock guard(lock);
-        this->deviceReset = true;
-        this->cachedResolution = resolution;
+    switch (e.type) {
+    case Window::WindowEvent::WindowResized:
+        if (true) {
+            auto resolution = window->resolution();
+            withLock([this, resolution] {
+                this->deviceReset = true;
+                this->cachedResolution = resolution;
+            });
+        }
+        break;
+    case Window::WindowEvent::WindowClosed:
+        withLock([this] {
+            this->validWindow = false;
+        });
+        break;
+    case Window::WindowEvent::WindowShown:
+    case Window::WindowEvent::WindowActivated:
+        withLock([this] {
+            if (this->surfaceReady == false) {
+                this->deviceReset = true;
+            }
+        });
+        break;
+    default:
+        break;
     }
 }
 

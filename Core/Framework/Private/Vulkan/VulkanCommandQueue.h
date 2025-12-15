@@ -28,8 +28,7 @@ namespace FV {
 
         std::shared_ptr<VulkanGraphicsDevice> gdevice;
 
-        template <typename T> requires std::is_invocable_r_v<void, T, VkQueue>
-        auto withVkQueue(T&& func) {
+        auto withVkQueue(std::invocable<VkQueue> auto&& func) {
             std::scoped_lock guard(lock);
             return func(queue);
         }

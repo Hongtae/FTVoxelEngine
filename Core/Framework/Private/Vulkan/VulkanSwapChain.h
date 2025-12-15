@@ -42,6 +42,7 @@ namespace FV {
         std::vector<VkSemaphore> submitSemaphores;
         uint32_t numberOfSwapchainImages;
         std::vector<std::shared_ptr<VulkanImageView>> imageViews;
+        std::shared_ptr<VulkanImageView> offscreenImageView;
 
         VkSwapchainKHR swapchain;
         VkSurfaceKHR surface;
@@ -53,12 +54,19 @@ namespace FV {
 
         mutable std::mutex lock;
         bool deviceReset;	// recreate swapchain
+        bool surfaceReady;
+        bool validWindow;
         Size cachedResolution;
 
         std::optional<RenderPassDescriptor> renderPassDescriptor;
 
         void updateDeviceIfNeeded();
         void onWindowEvent(const Window::WindowEvent&);
+
+        auto withLock(std::invocable auto&& fn) const {
+            std::scoped_lock guard(lock);
+            return fn();
+        };
     };
 }
 #endif //#if FVCORE_ENABLE_VULKAN
