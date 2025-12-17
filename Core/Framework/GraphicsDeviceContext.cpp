@@ -29,20 +29,22 @@ std::shared_ptr<GraphicsDeviceContext> GraphicsDeviceContext::makeDefault() {
         bool enableLayersForEnabledExtensions = false;
         bool enableValidation = false;
         bool enableDebugUtils = false;
+        uint32_t validationFeatures = VulkanValidationFeature::CoreValidation |
+            VulkanValidationFeature::SynchronizationValidation;
 
 #ifdef FVCORE_DEBUG_ENABLED
         auto args = Application::commandLineArguments();
-        if (std::find_if(args.begin(), args.end(),
-                         [](auto& arg) {
-                             std::string lower;
-                             std::transform(arg.begin(), arg.end(), std::back_inserter(lower),
-                                            [](auto c) { return std::tolower(c); });
-                             return lower.compare("--disable-validation") == 0;
-                         }) == args.end()) {
+        if (std::find_if(args.begin(), args.end(), [](auto& arg) {
+            std::string lower;
+            std::transform(arg.begin(), arg.end(), std::back_inserter(lower),
+                           [](auto c) { return std::tolower(c); });
+            return lower.compare("--disable-validation") == 0;
+        }) == args.end()) {
             enableValidation = true;
         }
         enableDebugUtils = true;
 #endif
+
         if (auto instance = VulkanInstance::makeInstance(
             requiredLayers,
             optionalLayers,
@@ -51,7 +53,8 @@ std::shared_ptr<GraphicsDeviceContext> GraphicsDeviceContext::makeDefault() {
             enableExtensionsForEnabledLayers,
             enableLayersForEnabledExtensions,
             enableValidation,
-            enableDebugUtils)) {
+            enableDebugUtils,
+            validationFeatures)) {
             device = instance->makeDevice({}, {});
         }
 #endif

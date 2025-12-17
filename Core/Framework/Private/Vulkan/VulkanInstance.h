@@ -18,6 +18,15 @@ namespace FV {
         std::map<std::string, uint32_t> extensions;
     };
 
+    struct VulkanValidationFeature {
+        static constexpr uint32_t CoreValidation                = 1;
+        static constexpr uint32_t SynchronizationValidation     = 1 << 1;
+        static constexpr uint32_t BestPractices                 = 1 << 2;
+        static constexpr uint32_t DebugPrintf                   = 1 << 3;
+        static constexpr uint32_t GPUAssisted                   = 1 << 4;
+        static constexpr uint32_t GPUAssistedReserveBindingSlot = 1 << 5;
+    };
+
     class VulkanInstance : public std::enable_shared_from_this<VulkanInstance> {
     public:
         VulkanInstance();
@@ -46,6 +55,9 @@ namespace FV {
             bool enableLayersForEnabledExtensions = false,
             bool enableValidation = false,
             bool enableDebugUtils = false,
+            uint32_t validationFeatures = 
+                VulkanValidationFeature::CoreValidation |
+                VulkanValidationFeature::SynchronizationValidation,
             VkAllocationCallbacks* allocationCallback = nullptr);
 
         VkAllocationCallbacks* allocationCallback;

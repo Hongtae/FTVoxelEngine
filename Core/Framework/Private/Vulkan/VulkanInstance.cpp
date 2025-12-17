@@ -91,6 +91,7 @@ std::shared_ptr<VulkanInstance> VulkanInstance::makeInstance(
     bool enableLayersForEnabledExtensions,
     bool enableValidation,
     bool enableDebugUtils,
+    uint32_t validationFeatureMask,
     VkAllocationCallbacks* allocationCallback) {
     VkApplicationInfo appInfo = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
     appInfo.pApplicationName = "FunTech-V-Core";
@@ -291,19 +292,43 @@ std::shared_ptr<VulkanInstance> VulkanInstance::makeInstance(
     };
     instanceCreateInfo.pApplicationInfo = &appInfo;
 
-    VkValidationFeatureEnableEXT enabledFeatures[] = {
-        VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT,
-        VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT,
-        VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT,
-    };
-    VkValidationFeaturesEXT validationFeatures = {
-        VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT
-    };
+    std::vector<VkValidationFeatureEnableEXT> enabledValidationFeatures;
+    std::vector<VkValidationFeatureDisableEXT> disabledValidationFeatures;
+    VkValidationFeaturesEXT validationFeatures = { VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT };
 
     if (enableValidation) {
-        validationFeatures.enabledValidationFeatureCount =
-            (uint32_t)std::size(enabledFeatures);
-        validationFeatures.pEnabledValidationFeatures = enabledFeatures;
+        if (validationFeatureMask & VulkanValidationFeature::GPUAssistedReserveBindingSlot) {
+            if (validationFeatureMask & (VulkanValidationFeature::GPUAssisted | VulkanValidationFeature::DebugPrintf)) {
+                // ok
+            } else {
+                Log::warning("VulkanValidationFeature::GPUAssistedReserveBindingSlot requires VulkanValidationFeature::GPUAssisted or VulkanValidationFeature::DebugPrintf to be enabled.");
+                validationFeatureMask |= VulkanValidationFeature::GPUAssisted;
+            }
+        }
+
+        if ((validationFeatureMask & VulkanValidationFeature::CoreValidation) == 0) {
+            disabledValidationFeatures.push_back(VK_VALIDATION_FEATURE_DISABLE_CORE_CHECKS_EXT);
+        }
+        if (validationFeatureMask & VulkanValidationFeature::SynchronizationValidation) {
+            enabledValidationFeatures.push_back(VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT);
+        }
+        if (validationFeatureMask & VulkanValidationFeature::BestPractices) {
+           enabledValidationFeatures.push_back(VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT);
+        }
+        if (validationFeatureMask & VulkanValidationFeature::DebugPrintf) {
+            enabledValidationFeatures.push_back(VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT);
+        }
+        if (validationFeatureMask & VulkanValidationFeature::GPUAssisted) {
+            enabledValidationFeatures.push_back(VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT);
+        }
+        if (validationFeatureMask & VulkanValidationFeature::GPUAssistedReserveBindingSlot) {
+            enabledValidationFeatures.push_back(VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT);
+        }
+
+        validationFeatures.enabledValidationFeatureCount = (uint32_t)enabledValidationFeatures.size();
+        validationFeatures.pEnabledValidationFeatures = enabledValidationFeatures.data();
+        validationFeatures.disabledValidationFeatureCount = (uint32_t)disabledValidationFeatures.size();
+        validationFeatures.pDisabledValidationFeatures = disabledValidationFeatures.data();
         instanceCreateInfo.pNext = &validationFeatures;
     }
 

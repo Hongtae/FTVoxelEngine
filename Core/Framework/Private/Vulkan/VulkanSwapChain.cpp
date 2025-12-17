@@ -481,9 +481,9 @@ void VulkanSwapChain::setupFrame() {
     auto& gdevice = cqueue->gdevice;
     VkDevice device = gdevice->device;
 
-    auto acuireLockIndex = this->frameCount % numberOfAcquireLocks;
-    auto waitSemaphore = acquireSemaphores.at(acuireLockIndex);
-    auto fence = acquireFences.at(acuireLockIndex);
+    auto acquireLockIndex = this->frameCount % numberOfAcquireLocks;
+    auto waitSemaphore = acquireSemaphores.at(acquireLockIndex);
+    auto fence = acquireFences.at(acquireLockIndex);
 
     bool frameReady = withLock([&] {
         if (this->surfaceReady) {
@@ -609,9 +609,9 @@ bool VulkanSwapChain::present(GPUEvent** waitEvents, size_t numEvents) {
         return false;
     }
 
-    auto acuireLockIndex = this->frameCount % numberOfAcquireLocks;
-    auto waitSemaphore = acquireSemaphores.at(acuireLockIndex);
-    auto fence = acquireFences.at(acuireLockIndex);
+    auto acquireLockIndex = this->frameCount % numberOfAcquireLocks;
+    auto waitSemaphore = acquireSemaphores.at(acquireLockIndex);
+    auto fence = acquireFences.at(acquireLockIndex);
 
     auto submitSemaphore = submitSemaphores.at(this->imageIndex);
     auto presentSrc = imageViews.at(this->imageIndex);
