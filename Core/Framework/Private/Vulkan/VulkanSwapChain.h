@@ -38,9 +38,12 @@ namespace FV {
         uint64_t frameCount;
         uint32_t imageIndex;
 
-        std::vector<VkSemaphore> acquireSemaphores;
-        std::vector<VkSemaphore> submitSemaphores;
+        uint32_t numberOfAcquireLocks;
+        std::vector<VkSemaphore> acquireSemaphores; // signaled when image is acquired.
+        std::vector<VkFence> acquireFences; // signaled when semaphore is ready.
+
         uint32_t numberOfSwapchainImages;
+        std::vector<VkSemaphore> submitSemaphores;
         std::vector<std::shared_ptr<VulkanImageView>> imageViews;
         std::shared_ptr<VulkanImageView> offscreenImageView;
 

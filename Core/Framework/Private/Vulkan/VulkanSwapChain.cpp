@@ -10,12 +10,11 @@
 #if FVCORE_ENABLE_VULKAN
 using namespace FV;
 
-constexpr int maxFrameSemaphores = 3;
-
 VulkanSwapChain::VulkanSwapChain(std::shared_ptr<VulkanCommandQueue> q, std::shared_ptr<Window> w)
     : cqueue(q)
     , window(w)
     , surface(nullptr)
+    , surfaceFormat{}
     , swapchain(nullptr)
     , enableVSync(false)
     , deviceReset(false)
@@ -23,7 +22,8 @@ VulkanSwapChain::VulkanSwapChain(std::shared_ptr<VulkanCommandQueue> q, std::sha
     , validWindow(false)
     , frameCount(0)
     , imageIndex(0)
-    , numberOfSwapchainImages(0) {
+    , numberOfSwapchainImages(0)
+    , numberOfAcquireLocks(0) {
 
     cachedResolution = window->resolution();
     if (window && window->platformHandle() != nullptr) {
@@ -62,6 +62,9 @@ VulkanSwapChain::~VulkanSwapChain() {
     }
     for (auto semaphore : submitSemaphores) {
         vkDestroySemaphore(device, semaphore, gdevice->allocationCallbacks());
+    }
+    for (auto fence : acquireFences) {
+        vkDestroyFence(device, fence, gdevice->allocationCallbacks());
     }
 }
 
@@ -407,9 +410,36 @@ bool VulkanSwapChain::updateDevice() {
             }
             semaphores.push_back(semaphore);
         }
+        semaphores.shrink_to_fit();
         return semaphores.size() == count;
     };
-    if (!resizeSemaphoreVector(acquireSemaphores, swapchainImageCount))
+    auto resizeFenceVector = [&](std::vector<VkFence>& fences, size_t count, bool signaled) {
+        while (fences.size() > count) {
+            VkFence fence = fences.back();
+            vkDestroyFence(device, fence, gdevice->allocationCallbacks());
+            fences.pop_back();
+        }
+        while (fences.size() < count) {
+            VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+            fenceCreateInfo.flags = signaled ? VK_FENCE_CREATE_SIGNALED_BIT : 0;
+            VkFence fence = VK_NULL_HANDLE;
+            err = vkCreateFence(device, &fenceCreateInfo, gdevice->allocationCallbacks(), &fence);
+            if (err != VK_SUCCESS) {
+                Log::error("vkCreateFence failed: {}", err);
+                FVERROR_ABORT("vkCreateFence failed");
+                return false;
+            }
+            fences.push_back(fence);
+        }
+        fences.shrink_to_fit();
+        return fences.size() == count;
+    };
+
+    auto numAcquireLocks = std::max(swapchainImageCount, 2U);
+
+    if (!resizeFenceVector(acquireFences, numAcquireLocks, true))
+        return false;    
+    if (!resizeSemaphoreVector(acquireSemaphores, numAcquireLocks))
         return false;
     if (!resizeSemaphoreVector(submitSemaphores, swapchainImageCount))
         return false;
@@ -417,12 +447,15 @@ bool VulkanSwapChain::updateDevice() {
     this->imageIndex = 0;
     this->frameCount = 0;
     this->numberOfSwapchainImages = swapchainImageCount;
+    this->numberOfAcquireLocks = numAcquireLocks;
     this->offscreenImageView = nullptr;
 
     FVASSERT(this->numberOfSwapchainImages > 0);
-    FVASSERT(this->imageViews.size() == this->numberOfSwapchainImages);
-    FVASSERT(this->acquireSemaphores.size() == this->numberOfSwapchainImages);
-    FVASSERT(this->submitSemaphores.size() == this->numberOfSwapchainImages);
+    FVASSERT(this->numberOfAcquireLocks > 0);
+    FVASSERT(this->imageViews.size() == swapchainImageCount);
+    FVASSERT(this->submitSemaphores.size() == swapchainImageCount);
+    FVASSERT(this->acquireFences.size() == numAcquireLocks);
+    FVASSERT(this->acquireSemaphores.size() == numAcquireLocks);
 
     withLock([this] { this->surfaceReady = true; });
     return true;
@@ -448,16 +481,29 @@ void VulkanSwapChain::setupFrame() {
     auto& gdevice = cqueue->gdevice;
     VkDevice device = gdevice->device;
 
-    auto frameIndex = this->frameCount % acquireSemaphores.size();
-    auto waitSemaphore = acquireSemaphores.at(frameIndex);
+    auto acuireLockIndex = this->frameCount % numberOfAcquireLocks;
+    auto waitSemaphore = acquireSemaphores.at(acuireLockIndex);
+    auto fence = acquireFences.at(acuireLockIndex);
 
     bool frameReady = withLock([&] {
         if (this->surfaceReady) {
+            auto st = vkGetFenceStatus(device, fence);
+            if (st == VK_NOT_READY) {
+                auto start = std::chrono::high_resolution_clock::now();
+                vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
+                auto end = std::chrono::high_resolution_clock::now();
+                auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+                if (duration > 100) {
+                    Log::warning("VulkanSwapChain::setupFrame: vkWaitForFences took {} microseconds.", duration);
+                }
+            } else if (st != VK_SUCCESS) {
+                Log::error("vkGetFenceStatus failed: {}", st);
+            }
+            vkResetFences(device, 1, &fence);
             VkResult err = vkAcquireNextImageKHR(device,
                                                  this->swapchain, UINT64_MAX,
                                                  waitSemaphore, VK_NULL_HANDLE,
                                                  &this->imageIndex);
-
             switch (err) {
             case VK_SUCCESS:
             case VK_TIMEOUT:
@@ -563,11 +609,35 @@ bool VulkanSwapChain::present(GPUEvent** waitEvents, size_t numEvents) {
         return false;
     }
 
-    auto frameIndex = this->frameCount % acquireSemaphores.size();
-    auto waitSemaphore = acquireSemaphores.at(frameIndex);
+    auto acuireLockIndex = this->frameCount % numberOfAcquireLocks;
+    auto waitSemaphore = acquireSemaphores.at(acuireLockIndex);
+    auto fence = acquireFences.at(acuireLockIndex);
 
     auto submitSemaphore = submitSemaphores.at(this->imageIndex);
     auto presentSrc = imageViews.at(this->imageIndex);
+
+    if (true) {
+        VkSemaphoreSubmitInfo waitSemaphoreInfo = {
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+            .semaphore = waitSemaphore,
+            .stageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT
+        };
+        VkSemaphoreSubmitInfo signalSemaphoreInfo = {
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+            .semaphore = submitSemaphore,
+            .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT
+        };
+        VkSubmitInfo2 submitInfo = {
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+            .waitSemaphoreInfoCount = 1,
+            .pWaitSemaphoreInfos = &waitSemaphoreInfo,
+            .signalSemaphoreInfoCount = 1,
+            .pSignalSemaphoreInfos = &signalSemaphoreInfo
+        };
+        cqueue->withVkQueue([&](VkQueue queue) {
+            vkQueueSubmit2(queue, 1, &submitInfo, fence);
+        });
+    }
 
     if (auto cbuffer = cqueue->makeCommandBuffer()) {
         if (auto encoder = std::dynamic_pointer_cast<VulkanCopyCommandEncoder>(cbuffer->makeCopyCommandEncoder())) {
@@ -579,7 +649,7 @@ bool VulkanSwapChain::present(GPUEvent** waitEvents, size_t numEvents) {
                 cqueue->family->familyIndex,
                 commandBuffer);
             });
-            encoder->waitSemaphore(waitSemaphore, 0, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT);
+            encoder->waitSemaphore(submitSemaphore, 0, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT);
             encoder->signalSemaphore(submitSemaphore, 0, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT);
             encoder->endEncoding();
             cbuffer->commit();
