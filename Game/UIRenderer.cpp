@@ -117,7 +117,7 @@ void UIRenderer::initialize(std::shared_ptr<GraphicsDeviceContext>, std::shared_
     init_info.Instance = gdevice->instance->instance;
     init_info.Device = gdevice->device;
     init_info.PhysicalDevice = gdevice->physicalDevice.device;
-    init_info.Queue = cqueue->queue;
+    init_info.Queue = cqueue->withVkQueue([](VkQueue q) { return q; });
     init_info.QueueFamily = cqueue->family->familyIndex;
     init_info.MinImageCount = 2;
     init_info.ImageCount = uint32_t(swapchain->maximumBufferCount());
@@ -146,7 +146,9 @@ void UIRenderer::initialize(std::shared_ptr<GraphicsDeviceContext>, std::shared_
     VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &this->commandBuffer;
-    err = vkQueueSubmit(cqueue->queue, 1, &submitInfo, VK_NULL_HANDLE);
+    err = cqueue->withVkQueue([&](VkQueue queue) {
+        return vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
+    });
     if (err != VK_SUCCESS)
         throw std::runtime_error("vkQueueSubmit failed!");
 
@@ -262,7 +264,9 @@ void UIRenderer::render(const RenderPassDescriptor& rp, const Rect& frame) {
         submitInfo.commandBufferInfoCount = 1;
         submitInfo.pCommandBufferInfos = &cbufferSubmitInfo;
 
-        err = vkQueueSubmit2(cqueue->queue, 1, &submitInfo, this->fence);
+        err = cqueue->withVkQueue([&](VkQueue queue) {
+            return vkQueueSubmit2(queue, 1, &submitInfo, this->fence);
+        });
         if (err != VK_SUCCESS)
             throw std::runtime_error("vkQueueSubmit2 failed.");
 #endif
