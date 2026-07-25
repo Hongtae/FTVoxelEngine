@@ -25,7 +25,7 @@ This engine is a volumetric visualization and dynamics simulation engine, not a 
   - Vulkan rendering test
 
 # Build
-- Visual Studio 2022
+- Visual Studio 2026
   - Desktop development with C++
 - Vulkan SDK 1.3.243 or later (requires Validation-Layer for debugging)
   - [Download Vulkan SDK](https://vulkan.lunarg.com/sdk/home)
