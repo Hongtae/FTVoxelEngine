@@ -354,14 +354,14 @@ VulkanMemoryPool::~VulkanMemoryPool() {
 
 std::optional<VulkanMemoryBlock> VulkanMemoryPool::alloc(uint64_t size) {
     FVASSERT_DEBUG(size > 0);
-    //if (auto iter = std::lower_bound(allocators.begin(), allocators.end(),
-    //                                 size,
-    //                                 [](VulkanMemoryAllocator* a, uint64_t value) {
-    //    return a->blockSize < value;
-    //}); iter != allocators.end()) {
-    //    FVASSERT_DEBUG((*iter)->blockSize >= size);
-    //    return (*iter)->alloc(size);
-    //}
+    if (auto iter = std::lower_bound(allocators.begin(), allocators.end(),
+                                    size,
+                                    [](VulkanMemoryAllocator* a, uint64_t value) {
+       return a->blockSize < value;
+    }); iter != allocators.end()) {
+       FVASSERT_DEBUG((*iter)->blockSize >= size);
+       return (*iter)->alloc(size);
+    }
 
     auto device = gdevice->device;
     auto allocationCallbacks = gdevice->allocationCallbacks();
