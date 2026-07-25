@@ -19,6 +19,7 @@ VulkanSwapChain::VulkanSwapChain(std::shared_ptr<VulkanCommandQueue> q, std::sha
     , enableVSync(false)
     , deviceReset(false)
     , surfaceReady(false)
+    , frameReady(false)
     , validWindow(false)
     , frameCount(0)
     , imageIndex(0)
@@ -156,6 +157,7 @@ bool VulkanSwapChain::updateDevice() {
     Size resolution = withLock([this] {
         this->deviceReset = false;
         this->surfaceReady = false;
+        this->frameReady = false;
         return this->cachedResolution;
     });
 
@@ -318,14 +320,10 @@ bool VulkanSwapChain::updateDevice() {
         return "## UNKNOWN ##";
     }(swapchainPresentMode));
 
-    // If an existing swap chain is re-created, destroy the old swap chain
-    // This also cleans up all the presentable images
-    if (swapchainOld) {
-        withLock([&] {
-            vkDestroySwapchainKHR(device, swapchainOld, gdevice->allocationCallbacks());
-        });
-    }
-
+    // Release the views of the old swapchain images before destroying the
+    // swapchain: vkDestroySwapchainKHR destroys its presentable images, and a
+    // VkImageView must not outlive the VkImage it was created from.
+    this->renderPassDescriptor.reset();
     for (auto& imageView : imageViews) {
         imageView->image->image = VK_NULL_HANDLE;
         imageView->image = nullptr;
@@ -334,6 +332,14 @@ bool VulkanSwapChain::updateDevice() {
         FVASSERT_DEBUG(imageView->imageView);
     }
     imageViews.clear();
+
+    // If an existing swap chain is re-created, destroy the old swap chain
+    // This also cleans up all the presentable images
+    if (swapchainOld) {
+        withLock([&] {
+            vkDestroySwapchainKHR(device, swapchainOld, gdevice->allocationCallbacks());
+        });
+    }
 
     uint32_t swapchainImageCount = 0;
     err = vkGetSwapchainImagesKHR(device, this->swapchain, &swapchainImageCount, nullptr);
@@ -481,39 +487,54 @@ void VulkanSwapChain::setupFrame() {
     auto& gdevice = cqueue->gdevice;
     VkDevice device = gdevice->device;
 
-    auto acquireLockIndex = this->frameCount % numberOfAcquireLocks;
-    auto waitSemaphore = acquireSemaphores.at(acquireLockIndex);
-    auto fence = acquireFences.at(acquireLockIndex);
+    VkSemaphore waitSemaphore = VK_NULL_HANDLE;
 
-    bool frameReady = withLock([&] {
-        if (this->surfaceReady) {
-            auto st = vkGetFenceStatus(device, fence);
-            if (st == VK_NOT_READY) {
-                auto start = std::chrono::high_resolution_clock::now();
-                vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
-                auto end = std::chrono::high_resolution_clock::now();
-                auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-                if (duration > 100) {
-                    Log::warning("VulkanSwapChain::setupFrame: vkWaitForFences took {} microseconds.", duration);
-                }
-            } else if (st != VK_SUCCESS) {
-                Log::error("vkGetFenceStatus failed: {}", st);
+    bool frameReady = withLock([&]()->bool {
+        this->frameReady = false;
+        if (this->surfaceReady == false || this->numberOfAcquireLocks == 0)
+            return false;
+
+        auto acquireLockIndex = this->frameCount % this->numberOfAcquireLocks;
+        VkFence fence = acquireFences.at(acquireLockIndex);
+        waitSemaphore = acquireSemaphores.at(acquireLockIndex);
+
+        auto st = vkGetFenceStatus(device, fence);
+        if (st == VK_NOT_READY) {
+            auto start = std::chrono::high_resolution_clock::now();
+            vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
+            auto end = std::chrono::high_resolution_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+            if (duration > 100) {
+                Log::warning("VulkanSwapChain::setupFrame: vkWaitForFences took {} microseconds.", duration);
             }
+        } else if (st != VK_SUCCESS) {
+            Log::error("vkGetFenceStatus failed: {}", st);
+        }
+
+        VkResult err = vkAcquireNextImageKHR(device,
+                                             this->swapchain, UINT64_MAX,
+                                             waitSemaphore, VK_NULL_HANDLE,
+                                             &this->imageIndex);
+        switch (err) {
+        case VK_SUBOPTIMAL_KHR:
+            // the acquired image is still usable, but the swapchain no longer
+            // matches the surface exactly. recreate it after this frame.
+            this->deviceReset = true;
+            [[fallthrough]];
+        case VK_SUCCESS:
+            // reset the fence only after a successful acquire: it is signaled
+            // by the submission in present(), which is skipped when no image
+            // was acquired. resetting it unconditionally would make the next
+            // setupFrame() wait on it forever.
             vkResetFences(device, 1, &fence);
-            VkResult err = vkAcquireNextImageKHR(device,
-                                                 this->swapchain, UINT64_MAX,
-                                                 waitSemaphore, VK_NULL_HANDLE,
-                                                 &this->imageIndex);
-            switch (err) {
-            case VK_SUCCESS:
-            case VK_TIMEOUT:
-            case VK_NOT_READY:
-            case VK_SUBOPTIMAL_KHR:
-                return true;
-                break;
-            default:
-                Log::error("vkAcquireNextImageKHR failed: {}", err);
-            }
+            this->frameReady = true;
+            return true;
+        case VK_ERROR_OUT_OF_DATE_KHR:
+            this->deviceReset = true;
+            break;
+        default:
+            Log::error("vkAcquireNextImageKHR failed: {}", err);
+            break;
         }
         return false;
     });
@@ -595,8 +616,8 @@ RenderPassDescriptor VulkanSwapChain::currentRenderPassDescriptor() {
 
 bool VulkanSwapChain::present(GPUEvent** waitEvents, size_t numEvents) {
 
-    auto [validWindow, surfaceReady] = withLock([this] {
-        return std::make_tuple(this->validWindow, this->surfaceReady);
+    auto [validWindow, surfaceReady, frameReady] = withLock([this] {
+        return std::make_tuple(this->validWindow, this->surfaceReady, this->frameReady);
     });
 
     if (validWindow == false) {
@@ -606,6 +627,15 @@ bool VulkanSwapChain::present(GPUEvent** waitEvents, size_t numEvents) {
 
     if (surfaceReady == false) {
         this->renderPassDescriptor.reset();
+        return false;
+    }
+
+    if (frameReady == false) {
+        // no image was acquired for this frame. the acquire-semaphore has no
+        // pending signal operation, so submitting a wait on it would hang the
+        // queue. drop the frame and let the swapchain recover instead.
+        this->renderPassDescriptor.reset();
+        this->updateDeviceIfNeeded();
         return false;
     }
 
@@ -681,18 +711,19 @@ bool VulkanSwapChain::present(GPUEvent** waitEvents, size_t numEvents) {
     VkResult err = cqueue->withVkQueue([&](VkQueue queue) {
         return vkQueuePresentKHR(queue, &presentInfo);
     });
-    if (err != VK_SUCCESS) {
+    if (err != VK_SUCCESS && err != VK_SUBOPTIMAL_KHR) {
         Log::error("vkQueuePresentKHR failed: {}", err);
         //FVASSERT_DEBUG(err == VK_SUCCESS);
     }
 
     this->renderPassDescriptor.reset();
 
-    if (err == VK_ERROR_OUT_OF_DATE_KHR) {
-        withLock([this] {
+    withLock([this, err] {
+        // the acquired image has been handed to the presentation engine.
+        this->frameReady = false;
+        if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR)
             this->deviceReset = true;
-        });
-    }
+    });
     this->updateDeviceIfNeeded();
 
     this->frameCount += 1;

@@ -58,6 +58,7 @@ namespace FV {
         mutable std::mutex lock;
         bool deviceReset;	// recreate swapchain
         bool surfaceReady;
+        bool frameReady;    // an image has been acquired for the current frame
         bool validWindow;
         Size cachedResolution;
 
