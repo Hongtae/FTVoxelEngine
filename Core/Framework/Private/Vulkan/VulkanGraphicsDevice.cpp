@@ -189,6 +189,12 @@ VulkanGraphicsDevice::VulkanGraphicsDevice(std::shared_ptr<VulkanInstance> ins,
 }
 
 VulkanGraphicsDevice::~VulkanGraphicsDevice() {
+    // Wait for the GPU before tearing anything down. Submissions still in
+    // flight reference command buffers and descriptor pools that are about to
+    // be destroyed, and the fence completion thread drains its remaining
+    // handlers on stop - which requires those fences to be signaled already.
+    vkDeviceWaitIdle(device);
+
     fenceCompletionThread.request_stop();
     fenceCompletionCond.notify_all();
     fenceCompletionThread.join();
@@ -433,21 +439,26 @@ void VulkanGraphicsDevice::releaseDescriptorSets(VulkanDescriptorPool* pool, VkD
     }
 
     if (numChainPools > cleanupThresholdAllChains) {
+        // Only chains that hold no pool at all can be dropped. A chain with a
+        // live pool must stay in the map: the sets allocated from it are
+        // released through this same lookup.
         std::vector<VulkanDescriptorPoolID> emptyChainIDs;
         emptyChainIDs.reserve(dpChainMap.poolChainMap.size());
-        for (auto& pair : dpChainMap.poolChainMap)
-            emptyChainIDs.push_back(pair.first);
-        for (auto& poolID : emptyChainIDs) {
-            auto it = dpChainMap.poolChainMap.find(poolID);
+        for (auto& pair : dpChainMap.poolChainMap) {
+            if (pair.second->cleanup() == 0)
+                emptyChainIDs.push_back(pair.first);
+        }
+        for (auto& chainID : emptyChainIDs) {
+            auto it = dpChainMap.poolChainMap.find(chainID);
+            FVASSERT_DEBUG(it != dpChainMap.poolChainMap.end());
             VulkanDescriptorPoolChain* chain = it->second;
             dpChainMap.poolChainMap.erase(it);
             delete chain;
         }
-    } else {
-        auto chain = dpChainMap.poolChainMap[poolID];
+    } else if (auto it = dpChainMap.poolChainMap.find(poolID);
+               it != dpChainMap.poolChainMap.end()) {
+        VulkanDescriptorPoolChain* chain = it->second;
         if (chain->descriptorPoolCount() > cleanupThreshold && chain->cleanup() == 0) {
-            auto it = dpChainMap.poolChainMap.find(poolID);
-            VulkanDescriptorPoolChain* chain = it->second;
             dpChainMap.poolChainMap.erase(it);
             delete chain;
         }
@@ -1758,6 +1769,36 @@ void VulkanGraphicsDevice::fenceCompletionCallbackThreadProc(std::stop_token sto
             }
         } else {
             fenceCompletionCond.wait(fenceMutex);
+        }
+    }
+
+    // Drain whatever is left. The device is idle by the time a stop is
+    // requested, so every remaining fence is signaled; dropping the handlers
+    // here would release their command buffers without running the caller's
+    // completion callbacks.
+    waitingFences.insert(waitingFences.end(),
+                         pendingFenceCallbacks.begin(),
+                         pendingFenceCallbacks.end());
+    pendingFenceCallbacks.clear();
+    if (waitingFences.empty() == false) {
+        fenceMutex.unlock();
+
+        fences.clear();
+        fences.reserve(waitingFences.size());
+        for (FenceCallback& cb : waitingFences) {
+            fences.push_back(cb.fence);
+            if (cb.completionHandler)
+                cb.completionHandler();
+        }
+        waitingFences.clear(); // releases the objects captured by the handlers.
+
+        fenceMutex.lock();
+        if (fences.empty() == false) {
+            err = vkResetFences(device, (uint32_t)fences.size(), fences.data());
+            if (err != VK_SUCCESS)
+                Log::error("vkResetFences failed: {}", err);
+            reusableFences.insert(reusableFences.end(), fences.begin(), fences.end());
+            fences.clear();
         }
     }
     Log::info("Vulkan Queue Completion Helper thread is finished.");
